@@ -1,5 +1,5 @@
 weapon_id,name_zh,rarity,class,range_type,dmg,hits,interval_s,range_m,avg_targets,pattern_desc,awaken_desc,awaken_power,awaken_basis,tags,needs_sim
-W001,鐵刀,common,刀,melee,56,1,0.8,2.5,2.5,前方120°扇形揮砍,揮砍範圍+12%,1.0,依stat_values area,blade|area,0
+W001,青鞘太刀,common,刀,melee,56,1,0.8,2.5,2.5,前方120°扇形揮砍,揮砍範圍+12%,1.0,依stat_values area,blade|area,0
 W002,齊眉棍,common,棍,melee,60,1,1.2,2.8,3.5,360°橫掃並擊退,擊退距離加倍並暈眩0.3秒,1.0,控場價值；主觀估值,staff|area|control,1
 W003,鐵拳套,common,拳,melee,44,1,0.3,1.5,1.2,快速連拳單體,攻速+8%,1.0,依stat_values atk_speed,fist|atk_speed,0
 W004,青鋼劍,common,劍,mid,49,1,0.5,3.5,1.5,直線突刺,突刺距離+1m並可穿透,1.0,平均命中1.5→1.65 ≈ +10%,sword|pierce,0

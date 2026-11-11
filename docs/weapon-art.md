@@ -4,11 +4,11 @@
 
 [全部武器實拍](previews/weapon-set.jpg) · [四種出招動畫](previews/weapon-attacks.gif)
 
-[鐵刀命中與揮空、竹弓與連弩實拍](previews/weapon-weight.gif)
+[青鞘太刀拔刀斬實拍](previews/tachi-draw.gif) · [舊版鐵刀、竹弓與連弩實拍](previews/weapon-weight.gif)
 
-鐵刀於基礎攻速約 0.22 秒接觸。擊中時刀身減速，揮空則順勢送到底。按住攻擊可從上一刀的終點反撩。竹弓從側傾搭箭轉至接近直立的滿弓姿勢，天機弩則側傾補矢、回正發射。這些傾角為第一人稱畫面構圖所設。動畫節奏參考 [Techland 的近戰動畫開發日誌](https://outpost.dyinglightgame.com/news/dev-blog-they-tried-to-break-him)、[Exouch 的第一人稱弓動畫](https://forums.unrealengine.com/t/exouch-first-person-bow-animation-pack/2691165) 及 [Modern First-Person Animation Overhaul 的弩動畫](https://www.nexusmods.com/skyrimspecialedition/mods/115525)。
+青鞘太刀平時入鞘，攻擊時副手扶鞘，全刀出鞘後橫斬，基礎攻速約 0.34 秒接觸。回收時刀身對準鞘口，納刀後可再拔斬。竹弓從側傾搭箭轉至接近直立的滿弓姿勢，天機弩則側傾補矢、回正發射。這些傾角為第一人稱畫面構圖所設。動畫節奏參考 [Techland 的近戰動畫開發日誌](https://outpost.dyinglightgame.com/news/dev-blog-they-tried-to-break-him)、[Exouch 的第一人稱弓動畫](https://forums.unrealengine.com/t/exouch-first-person-bow-animation-pack/2691165) 及 [Modern First-Person Animation Overhaul 的弩動畫](https://www.nexusmods.com/skyrimspecialedition/mods/115525)。
 
-- [鐵刀（W001，Tripo 原稿）](https://studio.tripo3d.ai/zh/workspace/generate/c956c7b4-182b-4272-b6ca-cc9d9b8a06c6)：同側肩上起刀、過準星斜斬、送到對側後回收。
+- [青鞘太刀（W001，握柄的 Tripo 原稿）](https://studio.tripo3d.ai/zh/workspace/generate/c956c7b4-182b-4272-b6ca-cc9d9b8a06c6)：保留原刀握柄，在 Blender 重建刀身、刀鐔與獨立刀鞘（見 tools/build_tachi.py）。
 - [齊眉棍（W002，Tripo 原稿）](https://studio.tripo3d.ai/zh/workspace/generate/a9be4ff8-43a2-4604-966e-a7b848dd96f2)：轉腕蓄勢、平棍橫掃。
 - [鐵拳套（W003，Tripo 原稿）](https://studio.tripo3d.ai/zh/workspace/generate/2fc5d658-d7d0-4113-b245-b74cfc935970)：短縮拳、快速前送。
 - [青鋼劍（W004，Tripo 原稿）](https://studio.tripo3d.ai/zh/workspace/generate/54580822-6855-4689-9c75-2025827ce83c)：收劍、直刺回鋒。

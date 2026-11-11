@@ -24,9 +24,9 @@ var timeline: Tween
 var alternating := false
 var home: Vector3
 var attack_action: StringName
-var chain_ready := false
-var reverse_cut := false
-var saber_contact := false
+var saya: Node3D
+var blade: Node3D
+var saya_hand: LoadingHand
 var flex_mesh: MeshInstance3D
 var limb_extent := 0.0
 var top := Vector3.ZERO
@@ -36,7 +36,8 @@ func setup(wid: String, slot: int) -> void:
 	id = wid
 	attack_action = "attack_%d" % (slot+1)
 	hand = 1.0 if slot == 0 else -1.0
-	var packed := load("res://assets/models/weapons/%s.glb" % id) as PackedScene
+	var asset := "Tachi" if id == "W001" else id
+	var packed := load("res://assets/models/weapons/%s.glb" % asset) as PackedScene
 	art = packed.instantiate()
 	add_child(art)
 	home = Vector3(.32*hand,-.23,-.49)
@@ -48,7 +49,7 @@ func setup(wid: String, slot: int) -> void:
 		art.scale = Vector3.ONE*.75
 		lash = art.find_children("*","MeshInstance3D",true,false)[0]
 	_add_grip()
-	if needs_support():
+	if id in ["W007","W303"]:
 		var mesh: MeshInstance3D = art.find_children("*","MeshInstance3D",true,false)[0]
 		flex_mesh = mesh
 		# 直接從最外端的頂點取平均，弓梢位置跟隨校正後的模型。
@@ -77,7 +78,7 @@ func setup(wid: String, slot: int) -> void:
 			var strand := Bow.rod(.003,.003,Color("#eadbb9"))
 			add_child(strand)
 			string.append(strand)
-	if needs_support():
+	if id in ["W007","W303"]:
 		loader = LoadingHand.new()
 		add_child(loader)
 		loader.setup(hand)
@@ -90,6 +91,14 @@ func setup(wid: String, slot: int) -> void:
 		mate.position = Vector3(-.10*hand,.035,-.045)
 		mate.rotation_degrees = Vector3(3,-14*hand,12*hand)
 	_pose(Vector3.ZERO,Vector3.ZERO)
+	if id == "W001":
+		blade = art.find_child("Blade",true,false)
+		saya = art.find_child("Saya",true,false)
+		saya.reparent(self,false)
+		saya_hand = LoadingHand.new()
+		saya.add_child(saya_hand)
+		saya_hand.setup(hand)
+		_tachi_pose(0.0)
 	if loader:
 		_rest_ammo()
 
@@ -110,13 +119,6 @@ func _add_grip() -> void:
 		Bow.span(wrap,Vector3(-.033*hand,-.01,z),Vector3(.021*hand,.024,z+.004))
 
 func _process(_delta: float) -> void:
-	if chain_ready and not Input.is_action_pressed(attack_action):
-		chain_ready = false
-		reverse_cut = false
-		if timeline:
-			timeline.kill()
-		timeline = create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-		_key(timeline,Vector3.ZERO,Vector3.ZERO,.15)
 	if grip_sleeve and is_visible_in_tree():
 		var elbow := get_parent_node_3d().to_global(Vector3(hand*.40,-.43,-.19))
 		Bow.span(grip_sleeve,to_local(elbow),grip_wrist)
@@ -132,7 +134,7 @@ func _pose(deg: Vector3, offset: Vector3) -> void:
 	position = home + Vector3(offset.x*hand,offset.y,offset.z)
 
 func needs_support() -> bool:
-	return id in ["W007","W303"]
+	return id in ["W001","W007","W303"]
 
 func _tail(draw: float) -> Vector3:
 	if id == "W303":
@@ -225,34 +227,31 @@ func _reset_crossbow(progress: float) -> void:
 	_bend(progress)
 	_hand_at(_tail(progress),false)
 
+## Camera-space choreography; the sheath moves separately from the sword hand.
+func _tachi_pose(t: float) -> void:
+	var draw := smoothstep(.08,.34,t) * (1.0-smoothstep(.73,.98,t))
+	var sweep := smoothstep(.34,.50,t) * (1.0-smoothstep(.59,.73,t))
+	var lift := smoothstep(0,.08,t) * (1.0-smoothstep(.98,1.0,t))
+	var dock := Vector3(-.18*hand,-.23 + .035*lift,-.55)
+	var rest_angle := Vector3(-12,74*hand,-15*hand)
+	var dock_basis := Basis.from_euler(rest_angle * PI/180)
+	var axis := dock_basis.z
+	var rest_saya := Transform3D(dock_basis,dock-axis*.32*draw)
+	position = dock + axis*.43*draw + Vector3(.07*hand,.13,-.09)*sweep
+	rotation_degrees = rest_angle.lerp(Vector3(21,-64*hand,24*hand),sweep)
+	saya.transform = transform.affine_inverse() * rest_saya
+	# Reveal only the portion outside the mouth; the curved tip cannot poke through the lacquer.
+	blade.visible = draw > .001
+	blade.scale = Vector3(1,maxf(.001,draw*draw),maxf(.001,draw))
+	blade.position.z = -.082*(1.0-draw)
+	var elbow := saya.to_local(get_parent_node_3d().to_global(Vector3(-hand*.45,-.42,-.23)))
+	saya_hand.place(Vector3(0,-.019,-.15),elbow,t > 0.0 and t < 1.0)
+
 func _saber_sequence(t: Tween, seconds: float, impact: Callable) -> void:
-	reverse_cut = chain_ready and not reverse_cut
-	chain_ready = false
-	saber_contact = false
-	var high := Vector3(12,-63,-52)
-	var low := Vector3(-47,72,65)
-	var high_pos := Vector3(.10,.105,-.06)
-	var low_pos := Vector3(-.55,-.085,-.13)
-	var middle := Vector3(-19,13,18)
-	var middle_pos := Vector3(-.22,.05,-.13)
-	var finish := high if reverse_cut else low
-	var finish_pos := high_pos if reverse_cut else low_pos
-	_key(t,low if reverse_cut else high,low_pos if reverse_cut else high_pos,seconds*.16)
-	t.set_ease(Tween.EASE_IN)
-	_key(t,middle,middle_pos,seconds*.12)
-	t.tween_callback(func(): saber_contact = impact.call(0)==true)
-	t.tween_method(func(progress: float):
-		var blend := 1.0-pow(1.0-progress,3)
-		if saber_contact:
-			# 命中先讓刀停在接觸點附近，再將餘勢送往連段起點。
-			blend = .08*smoothstep(0,.32,progress)+.92*smoothstep(.32,1,progress)
-		_pose(middle.lerp(finish,blend),middle_pos.lerp(finish_pos,blend))
-	,0.0,1.0,seconds*.44).set_trans(Tween.TRANS_LINEAR)
-	t.tween_callback(func(): chain_ready = Input.is_action_pressed(attack_action))
-	t.tween_method(func(progress: float):
-		if not chain_ready:
-			_pose(finish.lerp(Vector3.ZERO,progress),finish_pos.lerp(Vector3.ZERO,progress))
-	,0.0,1.0,seconds*.28).set_ease(Tween.EASE_IN_OUT)
+	_tachi_pose(0.0)
+	t.tween_method(_tachi_pose,0.0,.42,seconds*.42).set_trans(Tween.TRANS_LINEAR)
+	t.tween_callback(impact.bind(0))
+	t.tween_method(_tachi_pose,.42,1.0,seconds*.58).set_trans(Tween.TRANS_LINEAR)
 
 func _key(t: Tween, r: Vector3, p: Vector3, sec: float) -> void:
 	var rr: Vector3 = REST[id]+r
@@ -270,7 +269,7 @@ func attack(interval: float, hits: int, impact: Callable) -> void:
 	var t := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 	timeline = t
 	t.set_trans(Tween.TRANS_SINE)
-	if needs_support():
+	if id in ["W007","W303"]:
 		_ranged_sequence(t,seconds,hits,impact)
 		return
 	if id=="W001":

@@ -278,6 +278,16 @@ func _check_weapon_views(player) -> void:
 	_check(not crossbow.visible and player.attack_count==count,"副手搭箭時另一把武器收起並等待")
 	await _frames(62)
 	_check(crossbow.visible,"收勢後恢復另一把武器")
+	Game.weapons[0] = {"id":"W001","lv":1}
+	Game.recompute()
+	var tachi = player.weapon_models[0]
+	_check(not tachi.blade.visible, "太刀待機入鞘")
+	var strokes: Array = []
+	tachi.attack(.8,1,func(i): strokes.append([i,tachi.blade.scale.z]))
+	await _frames(10)
+	_check(tachi.saya_hand.visible and tachi.blade.visible and strokes.is_empty(), "扶鞘拔刀尚未命中")
+	await _frames(46)
+	_check(strokes.size()==1 and strokes[0][1]>.99 and not tachi.blade.visible and not tachi.saya_hand.visible, "全刀出鞘才命中一次，收刀回復待機")
 	Game.weapons = old
 	Game.recompute()
 
