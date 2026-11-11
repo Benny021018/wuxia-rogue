@@ -53,8 +53,9 @@ func setup(wid: String, slot: int) -> void:
 		art.scale = Vector3.ONE*.75
 		lash = art.find_children("*","MeshInstance3D",true,false)[0]
 	_add_grip()
+	if id == "W301": art.find_child("Scabbard",true,false).hide()
 	if id in ["W007","W303"]:
-		var mesh: MeshInstance3D = art.find_children("*","MeshInstance3D",true,false)[0]
+		var mesh: MeshInstance3D = art.find_child("BowLimbs",true,false) if id == "W007" else art.find_children("*","MeshInstance3D",true,false)[0]
 		flex_mesh = mesh
 		# 直接從最外端的頂點取平均，弓梢位置跟隨校正後的模型。
 		var vertices: PackedVector3Array = mesh.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]

@@ -253,6 +253,11 @@ func _check_cover_tactics(world, player) -> void:
 	await _frames(2)
 
 func _check_weapon_views(player) -> void:
+	var allowed: Array = []
+	for rarity in Data.rarity_order:
+		allowed.append_array(Game._pool(rarity,"W",{})[0])
+	allowed.sort()
+	_check(allowed==["W001","W007","W301"],"此版本只開放太刀、弓、大劍")
 	var old: Array = Game.weapons.duplicate(true)
 	Game.weapons[0] = {"id":"W007","lv":1}
 	Game.weapons[1] = {"id":"W303","lv":1}

@@ -1,4 +1,6 @@
 extends Node
+const FEATURED_WEAPONS := ["W001","W007","W301"]
+
 ## 一局遊戲的狀態：角色、修為、銀兩、武器、武學、門派傳承，以及參悟（抽獎）邏輯
 
 signal stats_changed
@@ -61,7 +63,7 @@ func new_run(cid: String) -> void:
 	bond_tiers = {}
 	# 開局從凡品武器中隨機給一把（近戰／中距離／遠程各有機會）
 	var starters: Array = []
-	for wid in Data.weapons:
+	for wid in FEATURED_WEAPONS:
 		if Data.weapons[wid].rarity == "common":
 			starters.append(wid)
 	weapons = [{"id": starters[rng.randi() % starters.size()], "lv": 1}, null]
@@ -372,7 +374,7 @@ func _pool(rar: String, kind: String, seen: Dictionary) -> Array:
 	var weights: Array = []
 	var own_mult: float = Data.gacha.owned_upgrade_weight_mult
 	if kind == "W":
-		for wid in Data.weapons:
+		for wid in FEATURED_WEAPONS:
 			if Data.weapons[wid].rarity != rar or seen.has(wid):
 				continue
 			var lv := _owned_weapon_lv(wid)
@@ -415,6 +417,9 @@ func roll_choices() -> Array:
 			rar = "legendary"
 		var kind := "W" if rng.randf() < float(Data.gacha.weapon_pool_ratio) else "M"
 		var p := _pool(rar, kind, seen)
+		if p[0].is_empty() and kind == "W":
+			kind = "M"
+			p = _pool(rar, kind, seen)
 		if p[0].is_empty():
 			continue
 		var id: String = _pick_weighted(p[0], p[1])
@@ -428,7 +433,9 @@ func roll_choices() -> Array:
 				opts.append(mid)
 		if not opts.is_empty():
 			var mid: String = opts[rng.randi() % opts.size()]
-			cands[cands.size() - 1] = {"kind": "M", "id": mid, "rarity": Data.martial[mid].rarity}
+			var offer := {"kind": "M", "id": mid, "rarity": Data.martial[mid].rarity}
+			if cands.is_empty(): cands.append(offer)
+			else: cands[cands.size() - 1] = offer
 	# 天命・圓滿：必有一個已習得武學的升級
 	if f("guarantee_upgrade") > 0 and not cands.any(func(c): return c.kind == "M" and martial.has(c.id)):
 		var opts: Array = []
@@ -437,7 +444,9 @@ func roll_choices() -> Array:
 				opts.append(mid)
 		if not opts.is_empty():
 			var mid: String = opts[rng.randi() % opts.size()]
-			cands[0] = {"kind": "M", "id": mid, "rarity": Data.martial[mid].rarity}
+			var offer := {"kind": "M", "id": mid, "rarity": Data.martial[mid].rarity}
+			if cands.is_empty(): cands.append(offer)
+			else: cands[0] = offer
 	if cands.any(func(c): return c.rarity == "legendary"):
 		since_legendary = 0
 	else:

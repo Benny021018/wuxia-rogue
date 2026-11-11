@@ -8,7 +8,7 @@ func _post_import(scene: Node) -> Object:
 			var mat := mesh.surface_get_material(surface) as BaseMaterial3D
 			if mat:
 				mat.vertex_color_use_as_albedo = true
-				if item is MeshInstance3D and item.skin != null:
+				if item is MeshInstance3D and item.skin != null and not mat.resource_name.begins_with("FaceInk_"):
 					var ink := StandardMaterial3D.new()
 					ink.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 					ink.cull_mode = BaseMaterial3D.CULL_FRONT

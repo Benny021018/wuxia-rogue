@@ -95,6 +95,10 @@ def fit(key,target):
         for j,b in enumerate(bones):
             group=o.vertex_groups.new(name=b.name)
             for idx in np.flatnonzero(weights[:,j]):group.add([int(idx)],float(weights[idx,j]),'REPLACE')
+        o.data.update()
+        sys.path.insert(0,str(ROOT/'tools'))
+        from sculpt_camp_faces import sculpt
+        sculpt(o,key)
         o.parent=rig;o.matrix_parent_inverse=rig.matrix_world.inverted();mod=o.modifiers.new('Skin','ARMATURE');mod.object=rig
     else:
         if target[0]>target[1]*1.7 and dims[1]>dims[0]:
@@ -106,4 +110,5 @@ def fit(key,target):
     if rig:rig.select_set(True)
     bpy.ops.export_scene.gltf(filepath=str(DEST/(key+'.glb')),use_selection=True,export_animations=bool(rig),export_animation_mode='NLA_TRACKS',export_frame_range=False)
     print('SMART',key,len(o.data.polygons),sum(len(p.vertices)-2 for p in o.data.polygons),flush=True)
-for key,target in (sizes|dict.fromkeys(donors)).items():fit(key,target)
+for key,target in (sizes|dict.fromkeys(donors)).items():
+    if "--faces" not in sys.argv or key in donors: fit(key,target)
