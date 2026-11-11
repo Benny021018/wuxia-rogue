@@ -11,7 +11,7 @@ var _tick := 0.0
 var _mesh: MeshInstance3D
 
 
-func configure(r: float, damage_per_sec: float, dur: float, to_player := true, color := Color(0.35, 0.7, 0.2, 0.35)) -> void:
+func configure(r: float, damage_per_sec: float, dur: float, to_player := true, color := Color(0.35, 0.7, 0.2, 0.35), clip: StringName = &"poison-cloud") -> void:
 	radius = r
 	dps = damage_per_sec
 	duration = dur
@@ -19,6 +19,11 @@ func configure(r: float, damage_per_sec: float, dur: float, to_player := true, c
 	_mesh = FX.cylinder(r, 0.08, color, 0.4)
 	add_child(_mesh)
 	_mesh.position.y = 0.05
+	if clip != &"":
+		var span := minf(r * 1.6, 3.0)
+		var mist := FX.play(self, global_position, clip, span, 1.8)
+		var frame := FX.COMBAT_FRAMES.get_frame_texture(clip, 0)
+		mist.position.y = frame.get_height() * mist.pixel_size * 0.48
 
 
 func _physics_process(delta: float) -> void:

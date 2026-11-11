@@ -1,4 +1,6 @@
 extends CharacterBody3D
+
+const MELEE_EFFECTS := {"劍": &"thrust", "槍": &"thrust", "棍": &"spin-slash", "鞭": &"whip-crack", "鉤": &"double-slash", "拳": &"blunt-hit", "巨劍": &"heavy-cleave"}
 ## 第一人稱玩家：移動、雙武器攻擊、受傷流程，以及武學／門派／境界的戰鬥效果
 
 signal hp_changed
@@ -113,6 +115,7 @@ func _physics_process(delta: float) -> void:
 		var iv := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 		dir = (transform.basis * Vector3(iv.x, 0, iv.y)).normalized()
 		if Input.is_action_just_pressed("dash") and dash_cd <= 0.0:
+			FX.play(get_parent(), cam.global_position - cam.global_basis.z * 1.1 - cam.global_basis.y * 0.32, &"blink-out", 0.5, 0.18)
 			dash_t = 0.2
 			dash_cd = 1.0
 			invuln_t = maxf(invuln_t, 0.2)
@@ -278,8 +281,10 @@ func _attack(slot: int) -> void:
 			for e in targets:
 				if is_instance_valid(e) and not e.dead:
 					deal(e, dmg, false)
-		if not targets.is_empty():
-			FX.flash(get_parent(), origin + fwd * minf(range_m, 2.5), 0.3, Data.rarity_color(row.rarity), 0.12)
+		var swing: StringName = MELEE_EFFECTS.get(row["class"], &"sword-slash")
+		var side := -1.0 if slot == 0 else 1.0
+		var strike := origin + fwd * minf(range_m, 1.7) + cam.global_basis.x * side * 0.32 - cam.global_basis.y * 0.18
+		FX.play(get_parent(), strike, swing, 1.3, minf(cooldowns[slot], 0.26), Color.WHITE, slot == 0)
 		# 劍氣縱橫：近戰與中距離武器射出劍氣
 		if Game.f("sword_qi_pct") > 0.0:
 			var n := 1 + int(Game.f("sword_qi_count"))
@@ -361,10 +366,11 @@ func _on_attack_effects(primary, base: float, fwd: Vector3) -> void:
 			var tgt = _random_enemy_near(15.0)
 			if tgt:
 				deal(tgt, base * 2.0 * (1.0 + Game.f("extra_hit_bonus")), false)
-				FX.flash(get_parent(), tgt.hit_center(), 0.25, Color(0.7, 0.9, 1.0), 0.15)
+				FX.play(get_parent(), tgt.hit_center(), &"thrust", 1.3, 0.18)
 		fs -= 100.0
 	# 雷霆劍訣：每第 5 次攻擊落雷
 	if Game.f("thunder_pct") > 0.0 and attack_count % 5 == 0:
+		FX.play(get_parent(), primary.hit_center() + Vector3.UP * 1.3, &"lightning-strike", 4.2, 0.38)
 		_aoe(primary.global_position, 2.0, base * Game.f("thunder_pct") / 100.0, Color(0.8, 0.8, 1.0))
 
 
@@ -372,14 +378,14 @@ func _extra_hit(e, dmg: float, fwd: Vector3) -> void:
 	if not is_instance_valid(e) or e.dead:
 		return
 	deal(e, dmg, false)
-	FX.flash(get_parent(), e.hit_center(), 0.2, Color(0.5, 1.0, 0.8), 0.1)
+	FX.play(get_parent(), e.hit_center(), &"sword-slash", 1.2, 0.18, Color(0.65, 1.0, 0.85))
 	# 劍氣離體：追擊同時射出劍氣
 	if Game.f("extra_hit_qi") > 0.0:
 		_shoot(cam.global_position + fwd * 0.6, fwd, dmg * Game.f("extra_hit_qi"), 99, 10.0, Color(0.5, 1.0, 0.8))
 
 
 func _aoe(center: Vector3, r: float, dmg: float, color: Color) -> void:
-	FX.flash(get_parent(), center + Vector3(0, 0.5, 0), r * 0.5, color, 0.3)
+	FX.play(get_parent(), center + Vector3(0, 0.5, 0), &"ground-slam", r * 2.0, 0.35, color)
 	for e in _enemies_within(center, r):
 		deal(e, dmg, false)
 
@@ -490,6 +496,7 @@ func take_damage(amount: float, attacker = null, is_dot := false) -> void:
 			return
 		if guard_ready and Game.f("guard_every") > 0.0:
 			guard_ready = false
+			FX.play(get_parent(), cam.global_position - cam.global_basis.z, &"divine-shield", 0.9, 0.32)
 			FX.float_text(get_parent(), global_position + Vector3(0, 2, 0), "護體", Color(1, 0.85, 0.3))
 			return
 	var dr := Game.st("dmg_reduction_pct")
@@ -547,13 +554,16 @@ func _try_survive() -> void:
 func heal(v: float, show := true) -> void:
 	if hp <= 0.0:
 		return
+	var gained := minf(v, Game.max_hp() - hp)
 	hp = minf(Game.max_hp(), hp + v)
-	if show:
+	if show and gained > 0.0:
+		FX.play(get_parent(), cam.global_position - cam.global_basis.z - cam.global_basis.y * 0.3, &"heal", 0.48, 0.35)
 		FX.float_text(get_parent(), global_position + Vector3(0, 2, 0), "+%d" % int(v), Color(0.4, 1, 0.4))
 	hp_changed.emit()
 
 
 func level_up_heal() -> void:
+	FX.play(get_parent(), cam.global_position - cam.global_basis.z * 1.5 - cam.global_basis.y * 0.36, &"blessing", 0.68, 0.65)
 	if Game.f("levelup_heal") > 0.0:
 		heal(Game.max_hp() * Game.f("levelup_heal"))
 

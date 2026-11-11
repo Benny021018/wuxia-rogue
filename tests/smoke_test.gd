@@ -47,12 +47,16 @@ func _run_character(cid: String) -> void:
 			var enemy = world.spawn_enemy(id, Vector3(-10, 0, 0), false)
 			var parts: Array = enemy._visual.find_children("*", "MeshInstance3D", true, false)
 			_check(parts.size() == 1 and enemy._body_mat != null, "%s 模型與攻擊預警材質" % id)
+			var motion: AnimationPlayer = enemy._anim
+			_check(motion != null and motion.has_animation("Walk") and motion.has_animation("Shoot" if id == "H02" else "Slash"), "%s 的移動與攻擊動作可播放" % id)
 			if parts.size() == 1:
 				var part: MeshInstance3D = parts[0]
 				var bounds := part.global_transform * part.get_aabb()
 				_check(absf(bounds.size.y - 1.8) < 0.02 and absf(bounds.position.y) < 0.02, "%s 站姿與膠囊對齊" % id)
 			enemy.queue_free()
-		await _frames(2)
+		var spark := FX.play(world, Vector3.ZERO, &"hit-spark", 1.0, 0.1)
+		await _frames(12)
+		_check(not is_instance_valid(spark), "一次性命中特效播放完畢會釋放")
 	var wids: Array = Data.weapons.keys()
 	for mi in Data.map_order.size():
 		if mi > 0:

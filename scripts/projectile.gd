@@ -21,6 +21,14 @@ var _hit := {}
 func setup(color: Color, size := 0.15) -> void:
 	var m := FX.sphere(size, color, 2.0)
 	add_child(m)
+	if not poison_cloud and not direction.is_zero_approx():
+		var up := Vector3.RIGHT if absf(direction.normalized().dot(Vector3.UP)) > 0.98 else Vector3.UP
+		m.basis = Basis.looking_at(direction, up)
+		m.scale = Vector3(0.48, 0.48, 2.6)
+		var trail := FX.sphere(size, Color(color, 0.35), 1.1)
+		m.add_child(trail)
+		trail.position.z = size * 1.4
+		trail.scale = Vector3(0.5, 0.5, 1.3)
 
 
 func _physics_process(delta: float) -> void:

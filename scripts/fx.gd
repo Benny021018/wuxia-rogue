@@ -1,6 +1,8 @@
 class_name FX
 ## 共用的灰盒視覺工具：材質、浮動傷害數字、範圍預警圈
 
+const COMBAT_FRAMES := preload("res://assets/effects/combat.tres")
+
 static var _font: SystemFont
 
 
@@ -83,19 +85,41 @@ static func float_text(parent: Node, pos: Vector3, text: String, color := Color.
 
 ## 地面預警圈：duration 秒後消失
 static func warn_circle(parent: Node, pos: Vector3, radius: float, duration: float, color := Color(0.85, 0.15, 0.1, 0.35)) -> Node3D:
-	var c := cylinder(radius, 0.05, color, 0.6)
-	parent.add_child(c)
-	c.global_position = Vector3(pos.x, 0.06, pos.z)
-	var t := c.create_tween()
-	t.tween_interval(duration)
-	t.tween_callback(c.queue_free)
-	return c
+	var marker := Node3D.new()
+	parent.add_child(marker)
+	marker.global_position = Vector3(pos.x, 0.06, pos.z)
+	var rim := MeshInstance3D.new()
+	var ring := TorusMesh.new()
+	ring.inner_radius = radius * 0.94
+	ring.outer_radius = radius
+	rim.mesh = ring
+	rim.scale.y = 0.15
+	rim.material_override = mat(Color(color, 0.9), 1.2, true)
+	marker.add_child(rim)
+	var fill := cylinder(radius, 0.025, color, 0.5)
+	marker.add_child(fill)
+	fill.scale = Vector3(0.02, 1, 0.02)
+	var t := marker.create_tween()
+	t.tween_property(fill, "scale", Vector3.ONE, duration)
+	t.tween_callback(marker.queue_free)
+	return marker
 
 
-static func flash(parent: Node, pos: Vector3, radius: float, color: Color, duration := 0.25) -> void:
-	var s := sphere(radius, Color(color.r, color.g, color.b, 0.45), 1.5)
-	parent.add_child(s)
-	s.global_position = pos
-	var t := s.create_tween()
-	t.tween_property(s, "scale", Vector3.ONE * 1.3, duration)
-	t.tween_callback(s.queue_free)
+## 非循環影格播畢自行釋放；毒霧與火焰跟隨傷害區的生命週期。
+static func play(parent: Node3D, pos: Vector3, clip: StringName, span: float, duration: float, tint := Color.WHITE, flip := false) -> AnimatedSprite3D:
+	var sprite := AnimatedSprite3D.new()
+	sprite.sprite_frames = COMBAT_FRAMES
+	sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	sprite.shaded = false
+	sprite.flip_h = flip
+	sprite.modulate = tint
+	var frame := COMBAT_FRAMES.get_frame_texture(clip, 0)
+	sprite.pixel_size = span / maxf(frame.get_width(), frame.get_height())
+	parent.add_child(sprite)
+	sprite.global_position = pos
+	if not COMBAT_FRAMES.get_animation_loop(clip):
+		sprite.animation_finished.connect(sprite.queue_free)
+	var speed := COMBAT_FRAMES.get_frame_count(clip) / (duration * COMBAT_FRAMES.get_animation_speed(clip))
+	sprite.play(clip, speed)
+	return sprite

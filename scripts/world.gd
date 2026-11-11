@@ -84,6 +84,7 @@ func build_map(index: int) -> void:
 	var portal := FX.cylinder(1.6, 0.2, Color(0.3, 0.9, 0.7), 2.0)
 	level_root.add_child(portal)
 	portal.position = Vector3(portal_x, 0.1, 0)
+	FX.play(portal, portal.global_position + Vector3.UP, &"portal", 2.25, 2.0)
 	var pl := FX.label3d("前往下一處" if index < 3 else "離開天魔殿", 72, Color(0.6, 1, 0.85))
 	level_root.add_child(pl)
 	pl.position = Vector3(portal_x, 2.5, 0)
@@ -263,20 +264,20 @@ func _build_room(stage: int, lay: Dictionary, x0: float, theme: Dictionary) -> D
 					var cliff := FX.box(Vector3(ew, 0.05, eh), Color(0.02, 0.02, 0.02))
 					level_root.add_child(cliff)
 					cliff.position = c + Vector3(0, 0.03, 0)
-					_permanent_hazard(c, minf(ew, eh) / 2.0, stage, Color(0.1, 0.0, 0.0, 0.0), 3.0)
+					_permanent_hazard(c, minf(ew, eh) / 2.0, stage, Color(0.1, 0.0, 0.0, 0.0), 3.0, &"")
 				elif "血池" in label or ew <= 2.5:
 					var fire := FX.cylinder(minf(ew, eh) / 2.0, 0.8, Color(0.75, 0.05, 0.05) if "血池" in label else Color(0.9, 0.35, 0.1), 2.5)
 					level_root.add_child(fire)
 					fire.position = c + Vector3(0, 0.4, 0)
-					_permanent_hazard(c, minf(ew, eh) / 2.0 + 0.5, stage, Color(1, 0.4, 0.1, 0.2), 1.5)
+					_permanent_hazard(c, minf(ew, eh) / 2.0 + 0.5, stage, Color(1, 0.4, 0.1, 0.2), 1.5, &"" if "血池" in label else &"campfire")
 	return r
 
 
-func _permanent_hazard(c: Vector3, radius: float, stage: int, color: Color, mult := 0.5) -> void:
+func _permanent_hazard(c: Vector3, radius: float, stage: int, color: Color, mult := 0.5, clip: StringName = &"poison-cloud") -> void:
 	var hz := HAZARD.new()
 	level_root.add_child(hz)
 	hz.position = Vector3(c.x, 0, c.z)
-	hz.configure(radius, Data.cfg("base_enemy_dmg") * pow(Data.cfg("enemy_dmg_growth"), stage - 1) * mult, -1.0, true, color)
+	hz.configure(radius, Data.cfg("base_enemy_dmg") * pow(Data.cfg("enemy_dmg_growth"), stage - 1) * mult, -1.0, true, color, clip)
 
 
 func _set_gate(g: StaticBody3D, closed: bool) -> void:
@@ -396,7 +397,7 @@ func _process_spawns(delta: float) -> void:
 			if spawn_queue[i][2] == wave:
 				var q = spawn_queue[i]
 				spawn_queue.remove_at(i)
-				FX.flash(self, q[1] + Vector3(0, 0.5, 0), 0.6, Color(0.6, 0.1, 0.1), 0.25)
+				FX.play(self, q[1] + Vector3(0, 0.5, 0), &"poof", 1.3, 0.3, Color(0.95, 0.62, 0.5))
 				spawn_enemy(q[0], q[1], false)
 				break
 	var pending_this_wave := spawn_queue.any(func(q): return q[2] == wave)
@@ -421,6 +422,7 @@ func _clear_zone() -> void:
 		shrine_node.add_child(pillar)
 		pillar.global_position.y = 0.0
 		pillar.rotation.y = PI / 2.0
+		FX.play(shrine_node, pillar.global_position + Vector3.UP, &"magic-circle-cast", 2.5, 0.8)
 		var lab := FX.label3d("悟道碑\n［E］參悟", 64, Color(0.7, 1, 0.85))
 		lab.position.y = 3.3
 		shrine_node.add_child(lab)

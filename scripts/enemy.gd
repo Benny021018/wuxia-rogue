@@ -34,8 +34,7 @@ var summons: Array = []
 var _visual: Node3D
 var _body_mat: BaseMaterial3D
 var _label: Label3D
-var _stride := 0.0
-var _attack_motion: Tween
+var _anim: AnimationPlayer
 var _atk_cd := 0.8
 var _windup := 0.0
 var _skill_cd := 3.0
@@ -100,6 +99,10 @@ func _ready() -> void:
 	if BANDIT_MODELS.has(eid):
 		var model: Node3D = BANDIT_MODELS[eid].instantiate()
 		_visual.add_child(model)
+		_anim = model.find_child("AnimationPlayer", true, false)
+		for clip in [&"Walk", &"Idle"]:
+			_anim.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
+		_anim.play(&"Idle")
 		# 每個敵人各自控制蓄力發光，避免整群共用同一材質。
 		var mesh: MeshInstance3D = model.find_children("*", "MeshInstance3D", true, false)[0]
 		_body_mat = mesh.get_active_material(0).duplicate()
@@ -179,10 +182,11 @@ func _physics_process(delta: float) -> void:
 		if dist > 0.05:
 			rotation.y = atan2(-flat.x, -flat.z)
 	_behaviour(delta, flat, dist)
-	if BANDIT_MODELS.has(eid):
-		var stride_speed := Vector2(velocity.x, velocity.z).length()
-		_stride += delta * stride_speed * 4.0
-		_visual.position.y = absf(sin(_stride)) * minf(stride_speed, 1.0) * 0.035
+	if _anim and _anim.current_animation not in [&"Slash", &"Shoot"]:
+		var moving := Vector2(velocity.x, velocity.z).length() > 0.15
+		var clip := &"Walk" if moving else &"Idle"
+		if _anim.current_animation != clip:
+			_anim.play(clip, 0.10)
 	_apply_gravity(delta)
 	move_and_slide()
 
@@ -234,8 +238,8 @@ func _melee(delta: float, dist: float, mult := 1.0) -> void:
 		_windup -= delta
 		if _windup <= 0.0:
 			_body_mat.emission_enabled = false
-			if BANDIT_MODELS.has(eid):
-				_pose_attack(Vector3(-0.14, -0.24, 0), 0.08, true)
+			if _anim:
+				FX.play(world, hit_center() - global_basis.z * 0.7, &"sword-slash", 1.1, 0.20)
 			if dist <= reach + 0.8 + hit_radius:
 				_hit_player(dmg * mult)
 		return
@@ -244,17 +248,8 @@ func _melee(delta: float, dist: float, mult := 1.0) -> void:
 		_atk_cd = 1.3
 		_body_mat.emission_enabled = true
 		_body_mat.emission = Color(1, 0.3, 0.2)
-		if BANDIT_MODELS.has(eid):
-			_pose_attack(Vector3(0.10, 0.24, 0), _windup)
-
-
-func _pose_attack(pose: Vector3, duration: float, recover := false) -> void:
-	if _attack_motion:
-		_attack_motion.kill()
-	_attack_motion = create_tween()
-	_attack_motion.tween_property(_visual, "rotation", pose, duration)
-	if recover:
-		_attack_motion.tween_property(_visual, "rotation", Vector3.ZERO, 0.20)
+		if _anim:
+			_anim.play(&"Slash", 0.05)
 
 
 func _hit_player(amount: float) -> void:
@@ -300,7 +295,7 @@ func _aoe_after(center: Vector3, r: float, delay: float, amount: float) -> void:
 	if dead or not is_instance_valid(player):
 		return
 	var d := Vector2(player.global_position.x - center.x, player.global_position.z - center.z).length()
-	FX.flash(world, center + Vector3(0, 0.3, 0), r * 0.6, Color(1, 0.4, 0.2), 0.3)
+	FX.play(world, center + Vector3(0, 0.3, 0), &"ground-slam", r * 2.0, 0.3, Color(1, 0.4, 0.2))
 	if d <= r:
 		player.take_damage(amount, self)
 
@@ -353,10 +348,12 @@ func _behaviour(delta: float, flat: Vector3, dist: float) -> void:
 			_chase(flat, dist, 10.0)
 			_body_mat.emission_enabled = dist < 22.0 and _skill_cd < 0.3
 			_body_mat.emission = Color(0.85, 0.58, 0.18)
+			if dist < 22.0 and _skill_cd <= 0.3 and _anim.current_animation != &"Shoot":
+				_anim.play(&"Shoot", 0.04)
+				_anim.seek(clampf(0.3 - _skill_cd, 0.0, 0.3), true)
 			if _skill_cd <= 0.0 and dist < 22.0:
 				_skill_cd = 2.0
 				_shoot(24.0, dmg, Color(0.9, 0.8, 0.5))
-				_pose_attack(Vector3(0.08, 0.10, 0), 0.07, true)
 		"H04":
 			_chase(flat, dist, 8.0)
 			if _skill_cd <= 0.0 and dist < 18.0:
@@ -374,7 +371,7 @@ func _behaviour(delta: float, flat: Vector3, dist: float) -> void:
 			if not _revealed and dist < 3.0:
 				_revealed = true
 				_visual.visible = true
-				FX.flash(world, hit_center(), 0.5, Color(0.8, 0.8, 0.9), 0.15)
+				FX.play(world, hit_center(), &"poof", 1.4, 0.15, Color(0.8, 0.8, 0.9))
 			_chase(flat, dist)
 			if _revealed:
 				_melee(delta, dist)
@@ -422,7 +419,7 @@ func _b_hopper(delta: float, flat: Vector3, dist: float) -> void:
 				_skill_cd = 3.0
 				if dist < 2.0 + hit_radius:
 					_hit_player(dmg)
-				FX.flash(world, global_position, 1.0, Color(0.6, 0.6, 0.4), 0.2)
+				FX.play(world, global_position, &"ground-slam", 2.8, 0.2, Color(0.6, 0.6, 0.4))
 
 
 func _b_boar(delta: float, flat: Vector3, dist: float) -> void:
@@ -513,7 +510,7 @@ func _b_tiger(delta: float, flat: Vector3, dist: float) -> void:
 				_skill_cd = 6.0
 				if dist < 2.5 + hit_radius:
 					_hit_player(dmg * 1.2)
-				FX.flash(world, global_position, 1.5, Color(1, 0.7, 0.3), 0.2)
+				FX.play(world, global_position, &"ground-slam", 4.2, 0.2, Color(1, 0.7, 0.3))
 
 
 func _b_blade(delta: float, flat: Vector3, dist: float) -> void:
@@ -577,7 +574,7 @@ func _raise_corpse() -> void:
 	var pos: Vector3 = world.take_corpse_near(global_position, 12.0)
 	if pos == Vector3.INF:
 		pos = global_position + Vector3(randf_range(-2, 2), 0, randf_range(-2, 2))
-	FX.flash(world, pos + Vector3(0, 0.5, 0), 0.6, Color(0.4, 1, 0.4), 0.3)
+	FX.play(world, pos + Vector3(0, 0.5, 0), &"poof", 1.68, 0.3, Color(0.4, 1, 0.4))
 	var e = world.spawn_enemy("Z01", pos, false)
 	if e:
 		summons.append(e)
@@ -606,6 +603,8 @@ func _tick_status(delta: float) -> void:
 func apply_poison(total: float, stack: bool) -> void:
 	if total <= 0.0 or dead:
 		return
+	if _poison.is_empty():
+		FX.play(self, hit_center() + Vector3.UP * size, &"poisoned", 0.65 * size, 0.55)
 	if stack:
 		_poison.append([total / 3.0, 3.0])
 	elif _poison.is_empty():
@@ -626,6 +625,8 @@ func is_poisoned() -> bool:
 
 
 func apply_slow(pct: float, dur: float) -> void:
+	if _slow_t <= 0.0 and pct > 0.0 and dur > 0.0:
+		FX.play(self, global_position + Vector3.UP * 0.22, &"slowed", 1.2 * size, minf(dur, 0.6))
 	_slow = clampf(maxf(_slow, pct), 0.0, 80.0)
 	_slow_t = maxf(_slow_t, dur)
 
@@ -640,6 +641,8 @@ func apply_vuln(pct: float, dur: float) -> void:
 
 
 func stun(t: float) -> void:
+	if _stun_t <= 0.0 and t > 0.0:
+		FX.play(self, hit_center() + Vector3.UP * size, &"stunned", 0.8 * size, t)
 	_stun_t = maxf(_stun_t, t)
 
 
@@ -655,7 +658,7 @@ func take_hit(amount: float, from_pos: Vector3, crit: bool) -> float:
 		"H03":
 			if front:
 				dmg_in *= 0.3
-				FX.flash(world, hit_center() + facing * 0.48, 0.15, Color(1, 0.78, 0.32), 0.12)
+				FX.play(world, hit_center() + facing * 0.48, &"shield-block", 0.65, 0.12, Color(1, 0.78, 0.32))
 				if randf() < 0.3:
 					FX.float_text(world, hit_center() + Vector3(0, 0.8, 0), "格擋", Color(0.8, 0.8, 0.8), 28)
 		"Z04":
@@ -679,6 +682,11 @@ func take_hit(amount: float, from_pos: Vector3, crit: bool) -> float:
 func _apply_damage(v: float, crit: bool, dot: bool) -> float:
 	if dead:
 		return 0.0
+	if not dot:
+		var contact := hit_center()
+		if is_instance_valid(player):
+			contact += contact.direction_to(player.cam.global_position) * hit_radius
+		FX.play(world, contact, &"crit-hit" if crit else &"hit-spark", (1.55 if crit else 0.76) * size, 0.24 if crit else 0.14)
 	hp -= v
 	var col := Color(1, 0.85, 0.3) if crit else (Color(0.5, 1, 0.4) if dot else Color.WHITE)
 	if not dot or randf() < 0.15:
@@ -697,6 +705,7 @@ func die() -> void:
 	if dead:
 		return
 	dead = true
+	FX.play(world, hit_center(), &"poof", 1.4 * size, 0.36)
 	remove_from_group("enemies")
 	Game.add_kill(eid)
 	if is_instance_valid(player):
