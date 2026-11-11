@@ -36,6 +36,7 @@ func _run_character(cid: String) -> void:
 	var player = main.player
 	player.invuln_t = 1.0e9
 	if cid == Data.char_order[0]:
+		await _check_weapon_views(player)
 		await _check_cover_tactics(world, player)
 		var gate = world.rooms[0].gate_out
 		var meshes := (gate as Node).find_children("*", "MeshInstance3D", true, false)
@@ -249,3 +250,23 @@ func _check_cover_tactics(world, player) -> void:
 	player.set_physics_process(true)
 	world.set_physics_process(true)
 	await _frames(2)
+
+func _check_weapon_views(player) -> void:
+	var old: Array = Game.weapons.duplicate(true)
+	Game.weapons[0] = {"id":"W007","lv":1}
+	Game.weapons[1] = {"id":"W303","lv":1}
+	Game.recompute()
+	var bow = player.weapon_models[0]
+	var crossbow = player.weapon_models[1]
+	var events: Array = []
+	bow.attack(.8,1,func(i): events.append("弓%d"%i))
+	crossbow.attack(.8,3,func(i): events.append("弩%d"%i))
+	await _frames(8)
+	_check(events.is_empty() and bow.arrow.visible,"蓄力尚未放箭")
+	Game.recompute()
+	_check(player.weapon_models[0] == bow,"刷新屬性保留進行中的動作")
+	await _frames(49)
+	_check(events.count("弓0")==1 and events.count("弩0")==1 and events.count("弩1")==1 and events.count("弩2")==1 and events.size()==4,"雙手節拍獨立且每次放箭只觸發一次")
+	_check(bow.arrow.visible and bow.position.is_equal_approx(bow.home),"收勢回到握位並重新搭箭")
+	Game.weapons = old
+	Game.recompute()

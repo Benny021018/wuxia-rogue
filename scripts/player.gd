@@ -80,21 +80,20 @@ func _on_stats_changed() -> void:
 
 
 func refresh_weapon_models() -> void:
-	for m in weapon_models:
-		if m:
-			m.queue_free()
-	weapon_models = [null, null]
 	for i in 2:
 		var w = Game.weapons[i]
-		if w == null:
+		var previous = weapon_models[i]
+		if previous and w != null and previous.id == w.id:
 			continue
-		var row: Dictionary = Data.weapons[w.id]
-		var length := 0.9 if row.range_type == "melee" else (1.1 if row.range_type == "mid" else 0.45)
-		var m := FX.box(Vector3(0.06, 0.06, length), Data.rarity_color(row.rarity), 0.6)
-		cam.add_child(m)
-		m.position = Vector3(0.45 if i == 0 else -0.45, -0.35, -0.5 - length * 0.3)
-		m.rotation_degrees = Vector3(10, 8 if i == 0 else -8, 0)
-		weapon_models[i] = m
+		if previous:
+			cam.remove_child(previous)
+			previous.queue_free()
+		weapon_models[i] = null
+		if w != null:
+			var view := preload("res://scripts/weapon_view.gd").new()
+			cam.add_child(view)
+			view.setup(w.id,i)
+			weapon_models[i] = view
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -255,11 +254,19 @@ func _attack(slot: int) -> void:
 		cooldowns[slot] = 0.05
 	attack_count += 1
 	var dmg := float(row.dmg) * (1.0 + 0.15 * (int(w.lv) - 1))
+	refresh_weapon_models()
+	var view = weapon_models[slot]
+	view.attack(cooldowns[slot],int(row.hits),func(beat:int):
+		if is_instance_valid(view) and weapon_models[slot] == view and hp > 0:
+			_weapon_impact(slot,row,dmg,beat))
+
+
+func _weapon_impact(slot: int, row: Dictionary, dmg: float, beat: int) -> void:
 	var hits := int(row.hits)
+	var staggered: bool = row.weapon_id in ["W201","W302","W103","W303"]
 	var range_m := float(row.range_m)
 	var fwd := -cam.global_transform.basis.z
 	var origin := cam.global_position
-	_swing_anim(slot)
 	var targets: Array = []
 	if row.range_type == "ranged":
 		range_m *= 1.0 + Game.st("range_pct") / 100.0
@@ -267,10 +274,20 @@ func _attack(slot: int) -> void:
 		if "pierce" in String(row.tags):
 			pierce = 2 if row["class"] == "弩" else 1
 		var spread := 0.12 if hits >= 5 else 0.05
-		for h in hits:
+		for index in (1 if staggered else hits):
+			var h := beat if staggered else index
 			var off := (h - (hits - 1) / 2.0) * spread
 			var d := fwd.rotated(Vector3.UP, off)
-			_shoot(origin + d * 0.6, d, dmg, pierce, range_m, Data.rarity_color(row.rarity))
+			var muzzle: Vector3 = weapon_models[slot].launch_position()
+			var aim_point := origin + d * range_m
+			var ray := PhysicsRayQueryParameters3D.create(origin,aim_point,5)
+			var aim_hit := get_world_3d().direct_space_state.intersect_ray(ray)
+			if not aim_hit.is_empty():
+				aim_point = aim_hit.position
+			var launch_dir := muzzle.direction_to(aim_point)
+			if launch_dir.dot(d) < 0:
+				launch_dir = d
+			_shoot(muzzle, launch_dir, dmg, pierce, range_m, Data.rarity_color(row.rarity), row.weapon_id)
 			var sc := Game.f("split_chance")
 			if sc > 0.0 and randf() * 100.0 < sc:
 				var extra := 2 if Game.f("split3") > 0.0 else 1
@@ -279,7 +296,7 @@ func _attack(slot: int) -> void:
 	else:
 		range_m *= 1.0 + Game.st("area_pct") / 100.0
 		targets = _melee_targets(row, range_m, fwd)
-		for h in hits:
+		for h in (1 if staggered else hits):
 			for e in targets:
 				if is_instance_valid(e) and not e.dead:
 					deal(e, dmg, false)
@@ -293,13 +310,14 @@ func _attack(slot: int) -> void:
 		var strike := trail_center + heading * range_m * .82 + cam.global_basis.x * side * .12
 		FX.play(get_parent(), strike, swing, range_m * (.76 if cone == 0 else 1.12), duration, Color.WHITE, slot == 0)
 		# 劍氣縱橫：近戰與中距離武器射出劍氣
-		if Game.f("sword_qi_pct") > 0.0:
+		if beat == 0 and Game.f("sword_qi_pct") > 0.0:
 			var n := 1 + int(Game.f("sword_qi_count"))
 			for k in n:
 				var d2 := fwd.rotated(Vector3.UP, (k - (n - 1) / 2.0) * 0.2)
 				_shoot(origin + d2 * 0.6, d2, dmg * Game.f("sword_qi_pct") / 100.0, 99, 12.0, Color(0.6, 0.9, 1.0))
 	var primary = targets[0] if not targets.is_empty() else _nearest_in_front(15.0, fwd)
-	_on_attack_effects(primary, dmg, fwd)
+	if beat == 0:
+		_on_attack_effects(primary, dmg, fwd)
 
 
 func _melee_targets(row: Dictionary, range_m: float, fwd: Vector3) -> Array:
@@ -328,7 +346,7 @@ func _melee_targets(row: Dictionary, range_m: float, fwd: Vector3) -> Array:
 	return out
 
 
-func _shoot(pos: Vector3, dir: Vector3, dmg: float, pierce: int, rng: float, color: Color) -> void:
+func _shoot(pos: Vector3, dir: Vector3, dmg: float, pierce: int, rng: float, color: Color, visual_id := "") -> void:
 	var p := PROJ.new()
 	get_parent().add_child(p)
 	p.global_position = pos
@@ -339,7 +357,18 @@ func _shoot(pos: Vector3, dir: Vector3, dmg: float, pierce: int, rng: float, col
 	p.max_range = rng
 	p.radius = 0.35
 	p.on_hit = func(e, d): deal(e, d, false)
-	p.setup(color, 0.1)
+	if visual_id in ["W007","W303","W103","W203"]:
+		var missile := preload("res://scripts/archer_bow.gd").make_arrow()
+		var factor := .76 if visual_id=="W007" else (.48 if visual_id=="W303" else .24)
+		p.add_child(missile)
+		missile.basis = Basis.looking_at(p.direction).scaled(Vector3.ONE*factor)
+		missile.position = -p.direction * preload("res://scripts/archer_bow.gd").LENGTH * factor
+	elif visual_id == "W006":
+		var knife := preload("res://assets/models/weapons/W006.glb").instantiate()
+		p.add_child(knife)
+		knife.basis = Basis.looking_at(p.direction)
+	else:
+		p.setup(color, 0.1)
 
 
 func _on_attack_effects(primary, base: float, fwd: Vector3) -> void:
@@ -619,13 +648,3 @@ func _densest_point(r: float) -> Vector3:
 			best_n = n
 			best = e.global_position
 	return best
-
-
-func _swing_anim(slot: int) -> void:
-	var m = weapon_models[slot]
-	if m == null:
-		return
-	var base_rot: Vector3 = Vector3(10, 8 if slot == 0 else -8, 0)
-	var t: Tween = m.create_tween()
-	t.tween_property(m, "rotation_degrees", base_rot + Vector3(-50, 0, 0), 0.06)
-	t.tween_property(m, "rotation_degrees", base_rot, 0.12)
