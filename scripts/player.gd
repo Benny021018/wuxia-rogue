@@ -327,10 +327,8 @@ func _weapon_impact(slot: int, row: Dictionary, dmg: float, beat: int) -> bool:
 		for h in (1 if staggered else hits):
 			for e in targets:
 				if is_instance_valid(e) and not e.dead:
-					if deal(e, dmg, false):
+					if deal(e, dmg, false, _impact_weight(row.weapon_id)):
 						made_contact = true
-						if row.weapon_id == "W001" and not e.dead:
-							e.react_to_cut()
 		var swing: StringName = MELEE_EFFECTS.get(row["class"], &"sword-slash")
 		var side := -1.0 if slot == 0 else 1.0
 		var heading := Vector3(fwd.x,0,fwd.z).normalized()
@@ -388,7 +386,7 @@ func _shoot(pos: Vector3, dir: Vector3, dmg: float, pierce: int, rng: float, col
 	p.pierce = pierce
 	p.max_range = rng
 	p.radius = 0.35
-	p.on_hit = func(e, d): deal(e, d, false)
+	p.on_hit = func(e, d): deal(e, d, false, _impact_weight(visual_id), e.global_position - dir)
 	if visual_id in ["W007","W303","W103","W203"]:
 		var missile := preload("res://scripts/archer_bow.gd").make_arrow()
 		var factor := .76 if visual_id=="W007" else (.48 if visual_id=="W303" else .24)
@@ -459,7 +457,14 @@ func _aoe(center: Vector3, r: float, dmg: float, color: Color) -> void:
 
 
 ## 對敵人造成一次傷害（所有加成、暴擊、命中特效都在這裡）
-func deal(e, base: float, _is_dot: bool) -> bool:
+func _impact_weight(wid: String) -> float:
+	match wid:
+		"W101", "W204", "W301": return 1.8
+		"W003", "W006", "W103", "W203", "W303": return .65
+	return 1.0
+
+
+func deal(e, base: float, _is_dot: bool, weight := 1.0, source := Vector3.INF) -> bool:
 	if not is_instance_valid(e) or e.dead:
 		return false
 	var mult := 1.0 + Game.st("dmg_pct") / 100.0
@@ -504,7 +509,7 @@ func deal(e, base: float, _is_dot: bool) -> bool:
 	if crit:
 		mult *= (float(Data.gacha.base_crit_dmg_pct) + Game.st("crit_dmg_pct")) / 100.0
 		dodge_crit_ready = false
-	var dealt: float = e.take_hit(base * mult, global_position, crit)
+	var dealt: float = e.take_hit(base * mult, global_position if source == Vector3.INF else source, crit, weight)
 	if dealt <= 0.0:
 		return false
 	# 命中特效

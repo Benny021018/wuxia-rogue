@@ -37,7 +37,8 @@ var _label: Label3D
 const Bow := preload("res://scripts/archer_bow.gd")
 var _bow: Bow
 var _draw := -1.0
-var _cut_reaction: Tween
+var _recoil: Tween
+var _impact_pivot := Node3D.new()
 var _anim: AnimationPlayer
 var _atk_cd := 0.8
 var _swing_dir := Vector3.FORWARD
@@ -103,7 +104,8 @@ func _ready() -> void:
 	col.position.y = 0.9 * size
 	add_child(col)
 	_visual = Node3D.new()
-	add_child(_visual)
+	add_child(_impact_pivot)
+	_impact_pivot.add_child(_visual)
 	if BANDIT_MODELS.has(eid):
 		var model: Node3D = BANDIT_MODELS[eid].instantiate()
 		_visual.add_child(model)
@@ -113,7 +115,7 @@ func _ready() -> void:
 		_anim.play(&"Idle")
 		if eid == "H02":
 			_bow = Bow.new()
-			add_child(_bow)
+			_impact_pivot.add_child(_bow)
 			_bow.bind(model.find_children("*","Skeleton3D",true,false)[0])
 		# 每個敵人各自控制蓄力發光，避免整群共用同一材質。
 		var mesh: MeshInstance3D = model.find_children("*", "MeshInstance3D", true, false)[0]
@@ -777,16 +779,32 @@ func stun(t: float) -> void:
 	_stun_t = maxf(_stun_t, t)
 
 
-func react_to_cut() -> void:
-	if _cut_reaction:
-		_cut_reaction.kill()
-	_cut_reaction = create_tween()
-	_cut_reaction.tween_property(_visual,"rotation:x",-.11,.045)
-	_cut_reaction.tween_property(_visual,"rotation:x",0.0,.14)
+## 只動顯示層：腳下碰撞與敵人正在播放的招式保持同步。
+func _react_to_hit(away: Vector3, weight: float, guard: bool) -> void:
+	if _recoil:
+		_recoil.kill()
+	var local := (global_basis.inverse() * away).slide(Vector3.UP).normalized()
+	if local.is_zero_approx():
+		local = Vector3.BACK
+	var force := clampf(weight, .55, 2.2)
+	if rank == "boss":
+		force *= .55
+	var lean := Vector3.UP.cross(local) * (0.17 * force if not guard else .08)
+	lean.y = (.14 * force if not guard else -.12) * (1 if local.x >= 0 else -1)
+	var offset := local * size * (.095 * force if not guard else .035)
+	offset.y = -size * (.045 * force if not guard else .10)
+	_recoil = create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+	_recoil.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_recoil.tween_property(_impact_pivot, "rotation", lean, .045)
+	_recoil.parallel().tween_property(_impact_pivot, "position", offset, .045)
+	_recoil.tween_interval(.025 * force)
+	_recoil.tween_property(_impact_pivot, "rotation", -lean * .13, .085 * force)
+	_recoil.parallel().tween_property(_impact_pivot, "position", Vector3.ZERO, .085 * force)
+	_recoil.tween_property(_impact_pivot, "rotation", Vector3.ZERO, .10)
 
 
 ## 被玩家擊中：回傳實際造成的傷害
-func take_hit(amount: float, from_pos: Vector3, crit: bool) -> float:
+func take_hit(amount: float, from_pos: Vector3, crit: bool, weight := 1.0) -> float:
 	if dead:
 		return 0.0
 	var dmg_in := amount * (1.0 + _vuln / 100.0)
@@ -815,7 +833,10 @@ func take_hit(amount: float, from_pos: Vector3, crit: bool) -> float:
 				dmg_in *= 0.5
 	if rank == "elite" or rank == "boss":
 		dmg_in /= float(row.ehp_factor) if eid != "Z06" and eid != "Z04" else 1.0
-	return _apply_damage(dmg_in, crit, false)
+	var dealt := _apply_damage(dmg_in, crit, false)
+	if dealt > 0 and not dead:
+		_react_to_hit(-to_attacker, weight * (1.5 if crit else 1.0), eid == "H03" and front)
+	return dealt
 
 
 func _apply_damage(v: float, crit: bool, dot: bool) -> float:

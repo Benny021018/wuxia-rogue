@@ -38,6 +38,7 @@ func _run_character(cid: String) -> void:
 	if cid == Data.char_order[0]:
 		await _check_weapon_views(player)
 		await _check_cover_tactics(world, player)
+		await _check_hit_reactions(world)
 		var gate = world.rooms[0].gate_out
 		var meshes := (gate as Node).find_children("*", "MeshInstance3D", true, false)
 		_check(meshes.size() == 1, "山寨門只有一個可見模型")
@@ -279,3 +280,24 @@ func _check_weapon_views(player) -> void:
 	_check(crossbow.visible,"收勢後恢復另一把武器")
 	Game.weapons = old
 	Game.recompute()
+
+func _check_hit_reactions(world) -> void:
+	var e = world.spawn_enemy("H03", Vector3(-10, 0, 0), false)
+	e.set_physics_process(false)
+	e.rotation = Vector3.ZERO
+	var origin: Vector3 = e.global_position
+	e.take_hit(1, origin + Vector3.LEFT, false, .65)
+	await _frames(4)
+	var light: float = e._impact_pivot.position.x
+	e.take_hit(1, origin + Vector3.RIGHT, false, 1.8)
+	await _frames(4)
+	_check(light > 0 and e._impact_pivot.position.x < -light, "左右來擊反應相反，重擊幅度更大")
+	var before = e._recoil
+	e._apply_damage(1, false, true)
+	_check(before == e._recoil, "毒傷不重啟受擊動作")
+	e.take_hit(1, origin + Vector3.FORWARD, true)
+	await _frames(4)
+	_check(-e._impact_pivot.position.y > e._impact_pivot.position.z and e._impact_pivot.position.z > 0, "正面盾擋沉身承力")
+	await _frames(32)
+	_check(e._impact_pivot.transform.is_equal_approx(Transform3D.IDENTITY) and e.global_position.is_equal_approx(origin), "連擊後完全回正，碰撞位置不漂移")
+	e.queue_free()
