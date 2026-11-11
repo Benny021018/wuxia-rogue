@@ -104,7 +104,7 @@ func _on_zone_locked(stage: int, title: String) -> void:
 	hud.set_zone("第%d區　%s" % [stage, title])
 	hud.set_hint("")
 	if row.boss == "":
-		hud.show_banner("鎖　陣", "%s・%s　殺光所有敵人以破陣" % [row.area_zh, row.zone_type])
+		hud.show_banner("鎖　陣", "%s・%s　殺光所有敵人以破陣" % [row.area_zh, row.zone_type], UIKit.VERM.lightened(0.3))
 
 
 func _on_zone_cleared(stage: int) -> void:
@@ -113,7 +113,7 @@ func _on_zone_cleared(stage: int) -> void:
 	hud.set_enemies(0)
 	if stage >= Data.stages.size():
 		return
-	hud.show_banner("破　陣", "悟道碑已浮現，按 E 參悟")
+	hud.show_banner("破　陣", "悟道碑已浮現，按 E 參悟", UIKit.JADE.lightened(0.3))
 	hud.set_hint("走到悟道碑按［E］參悟　｜　出口已開啟")
 
 

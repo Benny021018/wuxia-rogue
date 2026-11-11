@@ -11,6 +11,10 @@ signal enemies_changed(count: int)
 
 const ENEMY := preload("res://scripts/enemy.gd")
 const HAZARD := preload("res://scripts/hazard.gd")
+const GATE_MODEL := preload("res://assets/models/gate.glb")
+const PALISADE_MODEL := preload("res://assets/models/palisade.glb")
+const PLATFORM_MODEL := preload("res://assets/models/platform.glb")
+const SHRINE_MODEL := preload("res://assets/models/shrine.glb")
 const CORRIDOR := 14.0
 const WALL_H := 4.0
 const SPAWN_RATE := 0.12
@@ -102,12 +106,21 @@ func _apply_env() -> void:
 	e.fog_enabled = true
 	e.fog_light_color = th.fog
 	e.fog_density = 0.018
+	if map_id == "greenwood":
+		e.background_mode = Environment.BG_SKY
+		e.sky = Sky.new()
+		var mountain_sky := ShaderMaterial.new()
+		mountain_sky.shader = preload("res://assets/greenwood/ridges.gdshader")
+		e.sky.sky_material = mountain_sky
+		e.fog_light_color = Color(0.38, 0.46, 0.43)
+		e.fog_density = 0.01
+		e.fog_sky_affect = 0.12
 	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	e.glow_enabled = true
 	env.environment = e
 
 
-func _static_box(size: Vector3, pos: Vector3, color: Color, parent: Node = null) -> StaticBody3D:
+func _static_box(size: Vector3, pos: Vector3, color: Color, model: PackedScene = null) -> StaticBody3D:
 	var sb := StaticBody3D.new()
 	sb.collision_layer = 1
 	var col := CollisionShape3D.new()
@@ -115,8 +128,18 @@ func _static_box(size: Vector3, pos: Vector3, color: Color, parent: Node = null)
 	shape.size = size
 	col.shape = shape
 	sb.add_child(col)
-	sb.add_child(FX.box(size, color))
-	(parent if parent else level_root).add_child(sb)
+	if model:
+		var art: Node3D = model.instantiate()
+		art.position.y = -size.y / 2.0
+		if model == GATE_MODEL:
+			art.rotation.y = PI / 2.0
+		sb.add_child(art)
+	else:
+		var box := FX.box(size, color)
+		if map_id == "greenwood":
+			box.material_override = preload("res://assets/greenwood/surfaces.tres")
+		sb.add_child(box)
+	level_root.add_child(sb)
 	sb.position = pos
 	return sb
 
@@ -162,8 +185,9 @@ func _build_room(stage: int, lay: Dictionary, x0: float, theme: Dictionary) -> D
 	for wx in [x0, x0 + w]:
 		_static_box(Vector3(0.5, WALL_H, seg), Vector3(wx, WALL_H / 2.0, -3.0 - seg / 2.0), theme.wall)
 		_static_box(Vector3(0.5, WALL_H, seg), Vector3(wx, WALL_H / 2.0, 3.0 + seg / 2.0), theme.wall)
-	var gate_in := _static_box(Vector3(0.6, WALL_H, 6.0), Vector3(x0, WALL_H / 2.0, 0), Color(0.75, 0.2, 0.15))
-	var gate_out := _static_box(Vector3(0.6, WALL_H, 6.0), Vector3(x0 + w, WALL_H / 2.0, 0), Color(0.75, 0.2, 0.15))
+	var gate_art := GATE_MODEL if map_id == "greenwood" else null
+	var gate_in := _static_box(Vector3(0.6, WALL_H, 6.0), Vector3(x0, WALL_H / 2.0, 0), Color(0.75, 0.2, 0.15), gate_art)
+	var gate_out := _static_box(Vector3(0.6, WALL_H, 6.0), Vector3(x0 + w, WALL_H / 2.0, 0), Color(0.75, 0.2, 0.15), gate_art)
 	_set_gate(gate_in, false)
 	var r := {"stage": stage, "x0": x0, "w": w, "h": h, "gate_in": gate_in, "gate_out": gate_out,
 		"spawns": {}, "elites": [], "boss": Vector3.ZERO, "shrine": Vector3(x0 + w - 4.0, 0, 4.0)}
@@ -194,9 +218,11 @@ func _build_room(stage: int, lay: Dictionary, x0: float, theme: Dictionary) -> D
 		match k:
 			"cover":
 				var tall := 1.2 if (ew < 3.0 and eh < 3.0) or label in ["棺", "板車", "草堆", "香爐"] else 3.0
-				_static_box(Vector3(ew, tall, eh), c + Vector3(0, tall / 2.0, 0), theme.wall.lightened(0.15))
+				var cover_art := PALISADE_MODEL if map_id == "greenwood" and label == "拒馬" else null
+				_static_box(Vector3(ew, tall, eh), c + Vector3(0, tall / 2.0, 0), theme.wall.lightened(0.15), cover_art)
 			"high":
-				_static_box(Vector3(ew, 1.0, eh), c + Vector3(0, 0.5, 0), Color(0.55, 0.47, 0.33))
+				var platform_art := PLATFORM_MODEL if map_id == "greenwood" and label == "箭樓" else null
+				_static_box(Vector3(ew, 1.0, eh), c + Vector3(0, 0.5, 0), Color(0.55, 0.47, 0.33), platform_art)
 			"round":
 				var big := maxf(ew, eh) >= 8.0
 				_static_cyl(minf(ew, eh) / 2.0, 8.0 if big else 1.4, c, Color(0.35, 0.3, 0.22) if big else theme.wall.lightened(0.1))
@@ -391,9 +417,10 @@ func _clear_zone() -> void:
 		shrine_node = Node3D.new()
 		add_child(shrine_node)
 		shrine_node.global_position = r.shrine
-		var pillar := FX.box(Vector3(1.2, 2.6, 0.5), Color(0.25, 0.6, 0.48), 1.2)
-		pillar.position.y = 1.3
+		var pillar: Node3D = SHRINE_MODEL.instantiate()
 		shrine_node.add_child(pillar)
+		pillar.global_position.y = 0.0
+		pillar.rotation.y = PI / 2.0
 		var lab := FX.label3d("悟道碑\n［E］參悟", 64, Color(0.7, 1, 0.85))
 		lab.position.y = 3.3
 		shrine_node.add_child(lab)

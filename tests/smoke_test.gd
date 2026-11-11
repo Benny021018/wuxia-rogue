@@ -35,6 +35,24 @@ func _run_character(cid: String) -> void:
 	var world = main.world
 	var player = main.player
 	player.invuln_t = 1.0e9
+	if cid == Data.char_order[0]:
+		var gate = world.rooms[0].gate_out
+		var meshes := (gate as Node).find_children("*", "MeshInstance3D", true, false)
+		_check(meshes.size() == 1, "山寨門只有一個可見模型")
+		if meshes.size() == 1:
+			var gate_mesh: MeshInstance3D = meshes[0]
+			var bounds := gate_mesh.global_transform * gate_mesh.get_aabb()
+			_check(bounds.size.distance_to(Vector3(0.6, 4, 6)) < 0.03 and absf(bounds.position.y) < 0.01, "寨門與門洞對齊")
+		for id in ["H01", "H02", "H03"]:
+			var enemy = world.spawn_enemy(id, Vector3(-10, 0, 0), false)
+			var parts: Array = enemy._visual.find_children("*", "MeshInstance3D", true, false)
+			_check(parts.size() == 1 and enemy._body_mat != null, "%s 模型與攻擊預警材質" % id)
+			if parts.size() == 1:
+				var part: MeshInstance3D = parts[0]
+				var bounds := part.global_transform * part.get_aabb()
+				_check(absf(bounds.size.y - 1.8) < 0.02 and absf(bounds.position.y) < 0.02, "%s 站姿與膠囊對齊" % id)
+			enemy.queue_free()
+		await _frames(2)
 	var wids: Array = Data.weapons.keys()
 	for mi in Data.map_order.size():
 		if mi > 0:

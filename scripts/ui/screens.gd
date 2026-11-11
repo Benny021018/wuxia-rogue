@@ -28,8 +28,12 @@ func hide_all() -> void:
 # ------------------------------------------------------------------ 主選單
 func show_main() -> void:
 	_clear()
-	var bg := ColorRect.new()
-	bg.color = Color(0.05, 0.05, 0.06)
+	var bg := TextureRect.new()
+	bg.texture = preload("res://assets/ui/greenwood_pass.webp")
+	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	bg.modulate = Color(0.58, 0.62, 0.64)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 	var v := UIKit.center_box(self, 700)
@@ -87,6 +91,13 @@ func _char_card(cid: String) -> Control:
 	pc.custom_minimum_size = Vector2(420, 520)
 	var v := VBoxContainer.new()
 	pc.add_child(v)
+	var portrait := UIKit.portrait(cid, Vector2(0, 250))
+	# 橫幅從頭頂取景，保留束髮與五官；HUD 仍使用完整方形立繪。
+	var crop := AtlasTexture.new()
+	crop.atlas = portrait.texture
+	crop.region = Rect2(0, 0, crop.atlas.get_width(), crop.atlas.get_height() * 0.69)
+	portrait.texture = crop
+	v.add_child(portrait)
 	v.add_child(UIKit.label(c.name_zh, 40, UIKit.PAPER))
 	v.add_child(UIKit.label("%s・出身 %s" % [c.title, Data.sects[c.origin_sect].name_zh], 19, UIKit.VERM.lightened(0.3)))
 	v.add_child(UIKit.label(c.bio, 17, UIKit.MUTED))

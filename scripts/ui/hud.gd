@@ -30,10 +30,19 @@ func _ready() -> void:
 	UIKit.place(cross, 0.5, 0.5, -20, -22, 40, 40)
 	add_child(cross)
 	# 左下：生命、修為
+	var vitals_back := Panel.new()
+	UIKit.place(vitals_back, 0, 1, 16, -128, 556, 124)
+	vitals_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(vitals_back)
 	var bl := VBoxContainer.new()
-	UIKit.place(bl, 0.0, 1.0, 30, -200, 420, 190)
+	UIKit.place(bl, 0.0, 1.0, 134, -200, 420, 190)
 	bl.alignment = BoxContainer.ALIGNMENT_END
 	add_child(bl)
+	var portrait_frame := PanelContainer.new()
+	UIKit.place(portrait_frame, 0, 1, 20, -116, 104, 104)
+	portrait_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(portrait_frame)
+	portrait_frame.add_child(UIKit.portrait(Game.char_id, Vector2(70, 70)))
 	realm_text = UIKit.label("", 22, UIKit.GOLD)
 	bl.add_child(realm_text)
 	var hb := Control.new()
@@ -69,6 +78,9 @@ func _ready() -> void:
 	tr.add_child(enemy_text)
 	martial_text = UIKit.label("", 15, UIKit.MUTED, HORIZONTAL_ALIGNMENT_RIGHT)
 	tr.add_child(martial_text)
+	for field in [weapon_text, zone_text, enemy_text, martial_text]:
+		field.add_theme_constant_override("outline_size", 4)
+		field.add_theme_color_override("font_outline_color", Color(0.05, 0.05, 0.05, 0.9))
 	# 上方：首領血條
 	boss_box = VBoxContainer.new()
 	UIKit.place(boss_box, 0.5, 0.0, -400, 24, 800, 64)
@@ -158,7 +170,8 @@ func set_hint(t: String) -> void:
 	hint.text = t
 
 
-func show_banner(title: String, sub := "") -> void:
+func show_banner(title: String, sub := "", color := UIKit.PAPER) -> void:
+	banner.add_theme_color_override("font_color", color)
 	banner.text = title
 	sub_banner.text = sub
 	for l in [banner, sub_banner]:

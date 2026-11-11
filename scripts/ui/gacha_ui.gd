@@ -78,8 +78,19 @@ func _card(c: Dictionary) -> Control:
 	pc.add_theme_stylebox_override("panel", sb)
 	var v := VBoxContainer.new()
 	pc.add_child(v)
-	v.add_child(UIKit.label(d.rarity_name, 18, Data.rarity_color(c.rarity)))
-	v.add_child(UIKit.label(d.title, 34, UIKit.PAPER))
+	var header := HBoxContainer.new()
+	v.add_child(header)
+	var icon := TextureRect.new()
+	icon.texture = preload("res://assets/ui/weapon.webp") if c.kind == "W" else preload("res://assets/ui/manual.webp")
+	icon.custom_minimum_size = Vector2(80, 80)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	header.add_child(icon)
+	var heading := VBoxContainer.new()
+	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(heading)
+	heading.add_child(UIKit.label(d.rarity_name, 18, Data.rarity_color(c.rarity)))
+	heading.add_child(UIKit.label(d.title, 32, UIKit.PAPER))
 	v.add_child(UIKit.label(d.sub, 17, UIKit.MUTED))
 	v.add_child(UIKit.label(d.level, 20, UIKit.GOLD))
 	var body := UIKit.label(d.body, 19, UIKit.PAPER)

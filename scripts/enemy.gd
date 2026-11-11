@@ -3,6 +3,11 @@ extends CharacterBody3D
 
 const PROJ := preload("res://scripts/projectile.gd")
 const HAZARD := preload("res://scripts/hazard.gd")
+const BANDIT_MODELS := {
+	"H01": preload("res://assets/models/bandit.glb"),
+	"H02": preload("res://assets/models/archer.glb"),
+	"H03": preload("res://assets/models/shield.glb"),
+}
 const GRAVITY := 18.0
 const MAP_COLORS := {
 	"greenwood": Color(0.55, 0.4, 0.28), "darkmoon": Color(0.16, 0.16, 0.2),
@@ -27,8 +32,10 @@ var summoner = null           # 召喚者（狼王判定狼群是否存活）
 var summons: Array = []
 
 var _visual: Node3D
-var _body_mat: StandardMaterial3D
+var _body_mat: BaseMaterial3D
 var _label: Label3D
+var _stride := 0.0
+var _attack_motion: Tween
 var _atk_cd := 0.8
 var _windup := 0.0
 var _skill_cd := 3.0
@@ -90,6 +97,30 @@ func _ready() -> void:
 	add_child(col)
 	_visual = Node3D.new()
 	add_child(_visual)
+	if BANDIT_MODELS.has(eid):
+		var model: Node3D = BANDIT_MODELS[eid].instantiate()
+		_visual.add_child(model)
+		# 每個敵人各自控制蓄力發光，避免整群共用同一材質。
+		var mesh: MeshInstance3D = model.find_children("*", "MeshInstance3D", true, false)[0]
+		_body_mat = mesh.get_active_material(0).duplicate()
+		mesh.set_surface_override_material(0, _body_mat)
+	else:
+		_build_graybox()
+	if rank != "minion":
+		_label = FX.label3d(row.name_zh, 64, Color(1, 0.85, 0.6) if rank == "elite" else Color(1, 0.4, 0.3))
+		_label.position.y = 2.2 * size + 0.3
+		add_child(_label)
+	if eid == "H06":      # 刺客：隱身
+		_revealed = false
+		_visual.visible = false
+	if _flying:
+		position.y = 3.0
+	_skill_cd = randf_range(1.5, 4.0)
+	if rank == "boss":
+		world.boss_spawned(self)
+
+
+func _build_graybox() -> void:
 	var base_col: Color = MAP_COLORS.get(row.map_id, Color.GRAY)
 	var tint := float(hash(eid) % 100) / 100.0 * 0.25 - 0.12
 	base_col = base_col.lightened(tint) if tint > 0.0 else base_col.darkened(-tint)
@@ -116,26 +147,10 @@ func _ready() -> void:
 	var eyes := FX.box(Vector3(0.4 * size, 0.08 * size, 0.08), Color(0.9, 0.95, 0.4) if map_is("corpse_sect") else Color(1, 0.2, 0.15), 3.0)
 	eyes.position = Vector3(0, (0.55 if _flying else 1.45) * size, -0.36 * size)
 	_visual.add_child(eyes)
-	if eid == "H03":      # 刀盾手：前方的盾
-		var sh := FX.box(Vector3(1.0, 1.3, 0.12), Color(0.55, 0.5, 0.4))
-		sh.position = Vector3(0, 0.9, -0.5)
-		_visual.add_child(sh)
 	if eid == "Z06":      # 鬼面屍王：背後的罩門
 		var core := FX.sphere(0.35, Color(0.3, 1.0, 0.4), 3.0)
 		core.position = Vector3(0, 1.6 * size * 0.5 + 0.6, 0.45 * size)
 		_visual.add_child(core)
-	if rank != "minion":
-		_label = FX.label3d(row.name_zh, 64, Color(1, 0.85, 0.6) if rank == "elite" else Color(1, 0.4, 0.3))
-		_label.position.y = 2.2 * size + 0.3
-		add_child(_label)
-	if eid == "H06":      # 刺客：隱身
-		_revealed = false
-		_visual.visible = false
-	if _flying:
-		position.y = 3.0
-	_skill_cd = randf_range(1.5, 4.0)
-	if rank == "boss":
-		world.boss_spawned(self)
 
 
 func map_is(m: String) -> bool:
@@ -164,6 +179,10 @@ func _physics_process(delta: float) -> void:
 		if dist > 0.05:
 			rotation.y = atan2(-flat.x, -flat.z)
 	_behaviour(delta, flat, dist)
+	if BANDIT_MODELS.has(eid):
+		var stride_speed := Vector2(velocity.x, velocity.z).length()
+		_stride += delta * stride_speed * 4.0
+		_visual.position.y = absf(sin(_stride)) * minf(stride_speed, 1.0) * 0.035
 	_apply_gravity(delta)
 	move_and_slide()
 
@@ -215,6 +234,8 @@ func _melee(delta: float, dist: float, mult := 1.0) -> void:
 		_windup -= delta
 		if _windup <= 0.0:
 			_body_mat.emission_enabled = false
+			if BANDIT_MODELS.has(eid):
+				_pose_attack(Vector3(-0.14, -0.24, 0), 0.08, true)
 			if dist <= reach + 0.8 + hit_radius:
 				_hit_player(dmg * mult)
 		return
@@ -223,6 +244,17 @@ func _melee(delta: float, dist: float, mult := 1.0) -> void:
 		_atk_cd = 1.3
 		_body_mat.emission_enabled = true
 		_body_mat.emission = Color(1, 0.3, 0.2)
+		if BANDIT_MODELS.has(eid):
+			_pose_attack(Vector3(0.10, 0.24, 0), _windup)
+
+
+func _pose_attack(pose: Vector3, duration: float, recover := false) -> void:
+	if _attack_motion:
+		_attack_motion.kill()
+	_attack_motion = create_tween()
+	_attack_motion.tween_property(_visual, "rotation", pose, duration)
+	if recover:
+		_attack_motion.tween_property(_visual, "rotation", Vector3.ZERO, 0.20)
 
 
 func _hit_player(amount: float) -> void:
@@ -319,9 +351,12 @@ func _behaviour(delta: float, flat: Vector3, dist: float) -> void:
 			_melee(delta, dist)
 		"H02":
 			_chase(flat, dist, 10.0)
+			_body_mat.emission_enabled = dist < 22.0 and _skill_cd < 0.3
+			_body_mat.emission = Color(0.85, 0.58, 0.18)
 			if _skill_cd <= 0.0 and dist < 22.0:
 				_skill_cd = 2.0
 				_shoot(24.0, dmg, Color(0.9, 0.8, 0.5))
+				_pose_attack(Vector3(0.08, 0.10, 0), 0.07, true)
 		"H04":
 			_chase(flat, dist, 8.0)
 			if _skill_cd <= 0.0 and dist < 18.0:
@@ -620,6 +655,7 @@ func take_hit(amount: float, from_pos: Vector3, crit: bool) -> float:
 		"H03":
 			if front:
 				dmg_in *= 0.3
+				FX.flash(world, hit_center() + facing * 0.48, 0.15, Color(1, 0.78, 0.32), 0.12)
 				if randf() < 0.3:
 					FX.float_text(world, hit_center() + Vector3(0, 0.8, 0), "格擋", Color(0.8, 0.8, 0.8), 28)
 		"Z04":

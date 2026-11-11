@@ -65,6 +65,16 @@ static func label(text: String, size := 20, color := PAPER, align := HORIZONTAL_
 	return l
 
 
+static func portrait(cid: String, minimum_size: Vector2) -> TextureRect:
+	var frame := TextureRect.new()
+	frame.texture = load("res://assets/portraits/%s.webp" % cid)
+	frame.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	frame.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	frame.custom_minimum_size = minimum_size
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return frame
+
+
 static func button(text: String, cb: Callable, size := 22) -> Button:
 	var b := Button.new()
 	b.text = text
