@@ -322,11 +322,13 @@ func _melee(delta: float, dist: float, mult := 1.0) -> void:
 		_windup -= delta
 		if _windup <= 0.0:
 			_body_mat.emission_enabled = false
+			var impact_reach := reach + 0.8 + hit_radius
+			FX.attack_trail(world,hit_center(),_swing_dir,impact_reach,180,0,Color("#ffa071"),.20)
 			if _anim:
-				FX.play(world, hit_center() - global_basis.z * 0.7, &"sword-slash", 1.1, 0.20)
+				FX.play(world,hit_center()+_swing_dir*impact_reach*.7,&"sword-slash",impact_reach*.8,.20)
 			var toward: Vector3 = player.global_position-global_position
 			toward.y = 0
-			if dist <= reach + 0.8 + hit_radius and _swing_dir.dot(toward.normalized()) >= 0 and _clear_shot():
+			if dist <= impact_reach and _swing_dir.dot(toward.normalized()) >= 0 and _clear_shot():
 				_hit_player(dmg * mult)
 		return
 	if _atk_cd <= 0.0 and dist <= reach + 0.5 + hit_radius and _clear_shot():
@@ -427,7 +429,7 @@ func _aoe_after(center: Vector3, r: float, delay: float, amount: float) -> void:
 	if dead or not is_instance_valid(player):
 		return
 	var d := Vector2(player.global_position.x - center.x, player.global_position.z - center.z).length()
-	FX.play(world, center + Vector3(0, 0.3, 0), &"ground-slam", r * 2.0, 0.3, Color(1, 0.4, 0.2))
+	FX.impact_wave(world,center,r,.3,Color(1,.4,.2))
 	if d <= r:
 		player.take_damage(amount, self)
 
@@ -543,9 +545,10 @@ func _b_hopper(delta: float, flat: Vector3, dist: float) -> void:
 			if is_on_floor() and velocity.y <= 0.0:
 				_state = ""
 				_skill_cd = 3.0
-				if dist < 2.0 + hit_radius:
+				var impact_radius := 2.0 + hit_radius
+				if dist < impact_radius:
 					_hit_player(dmg)
-				FX.play(world, global_position, &"ground-slam", 2.8, 0.2, Color(0.6, 0.6, 0.4))
+				FX.impact_wave(world, global_position, impact_radius, 0.2, Color(0.6, 0.6, 0.4))
 
 
 func _b_boar(delta: float, flat: Vector3, dist: float) -> void:
@@ -634,9 +637,10 @@ func _b_tiger(delta: float, flat: Vector3, dist: float) -> void:
 			if is_on_floor() and velocity.y <= 0.0:
 				_state = ""
 				_skill_cd = 6.0
-				if dist < 2.5 + hit_radius:
+				var impact_radius := 2.5 + hit_radius
+				if dist < impact_radius:
 					_hit_player(dmg * 1.2)
-				FX.play(world, global_position, &"ground-slam", 4.2, 0.2, Color(1, 0.7, 0.3))
+				FX.impact_wave(world, global_position, impact_radius, 0.2, Color(1, 0.7, 0.3))
 
 
 func _b_blade(delta: float, flat: Vector3, dist: float) -> void:

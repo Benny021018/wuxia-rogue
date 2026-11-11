@@ -1,6 +1,8 @@
 extends CharacterBody3D
 
 const MELEE_EFFECTS := {"劍": &"thrust", "槍": &"thrust", "棍": &"spin-slash", "鞭": &"whip-crack", "鉤": &"double-slash", "拳": &"blunt-hit", "巨劍": &"heavy-cleave"}
+const SWEEP_DEGREES := {"刀": 120.0, "棍": 360.0, "拳": 60.0, "鉤": 90.0, "巨劍": 140.0, "扇": 50.0, "鞭": 360.0}
+const THRUST_HALF_WIDTH := 0.9
 ## 第一人稱玩家：移動、雙武器攻擊、受傷流程，以及武學／門派／境界的戰鬥效果
 
 signal hp_changed
@@ -283,8 +285,13 @@ func _attack(slot: int) -> void:
 					deal(e, dmg, false)
 		var swing: StringName = MELEE_EFFECTS.get(row["class"], &"sword-slash")
 		var side := -1.0 if slot == 0 else 1.0
-		var strike := origin + fwd * minf(range_m, 1.7) + cam.global_basis.x * side * 0.32 - cam.global_basis.y * 0.18
-		FX.play(get_parent(), strike, swing, 1.3, minf(cooldowns[slot], 0.26), Color.WHITE, slot == 0)
+		var heading := Vector3(fwd.x,0,fwd.z).normalized()
+		var trail_center := origin - Vector3.UP * .62
+		var duration := clampf(cooldowns[slot],.14,.26)
+		var cone: float = SWEEP_DEGREES.get(row["class"],0.0)
+		FX.attack_trail(get_parent(),trail_center,heading,range_m,cone,THRUST_HALF_WIDTH,Color("#ffe6a3"),duration)
+		var strike := trail_center + heading * range_m * .82 + cam.global_basis.x * side * .12
+		FX.play(get_parent(), strike, swing, range_m * (.76 if cone == 0 else 1.12), duration, Color.WHITE, slot == 0)
 		# 劍氣縱橫：近戰與中距離武器射出劍氣
 		if Game.f("sword_qi_pct") > 0.0:
 			var n := 1 + int(Game.f("sword_qi_count"))
@@ -297,7 +304,7 @@ func _attack(slot: int) -> void:
 
 func _melee_targets(row: Dictionary, range_m: float, fwd: Vector3) -> Array:
 	var cls: String = row["class"]
-	var cone: float = {"刀": 120.0, "棍": 360.0, "拳": 60.0, "鉤": 90.0, "巨劍": 140.0, "扇": 50.0, "鞭": 360.0}.get(cls, 0.0)
+	var cone: float = SWEEP_DEGREES.get(cls, 0.0)
 	var line := cone == 0.0      # 劍、槍：直線穿刺
 	var flat_fwd := Vector3(fwd.x, 0, fwd.z).normalized()
 	var out: Array = []
@@ -314,7 +321,7 @@ func _melee_targets(row: Dictionary, range_m: float, fwd: Vector3) -> Array:
 		if line:
 			var along := flat.dot(flat_fwd)
 			var lateral := (flat - flat_fwd * along).length()
-			if along > -0.3 and lateral <= 0.9 + e.hit_radius:
+			if along > -0.3 and lateral <= THRUST_HALF_WIDTH + e.hit_radius:
 				out.append(e)
 		elif cone >= 360.0 or flat.length() < 0.8 or rad_to_deg(flat_fwd.angle_to(flat.normalized())) <= cone / 2.0:
 			out.append(e)
@@ -385,7 +392,7 @@ func _extra_hit(e, dmg: float, fwd: Vector3) -> void:
 
 
 func _aoe(center: Vector3, r: float, dmg: float, color: Color) -> void:
-	FX.play(get_parent(), center + Vector3(0, 0.5, 0), &"ground-slam", r * 2.0, 0.35, color)
+	FX.impact_wave(get_parent(),center,r,.35,color)
 	for e in _enemies_within(center, r):
 		deal(e, dmg, false)
 
