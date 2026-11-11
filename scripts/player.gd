@@ -18,6 +18,8 @@ var hp := 100.0
 var shield := 0.0
 var cam: Camera3D
 var weapon_models: Array = [null, null]
+var next_hand := 0
+var queued_press := [false,false]
 var cooldowns := [0.0, 0.0]
 var yaw := 0.0
 var pitch := 0.0
@@ -94,6 +96,8 @@ func refresh_weapon_models() -> void:
 			cam.add_child(view)
 			view.setup(w.id,i)
 			weapon_models[i] = view
+			queued_press[i] = false
+	_show_hands()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -134,11 +138,25 @@ func _physics_process(delta: float) -> void:
 	if global_position.y < -10.0:
 		global_position.y = 2.0
 		velocity = Vector3.ZERO
-	# 攻擊
-	for i in 2:
-		cooldowns[i] = maxf(0.0, cooldowns[i] - delta)
-		if input_enabled and Input.is_action_pressed("attack_%d" % (i + 1)) and cooldowns[i] <= 0.0 and Game.weapons[i] != null:
+	# 雙手武器借用另一隻手，按住雙鍵時輪流出招。
+	var priority := next_hand
+	for offset in 2:
+		var i := (priority+offset)%2
+		var action := "attack_%d" % (i+1)
+		cooldowns[i] = maxf(0.0,cooldowns[i]-delta)
+		queued_press[i] = input_enabled and Game.weapons[i]!=null and (queued_press[i] or Input.is_action_just_pressed(action))
+		if input_enabled and Game.weapons[i]!=null and cooldowns[i]<=0 and (queued_press[i] or Input.is_action_pressed(action)):
 			_attack(i)
+
+func _holding_both(view) -> bool:
+	return view != null and view.needs_support() and view.timeline != null and view.timeline.is_running()
+
+func _show_hands() -> void:
+	for i in 2:
+		var view = weapon_models[i]
+		if view:
+			view.visible = not _holding_both(weapon_models[1-i])
+
 
 
 # ------------------------------------------------------------------ 計時器與週期效果
@@ -242,6 +260,13 @@ func ref_hit() -> float:
 
 
 func _attack(slot: int) -> void:
+	refresh_weapon_models()
+	var view = weapon_models[slot]
+	var other = weapon_models[1-slot]
+	if _holding_both(other) or (view.needs_support() and other and other.timeline and other.timeline.is_running()):
+		return
+	next_hand = 1-slot
+	queued_press[slot] = false
 	var w = Game.weapons[slot]
 	var row: Dictionary = Data.weapons[w.id]
 	var atk_speed := Game.st("atk_speed_pct")
@@ -254,11 +279,12 @@ func _attack(slot: int) -> void:
 		cooldowns[slot] = 0.05
 	attack_count += 1
 	var dmg := float(row.dmg) * (1.0 + 0.15 * (int(w.lv) - 1))
-	refresh_weapon_models()
-	var view = weapon_models[slot]
 	view.attack(cooldowns[slot],int(row.hits),func(beat:int):
 		if is_instance_valid(view) and weapon_models[slot] == view and hp > 0:
 			_weapon_impact(slot,row,dmg,beat))
+	if view.needs_support():
+		_show_hands()
+		view.timeline.finished.connect(_show_hands,CONNECT_DEFERRED | CONNECT_ONE_SHOT)
 
 
 func _weapon_impact(slot: int, row: Dictionary, dmg: float, beat: int) -> void:

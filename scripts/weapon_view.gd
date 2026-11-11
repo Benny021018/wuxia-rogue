@@ -1,5 +1,6 @@
 extends Node3D
 ## 以握點為根的第一人稱動作。每個節拍回呼一次，左右手不共用 Tween。
+const LoadingHand := preload("res://scripts/loading_hand.gd")
 const Bow := preload("res://scripts/archer_bow.gd")
 const REST := {
 	"W001":Vector3(34,16,-13), "W002":Vector3(18,28,-20), "W003":Vector3(8,6,-12),
@@ -14,6 +15,9 @@ var hand: float
 var art: Node3D
 var string: Array[MeshInstance3D] = []
 var arrow: Node3D
+var grip_sleeve: MeshInstance3D
+var grip_wrist: Vector3
+var loader: LoadingHand
 var lash: MeshInstance3D
 var mate: Node3D
 var timeline: Tween
@@ -62,22 +66,26 @@ func setup(wid: String, slot: int) -> void:
 			var strand := Bow.rod(.003,.003,Color("#eadbb9"))
 			add_child(strand)
 			string.append(strand)
+	if needs_support():
+		loader = LoadingHand.new()
+		add_child(loader)
+		loader.setup(hand)
 		arrow = Bow.make_arrow()
 		add_child(arrow)
-		arrow.scale = Vector3.ONE*.76
+		arrow.scale = Vector3.ONE*(.76 if id=="W007" else .48)
 	if id == "W201":
 		mate = packed.instantiate()
 		art.add_child(mate)
 		mate.position = Vector3(-.10*hand,.035,-.045)
 		mate.rotation_degrees = Vector3(3,-14*hand,12*hand)
 	_pose(Vector3.ZERO,Vector3.ZERO)
-	_string_pose(0,true)
+	if loader:
+		_rest_ammo()
 
 func _add_grip() -> void:
-	var wrist := Vector3(.020*hand,-.055,.06)
-	var cuff := Bow.rod(.062,.051,Color("#343242"))
-	add_child(cuff)
-	Bow.span(cuff,wrist+Vector3(.07*hand,-.12,.22),wrist)
+	grip_wrist = Vector3(.020*hand,-.055,.06)
+	grip_sleeve = Bow.rod(.068,.051,Color("#343242"))
+	add_child(grip_sleeve)
 	if id in ["W003","W103","W203"]:
 		return
 	var glove := FX.sphere(.055,Color("#684a38"))
@@ -90,6 +98,11 @@ func _add_grip() -> void:
 		var z := -.032+j*.024
 		Bow.span(wrap,Vector3(-.033*hand,-.01,z),Vector3(.021*hand,.024,z+.004))
 
+func _process(_delta: float) -> void:
+	if grip_sleeve and is_visible_in_tree():
+		var elbow := get_parent_node_3d().to_global(Vector3(hand*.40,-.43,-.19))
+		Bow.span(grip_sleeve,to_local(elbow),grip_wrist)
+
 func launch_position() -> Vector3:
 	if arrow:
 		return arrow.to_global(Vector3.FORWARD*Bow.LENGTH)
@@ -100,14 +113,92 @@ func _pose(deg: Vector3, offset: Vector3) -> void:
 	rotation_degrees = Vector3(r.x,r.y*hand,r.z*hand)
 	position = home + Vector3(offset.x*hand,offset.y,offset.z)
 
-func _string_pose(draw: float, loaded: bool) -> void:
-	if arrow == null:
-		return
-	var tail := (top+bottom)*.5 + Vector3(0,0,.065 + draw*.29)
-	Bow.span(string[0],top,tail)
-	Bow.span(string[1],bottom,tail)
-	arrow.position = tail
-	arrow.visible = loaded
+func needs_support() -> bool:
+	return id in ["W007","W303"]
+
+func _tail(draw: float) -> Vector3:
+	if id == "W303":
+		return Vector3(0,.052,.11)
+	return (top+bottom)*.5 + Vector3(0,0,.065+draw*.29)
+
+func _bend(draw: float) -> void:
+	if not string.is_empty():
+		Bow.span(string[0],top,_tail(draw))
+		Bow.span(string[1],bottom,_tail(draw))
+
+func _rest_ammo() -> void:
+	_bend(0)
+	arrow.hide()
+	loader.place(Vector3.ZERO,Vector3.ZERO,false)
+
+func _hand_at(tail: Vector3, carrying: bool, tilt := 0.0) -> void:
+	var camera := get_parent_node_3d()
+	var elbow := to_local(camera.to_global(Vector3(-hand*.42,-.41,-.22)))
+	loader.place(tail,elbow,true)
+	arrow.visible = carrying
+	if carrying:
+		arrow.position = tail
+		arrow.rotation_degrees = Vector3(tilt,tilt*.55*hand,0)
+
+func _load_pose(progress: float) -> void:
+	# 箭由畫面另一側送入，落槽後弩手撤手，弓手繼續扣弦。
+	var pickup := _tail(0)+Vector3(-hand*.46,-.19,.09)
+	var guide := _tail(0)+Vector3(-hand*.16,.075,.015)
+	var dock := _tail(0)
+	if progress < .65:
+		var blend := smoothstep(0,.65,progress)
+		_hand_at(pickup.lerp(guide,blend),true,lerpf(24,9,blend))
+	else:
+		var blend := smoothstep(.65,1,progress)
+		_hand_at(guide.lerp(dock,blend),true,lerpf(9,0,blend))
+
+func _draw_pose(draw: float) -> void:
+	_bend(draw)
+	_hand_at(_tail(draw),true)
+
+func _withdraw(progress: float) -> void:
+	var grasp := _tail(1 if id=="W007" else 0)
+	var away := Vector3(-hand*.35,-.16,.10)
+	var camera := get_parent_node_3d()
+	var elbow := to_local(camera.to_global(Vector3(-hand*.42,-.41,-.22)))
+	loader.place(grasp+away*progress,elbow,progress<.99)
+
+func _fire(impact: Callable, beat: int) -> void:
+	impact.call(beat)
+	arrow.hide()
+
+func _ranged_sequence(t: Tween, seconds: float, hits: int, impact: Callable) -> void:
+	_rest_ammo()
+	if id=="W007":
+		_key(t,Vector3(-3,5,7),Vector3(-.12,.04,-.05),seconds*.30)
+		t.parallel().tween_method(_load_pose,0.0,1.0,seconds*.30)
+		t.tween_method(_draw_pose,0.0,1.0,seconds*.32)
+		t.tween_callback(_fire.bind(impact,0))
+		_key(t,Vector3(4,7,11),Vector3(-.10,.05,-.02),seconds*.065)
+		t.parallel().tween_method(_bend,1.0,0.0,seconds*.045)
+		t.parallel().tween_method(_withdraw,0.0,.32,seconds*.065)
+		_key(t,Vector3.ZERO,Vector3.ZERO,seconds*.315)
+		t.parallel().tween_method(_withdraw,.32,1.0,seconds*.20)
+	else:
+		# 每一矢都有送箭、鬆手、發射與後座四個可見節點。
+		var cycle := seconds/maxi(hits,1)
+		for beat in hits:
+			_key(t,Vector3(-8,6,-12),Vector3(-.08,.035,-.035),cycle*.60)
+			t.parallel().tween_method(_load_pose,0.0,1.0,cycle*.60)
+			t.tween_method(_withdraw,0.0,1.0,cycle*.17)
+			t.tween_callback(_fire.bind(impact,beat))
+			_key(t,Vector3(9,5,1),Vector3(-.045,.045,.038),cycle*.12)
+			_key(t,Vector3.ZERO,Vector3.ZERO,cycle*.11)
+	t.tween_callback(_rest_ammo)
+
+func _saber_sequence(t: Tween, seconds: float, impact: Callable) -> void:
+	# 起刀貼近同側肩膀，刀刃穿過視線時命中，手腕繼續送到對側。
+	_key(t,Vector3(18,-53,-27),Vector3(.085,.09,-.06),seconds*.23)
+	_key(t,Vector3(-9,19,22),Vector3(-.27,.09,-.15),seconds*.19)
+	t.tween_callback(impact.bind(0))
+	_key(t,Vector3(-40,69,61),Vector3(-.51,-.055,-.10),seconds*.21)
+	_key(t,Vector3(-24,54,45),Vector3(-.43,-.095,-.065),seconds*.10)
+	_key(t,Vector3.ZERO,Vector3.ZERO,seconds*.27)
 
 func _key(t: Tween, r: Vector3, p: Vector3, sec: float) -> void:
 	var rr: Vector3 = REST[id]+r
@@ -122,6 +213,15 @@ func attack(interval: float, hits: int, impact: Callable) -> void:
 	alternating = not alternating
 	art.visible = true
 	var seconds := minf(interval,.85)
+	var t := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+	timeline = t
+	t.set_trans(Tween.TRANS_SINE)
+	if needs_support():
+		_ranged_sequence(t,seconds,hits,impact)
+		return
+	if id=="W001":
+		_saber_sequence(t,seconds,impact)
+		return
 	var first: float = CONTACT[id]
 	var wind := Vector3(16,-28,-18)
 	var end := Vector3(-24,35,32)
@@ -149,30 +249,18 @@ func attack(interval: float, hits: int, impact: Callable) -> void:
 			wind = Vector3(18,-19,-35)
 			end = Vector3(-32,40,57)
 			thrust = Vector3(-.15,.04,-.17)
-		"W007":
-			wind = Vector3(-3,6,6)
-			end = Vector3(4,8,13)
-			prep = Vector3(-.11,.04,-.09)
-			thrust = prep + Vector3(.015,.015,.05)
-		"W103","W203","W303":
+		"W103","W203":
 			wind = Vector3(-6,7,0)
 			end = Vector3(9,7,-4)
 			prep = Vector3(-.08,.04,-.08)
 			thrust = prep + Vector3(.01,.02,.06)
-	var t := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	timeline = t
-	t.set_trans(Tween.TRANS_SINE)
 	_key(t,wind,prep,seconds*first*.68)
-	if arrow:
-		t.parallel().tween_method(func(v:float): _string_pose(v,true),0.0,1.0,seconds*first*.68)
 	_key(t,end,thrust,seconds*first*.32)
 	if lash:
 		t.parallel().tween_method(func(v:float): lash.set_blend_shape_value(0,v),0.0,1.0,seconds*first*.32)
 	if mate:
 		t.parallel().tween_property(mate,"rotation_degrees:y",32*hand,seconds*first*.32)
 	t.tween_callback(impact.bind(0))
-	if arrow:
-		t.tween_callback(_string_pose.bind(0,false))
 	if id=="W006":
 		t.tween_callback(art.hide)
 	# 針匣一次齊射，其餘多段武器逐拍回鉤、前刺或回彈。
@@ -191,4 +279,3 @@ func attack(interval: float, hits: int, impact: Callable) -> void:
 	if mate:
 		t.parallel().tween_property(mate,"rotation_degrees:y",-14*hand,recover)
 	t.tween_callback(art.show)
-	t.tween_callback(_string_pose.bind(0,true))

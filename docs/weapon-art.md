@@ -1,10 +1,10 @@
 # 第一人稱武器：模型與出招
 
-17 件模型分別由 Tripo Studio 生成。遊戲版在 Blender 減面、縮貼圖並以握點為原點重新定位；紅纓槍另補槍桿，九節鞭另加 Lash 形變。第一人稱動作在 Godot 播放，左右手各有自己的時間軸。攻擊間隔與每輪總段數沿用 weapons.csv，傷害、刀光與發射在對應動作節拍觸發。多段武器首拍觸發單輪附加效果。
+17 件模型分別由 Tripo Studio 生成。遊戲版在 Blender 減面、縮貼圖並以握點為原點重新定位；紅纓槍另補槍桿，九節鞭另加 Lash 形變。第一人稱動作在 Godot 播放，左右手各有自己的時間軸。竹弓與天機弩上箭時會借用另一手，雙鍵按住時輪流出招。攻擊間隔與每輪總段數沿用 weapons.csv，傷害、刀光與發射在對應動作節拍觸發。多段武器首拍觸發單輪附加效果。
 
 [全部武器實拍](previews/weapon-set.jpg) · [四種出招動畫](previews/weapon-attacks.gif)
 
-- [鐵刀（W001，Tripo 原稿）](https://studio.tripo3d.ai/zh/workspace/generate/c956c7b4-182b-4272-b6ca-cc9d9b8a06c6)：側提斜斬、刀背回收。
+- [鐵刀（W001，Tripo 原稿）](https://studio.tripo3d.ai/zh/workspace/generate/c956c7b4-182b-4272-b6ca-cc9d9b8a06c6)：同側肩上起刀、過準星斜斬、送到對側後回收。
 - [齊眉棍（W002，Tripo 原稿）](https://studio.tripo3d.ai/zh/workspace/generate/a9be4ff8-43a2-4604-966e-a7b848dd96f2)：轉腕蓄勢、平棍橫掃。
 - [鐵拳套（W003，Tripo 原稿）](https://studio.tripo3d.ai/zh/workspace/generate/2fc5d658-d7d0-4113-b245-b74cfc935970)：短縮拳、快速前送。
 - [青鋼劍（W004，Tripo 原稿）](https://studio.tripo3d.ai/zh/workspace/generate/54580822-6855-4689-9c75-2025827ce83c)：收劍、直刺回鋒。
@@ -20,4 +20,4 @@
 - [霸王槍（W204，Tripo 原稿）](https://studio.tripo3d.ai/zh/workspace/generate/100edc4f-a922-47bf-bf6f-39a9ea721999)：轉槍橫起與直起交替、槍尖前刺。
 - [開天巨劍（W301，Tripo 原稿）](https://studio.tripo3d.ai/zh/workspace/generate/42e15f3b-9b31-4c84-ade2-ae192616203f)：重劍高舉、下劈沉腕。
 - [驚鴻劍（W302，Tripo 原稿）](https://studio.tripo3d.ai/zh/workspace/generate/ae69b298-9e3d-4fea-a2a4-270670e1b41e)：接連兩次刺擊。
-- [天機弩（W303，Tripo 原稿）](https://studio.tripo3d.ai/zh/workspace/generate/d946d2c3-d6c0-4795-ae60-d0897c03b29d)：舉弩瞄準、三次回彈。
+- [天機弩（W303，Tripo 原稿）](https://studio.tripo3d.ai/zh/workspace/generate/d946d2c3-d6c0-4795-ae60-d0897c03b29d)：副手逐矢送箭入槽、撤手、三次發射與回彈。

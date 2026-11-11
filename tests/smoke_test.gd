@@ -263,10 +263,17 @@ func _check_weapon_views(player) -> void:
 	crossbow.attack(.8,3,func(i): events.append("弩%d"%i))
 	await _frames(8)
 	_check(events.is_empty() and bow.arrow.visible,"蓄力尚未放箭")
+	_check(bow.loader.visible and bow.loader.position.distance_to(bow.arrow.position)<.001,"搭箭時副手夾住箭尾")
 	Game.recompute()
 	_check(player.weapon_models[0] == bow,"刷新屬性保留進行中的動作")
 	await _frames(49)
 	_check(events.count("弓0")==1 and events.count("弩0")==1 and events.count("弩1")==1 and events.count("弩2")==1 and events.size()==4,"雙手節拍獨立且每次放箭只觸發一次")
-	_check(bow.arrow.visible and bow.position.is_equal_approx(bow.home),"收勢回到握位並重新搭箭")
+	_check(not bow.arrow.visible and not bow.loader.visible and bow.position.is_equal_approx(bow.home),"放箭後收臂回到握位")
+	player._attack(0)
+	var count: int = player.attack_count
+	player._attack(1)
+	_check(not crossbow.visible and player.attack_count==count,"副手搭箭時另一把武器收起並等待")
+	await _frames(62)
+	_check(crossbow.visible,"收勢後恢復另一把武器")
 	Game.weapons = old
 	Game.recompute()
