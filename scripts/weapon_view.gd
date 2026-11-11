@@ -23,11 +23,18 @@ var mate: Node3D
 var timeline: Tween
 var alternating := false
 var home: Vector3
+var attack_action: StringName
+var chain_ready := false
+var reverse_cut := false
+var saber_contact := false
+var flex_mesh: MeshInstance3D
+var limb_extent := 0.0
 var top := Vector3.ZERO
 var bottom := Vector3.ZERO
 
 func setup(wid: String, slot: int) -> void:
 	id = wid
+	attack_action = "attack_%d" % (slot+1)
 	hand = 1.0 if slot == 0 else -1.0
 	var packed := load("res://assets/models/weapons/%s.glb" % id) as PackedScene
 	art = packed.instantiate()
@@ -41,23 +48,27 @@ func setup(wid: String, slot: int) -> void:
 		art.scale = Vector3.ONE*.75
 		lash = art.find_children("*","MeshInstance3D",true,false)[0]
 	_add_grip()
-	if id == "W007":
+	if needs_support():
 		var mesh: MeshInstance3D = art.find_children("*","MeshInstance3D",true,false)[0]
+		flex_mesh = mesh
 		# 直接從最外端的頂點取平均，弓梢位置跟隨校正後的模型。
 		var vertices: PackedVector3Array = mesh.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
 		var high := -INF
 		var low := INF
 		for v in vertices:
-			var y: float = to_local(mesh.to_global(v)).y
+			var pt := to_local(mesh.to_global(v))
+			var y := pt.y if id=="W007" else pt.x
 			high = maxf(high,y)
 			low = minf(low,y)
+		limb_extent = maxf(absf(high),absf(low))
 		var n := Vector2i.ZERO
 		for v in vertices:
 			var pt := to_local(mesh.to_global(v))
-			if pt.y >= high-.018:
+			var along := pt.y if id=="W007" else pt.x
+			if along >= high-.012:
 				top += pt
 				n.x += 1
-			if pt.y <= low+.018:
+			if along <= low+.012:
 				bottom += pt
 				n.y += 1
 		top /= maxi(1,n.x)
@@ -99,6 +110,13 @@ func _add_grip() -> void:
 		Bow.span(wrap,Vector3(-.033*hand,-.01,z),Vector3(.021*hand,.024,z+.004))
 
 func _process(_delta: float) -> void:
+	if chain_ready and not Input.is_action_pressed(attack_action):
+		chain_ready = false
+		reverse_cut = false
+		if timeline:
+			timeline.kill()
+		timeline = create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+		_key(timeline,Vector3.ZERO,Vector3.ZERO,.15)
 	if grip_sleeve and is_visible_in_tree():
 		var elbow := get_parent_node_3d().to_global(Vector3(hand*.40,-.43,-.19))
 		Bow.span(grip_sleeve,to_local(elbow),grip_wrist)
@@ -118,13 +136,21 @@ func needs_support() -> bool:
 
 func _tail(draw: float) -> Vector3:
 	if id == "W303":
-		return Vector3(0,.052,.11)
+		return Vector3(0,.052,lerpf((top.z+bottom.z)*.5+.025,.11,draw))
 	return (top+bottom)*.5 + Vector3(0,0,.065+draw*.29)
 
 func _bend(draw: float) -> void:
 	if not string.is_empty():
-		Bow.span(string[0],top,_tail(draw))
-		Bow.span(string[1],bottom,_tail(draw))
+		flex_mesh.set_blend_shape_value(0,draw)
+		Bow.span(string[0],_flex_tip(top,draw),_tail(draw))
+		Bow.span(string[1],_flex_tip(bottom,draw),_tail(draw))
+
+func _flex_tip(rest: Vector3, draw: float) -> Vector3:
+	var axis := Vector3.UP if id=="W007" else Vector3.RIGHT
+	var along := rest.dot(axis)
+	var influence := pow(absf(along)/limb_extent,2)*draw
+	var travel := .112 if id=="W007" else .043
+	return rest + (Vector3.BACK*travel - axis*along*.12)*influence
 
 func _rest_ammo() -> void:
 	_bend(0)
@@ -142,9 +168,9 @@ func _hand_at(tail: Vector3, carrying: bool, tilt := 0.0) -> void:
 
 func _load_pose(progress: float) -> void:
 	# 箭由畫面另一側送入，落槽後弩手撤手，弓手繼續扣弦。
-	var pickup := _tail(0)+Vector3(-hand*.46,-.19,.09)
-	var guide := _tail(0)+Vector3(-hand*.16,.075,.015)
-	var dock := _tail(0)
+	var dock := _tail(1 if id=="W303" else 0)
+	var pickup := dock+Vector3(-hand*.46,-.19,.09)
+	var guide := dock+Vector3(-hand*.16,.075,.015)
 	if progress < .65:
 		var blend := smoothstep(0,.65,progress)
 		_hand_at(pickup.lerp(guide,blend),true,lerpf(24,9,blend))
@@ -157,7 +183,7 @@ func _draw_pose(draw: float) -> void:
 	_hand_at(_tail(draw),true)
 
 func _withdraw(progress: float) -> void:
-	var grasp := _tail(1 if id=="W007" else 0)
+	var grasp := _tail(1)
 	var away := Vector3(-hand*.35,-.16,.10)
 	var camera := get_parent_node_3d()
 	var elbow := to_local(camera.to_global(Vector3(-hand*.42,-.41,-.22)))
@@ -170,35 +196,63 @@ func _fire(impact: Callable, beat: int) -> void:
 func _ranged_sequence(t: Tween, seconds: float, hits: int, impact: Callable) -> void:
 	_rest_ammo()
 	if id=="W007":
-		_key(t,Vector3(-3,5,7),Vector3(-.12,.04,-.05),seconds*.30)
-		t.parallel().tween_method(_load_pose,0.0,1.0,seconds*.30)
-		t.tween_method(_draw_pose,0.0,1.0,seconds*.32)
+		_key(t,Vector3(-9,7,-14),Vector3(-.08,-.015,-.035),seconds*.22)
+		t.parallel().tween_method(_load_pose,0.0,1.0,seconds*.22)
+		_key(t,Vector3(-4,-5,12),Vector3(-.16,.07,-.13),seconds*.34)
+		t.parallel().tween_method(_draw_pose,0.0,1.0,seconds*.34).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_interval(seconds*.10)
 		t.tween_callback(_fire.bind(impact,0))
-		_key(t,Vector3(4,7,11),Vector3(-.10,.05,-.02),seconds*.065)
-		t.parallel().tween_method(_bend,1.0,0.0,seconds*.045)
-		t.parallel().tween_method(_withdraw,0.0,.32,seconds*.065)
-		_key(t,Vector3.ZERO,Vector3.ZERO,seconds*.315)
-		t.parallel().tween_method(_withdraw,.32,1.0,seconds*.20)
+		_key(t,Vector3(2,-3,17),Vector3(-.145,.075,-.08),seconds*.07)
+		t.parallel().tween_method(_bend,1.0,0.0,seconds*.04)
+		t.parallel().tween_method(_withdraw,0.0,.25,seconds*.07)
+		_key(t,Vector3.ZERO,Vector3.ZERO,seconds*.27)
+		t.parallel().tween_method(_withdraw,.25,1.0,seconds*.19)
 	else:
-		# 每一矢都有送箭、鬆手、發射與後座四個可見節點。
 		var cycle := seconds/maxi(hits,1)
 		for beat in hits:
-			_key(t,Vector3(-8,6,-12),Vector3(-.08,.035,-.035),cycle*.60)
-			t.parallel().tween_method(_load_pose,0.0,1.0,cycle*.60)
-			t.tween_method(_withdraw,0.0,1.0,cycle*.17)
+			_key(t,Vector3(-13,-8,-22),Vector3(-.05,-.025,-.015),cycle*.25)
+			t.parallel().tween_method(_reset_crossbow,0.0,1.0,cycle*.25)
+			t.tween_method(_load_pose,0.0,1.0,cycle*.34)
+			_key(t,Vector3(-7,-7,2),Vector3(-.13,.055,-.075),cycle*.18)
+			t.parallel().tween_method(_withdraw,0.0,1.0,cycle*.18)
 			t.tween_callback(_fire.bind(impact,beat))
-			_key(t,Vector3(9,5,1),Vector3(-.045,.045,.038),cycle*.12)
-			_key(t,Vector3.ZERO,Vector3.ZERO,cycle*.11)
+			_key(t,Vector3(3,-6,4),Vector3(-.12,.068,-.029),cycle*.09)
+			t.parallel().tween_method(_bend,1.0,0.0,cycle*.09)
+			_key(t,Vector3.ZERO,Vector3.ZERO,cycle*.14)
 	t.tween_callback(_rest_ammo)
 
+func _reset_crossbow(progress: float) -> void:
+	_bend(progress)
+	_hand_at(_tail(progress),false)
+
 func _saber_sequence(t: Tween, seconds: float, impact: Callable) -> void:
-	# 起刀貼近同側肩膀，刀刃穿過視線時命中，手腕繼續送到對側。
-	_key(t,Vector3(18,-53,-27),Vector3(.085,.09,-.06),seconds*.23)
-	_key(t,Vector3(-9,19,22),Vector3(-.27,.09,-.15),seconds*.19)
-	t.tween_callback(impact.bind(0))
-	_key(t,Vector3(-40,69,61),Vector3(-.51,-.055,-.10),seconds*.21)
-	_key(t,Vector3(-24,54,45),Vector3(-.43,-.095,-.065),seconds*.10)
-	_key(t,Vector3.ZERO,Vector3.ZERO,seconds*.27)
+	reverse_cut = chain_ready and not reverse_cut
+	chain_ready = false
+	saber_contact = false
+	var high := Vector3(12,-63,-52)
+	var low := Vector3(-47,72,65)
+	var high_pos := Vector3(.10,.105,-.06)
+	var low_pos := Vector3(-.55,-.085,-.13)
+	var middle := Vector3(-19,13,18)
+	var middle_pos := Vector3(-.22,.05,-.13)
+	var finish := high if reverse_cut else low
+	var finish_pos := high_pos if reverse_cut else low_pos
+	_key(t,low if reverse_cut else high,low_pos if reverse_cut else high_pos,seconds*.16)
+	t.set_ease(Tween.EASE_IN)
+	_key(t,middle,middle_pos,seconds*.12)
+	t.tween_callback(func(): saber_contact = impact.call(0)==true)
+	t.tween_method(func(progress: float):
+		var blend := 1.0-pow(1.0-progress,3)
+		if saber_contact:
+			# 命中先讓刀停在接觸點附近，再將餘勢送往連段起點。
+			blend = .08*smoothstep(0,.32,progress)+.92*smoothstep(.32,1,progress)
+		_pose(middle.lerp(finish,blend),middle_pos.lerp(finish_pos,blend))
+	,0.0,1.0,seconds*.44).set_trans(Tween.TRANS_LINEAR)
+	t.tween_callback(func(): chain_ready = Input.is_action_pressed(attack_action))
+	t.tween_method(func(progress: float):
+		if not chain_ready:
+			_pose(finish.lerp(Vector3.ZERO,progress),finish_pos.lerp(Vector3.ZERO,progress))
+	,0.0,1.0,seconds*.28).set_ease(Tween.EASE_IN_OUT)
 
 func _key(t: Tween, r: Vector3, p: Vector3, sec: float) -> void:
 	var rr: Vector3 = REST[id]+r

@@ -37,6 +37,7 @@ var _label: Label3D
 const Bow := preload("res://scripts/archer_bow.gd")
 var _bow: Bow
 var _draw := -1.0
+var _cut_reaction: Tween
 var _anim: AnimationPlayer
 var _atk_cd := 0.8
 var _swing_dir := Vector3.FORWARD
@@ -774,6 +775,14 @@ func stun(t: float) -> void:
 	if _stun_t <= 0.0 and t > 0.0:
 		FX.play(self, hit_center() + Vector3.UP * size, &"stunned", 0.8 * size, t)
 	_stun_t = maxf(_stun_t, t)
+
+
+func react_to_cut() -> void:
+	if _cut_reaction:
+		_cut_reaction.kill()
+	_cut_reaction = create_tween()
+	_cut_reaction.tween_property(_visual,"rotation:x",-.11,.045)
+	_cut_reaction.tween_property(_visual,"rotation:x",0.0,.14)
 
 
 ## 被玩家擊中：回傳實際造成的傷害

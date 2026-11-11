@@ -281,18 +281,20 @@ func _attack(slot: int) -> void:
 	var dmg := float(row.dmg) * (1.0 + 0.15 * (int(w.lv) - 1))
 	view.attack(cooldowns[slot],int(row.hits),func(beat:int):
 		if is_instance_valid(view) and weapon_models[slot] == view and hp > 0:
-			_weapon_impact(slot,row,dmg,beat))
+			return _weapon_impact(slot,row,dmg,beat)
+		return false)
 	if view.needs_support():
 		_show_hands()
 		view.timeline.finished.connect(_show_hands,CONNECT_DEFERRED | CONNECT_ONE_SHOT)
 
 
-func _weapon_impact(slot: int, row: Dictionary, dmg: float, beat: int) -> void:
+func _weapon_impact(slot: int, row: Dictionary, dmg: float, beat: int) -> bool:
 	var hits := int(row.hits)
 	var staggered: bool = row.weapon_id in ["W201","W302","W103","W303"]
 	var range_m := float(row.range_m)
 	var fwd := -cam.global_transform.basis.z
 	var origin := cam.global_position
+	var made_contact := false
 	var targets: Array = []
 	if row.range_type == "ranged":
 		range_m *= 1.0 + Game.st("range_pct") / 100.0
@@ -325,7 +327,10 @@ func _weapon_impact(slot: int, row: Dictionary, dmg: float, beat: int) -> void:
 		for h in (1 if staggered else hits):
 			for e in targets:
 				if is_instance_valid(e) and not e.dead:
-					deal(e, dmg, false)
+					if deal(e, dmg, false):
+						made_contact = true
+						if row.weapon_id == "W001" and not e.dead:
+							e.react_to_cut()
 		var swing: StringName = MELEE_EFFECTS.get(row["class"], &"sword-slash")
 		var side := -1.0 if slot == 0 else 1.0
 		var heading := Vector3(fwd.x,0,fwd.z).normalized()
@@ -344,6 +349,7 @@ func _weapon_impact(slot: int, row: Dictionary, dmg: float, beat: int) -> void:
 	var primary = targets[0] if not targets.is_empty() else _nearest_in_front(15.0, fwd)
 	if beat == 0:
 		_on_attack_effects(primary, dmg, fwd)
+	return made_contact
 
 
 func _melee_targets(row: Dictionary, range_m: float, fwd: Vector3) -> Array:
@@ -453,9 +459,9 @@ func _aoe(center: Vector3, r: float, dmg: float, color: Color) -> void:
 
 
 ## 對敵人造成一次傷害（所有加成、暴擊、命中特效都在這裡）
-func deal(e, base: float, _is_dot: bool) -> void:
+func deal(e, base: float, _is_dot: bool) -> bool:
 	if not is_instance_valid(e) or e.dead:
-		return
+		return false
 	var mult := 1.0 + Game.st("dmg_pct") / 100.0
 	var missing10 := (1.0 - hp / Game.max_hp()) * 10.0
 	mult += Game.f("low_hp_dmg_per10") * missing10 / 100.0
@@ -500,7 +506,7 @@ func deal(e, base: float, _is_dot: bool) -> void:
 		dodge_crit_ready = false
 	var dealt: float = e.take_hit(base * mult, global_position, crit)
 	if dealt <= 0.0:
-		return
+		return false
 	# 命中特效
 	var ls := Game.st("lifesteal_pct")
 	if Game.f("low_hp_lifesteal_x2") > 0.0 and hp < Game.max_hp() * 0.5:
@@ -524,6 +530,7 @@ func deal(e, base: float, _is_dot: bool) -> void:
 			for o in _enemies_within(e.global_position, 2.0):
 				if o != e:
 					o.take_hit(dealt * Game.f("crit_splash"), global_position, false)
+	return true
 
 
 func on_enemy_killed(e) -> void:
