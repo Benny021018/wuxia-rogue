@@ -31,6 +31,11 @@ var tachi_chain := 0
 var tachi_open := false
 var tachi_returning := false
 var tachi_hit := false
+var guard_time := 0.0
+const GUARD_ANGLE := Vector3(44,18,-22)
+const GUARD_POSITION := Vector3(.27,-.255,-.53)
+const DOCK_ANGLE := Vector3(-12,74,-15)
+const DOCK_POSITION := Vector3(-.18,-.22,-.55)
 var flex_mesh: MeshInstance3D
 var limb_extent := 0.0
 var top := Vector3.ZERO
@@ -103,7 +108,7 @@ func setup(wid: String, slot: int) -> void:
 		saya_hand = LoadingHand.new()
 		saya.add_child(saya_hand)
 		saya_hand.setup(hand)
-		_tachi_pose(0.0)
+		_tachi_closed()
 	if loader:
 		_rest_ammo()
 
@@ -123,12 +128,16 @@ func _add_grip() -> void:
 		var z := -.032+j*.024
 		Bow.span(wrap,Vector3(-.033*hand,-.01,z),Vector3(.021*hand,.024,z+.004))
 
-func _process(_delta: float) -> void:
-	if tachi_open and not Input.is_action_pressed(attack_action) and not timeline.is_running():
-		timeline = create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-		tachi_returning = true
-		timeline.tween_method(_tachi_pose,.58,1.0,.22)
-		timeline.tween_callback(_tachi_closed)
+func _process(delta: float) -> void:
+	if tachi_open and not tachi_returning and not timeline.is_running():
+		guard_time += delta
+		var breath := sin(guard_time*3.2)
+		_tachi_frame(GUARD_ANGLE + Vector3(breath*.9,0,0),GUARD_POSITION + Vector3.UP*breath*.004,1,0)
+		if guard_time >= 1.35 and not Input.is_action_pressed(attack_action):
+			tachi_returning = true
+			timeline = create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+			timeline.tween_method(_sheathe,0.0,1.0,.34)
+			timeline.tween_callback(_tachi_closed)
 	if grip_sleeve and is_visible_in_tree():
 		var elbow := get_parent_node_3d().to_global(Vector3(hand*.40,-.43,-.19))
 		Bow.span(grip_sleeve,to_local(elbow),grip_wrist)
@@ -237,65 +246,76 @@ func _reset_crossbow(progress: float) -> void:
 	_bend(progress)
 	_hand_at(_tail(progress),false)
 
-## Camera-space choreography; the sheath moves separately from the sword hand.
-func _tachi_pose(t: float) -> void:
-	var chained := tachi_chain != 0
-	var draw := (1.0 if chained else smoothstep(.05,.28,t)) * (1.0-smoothstep(.79,.99,t))
-	var pass_cut := smoothstep(.29,.48,t)
-	if tachi_hit and t > .40 and t < .48:
-		pass_cut = lerpf(smoothstep(.29,.48,.40),1.0,smoothstep(.415,.48,t))
-	var lift := smoothstep(0,.07,t) * (1.0-smoothstep(.98,1.0,t))
-	var dock := Vector3(-.18*hand,-.23 + .035*lift,-.55)
-	var rest_angle := Vector3(-12,74*hand,-15*hand)
-	var axis := Basis.from_euler(rest_angle * PI/180).z
-	var rest_saya := Transform3D(Basis.from_euler(rest_angle * PI/180),dock-axis*.32*draw)
-	var start := rest_angle
-	var end := Vector3(32,-60*hand,35*hand)
-	var start_offset := Vector3.ZERO
-	var end_offset := Vector3(.045*hand,.12,-.08)
-	var anticipation := sin(PI*clampf(t/.30,0,1))
-	if tachi_chain == 1:
-		start = end
-		start_offset = end_offset
-		end = Vector3(-22,70*hand,-43*hand)
-		end_offset = Vector3(-.29*hand,-.035,-.12)
-	elif tachi_chain == 2:
-		start = Vector3(-22,70*hand,-43*hand)
-		start_offset = Vector3(-.29*hand,-.035,-.12)
-	var recover := smoothstep(.60,.79,t)
-	var wrist := start.lerp(end,pass_cut)
-	wrist.x += (19.0 if tachi_chain == 2 else -7.0) * anticipation
-	position = dock + axis*.43*draw + start_offset.lerp(end_offset,pass_cut)*(1.0-recover)
-	rotation_degrees = wrist.lerp(rest_angle,recover)
-	saya.transform = transform.affine_inverse() * rest_saya
-	# Reveal only the portion outside the mouth; the curved tip cannot poke through the lacquer.
+func _draw_position(draw: float) -> Vector3:
+	return DOCK_POSITION + Basis.from_euler(DOCK_ANGLE*PI/180).z*.43*draw
+
+func _tachi_frame(angle: Vector3, grip: Vector3, draw: float, support: float, sheath_lowering := 1.0) -> void:
+	rotation_degrees = Vector3(angle.x,angle.y*hand,angle.z*hand)
+	position = Vector3(grip.x*hand,grip.y,grip.z)
+	var dock_basis := Basis.from_euler(Vector3(DOCK_ANGLE.x,DOCK_ANGLE.y*hand,DOCK_ANGLE.z*hand)*PI/180)
+	var dock := Vector3(DOCK_POSITION.x*hand,DOCK_POSITION.y,DOCK_POSITION.z)
+	var belt := dock-dock_basis.z*.32*draw + Vector3.DOWN*.42*sheath_lowering*draw
+	saya.transform = transform.affine_inverse()*Transform3D(dock_basis,belt)
 	blade.visible = draw > .001
 	blade.scale = Vector3(1,maxf(.001,draw*draw),maxf(.001,draw))
-	blade.position.z = -.082*(1.0-draw)
-	var elbow := saya.to_local(get_parent_node_3d().to_global(Vector3(-hand*.45,-.42,-.23)))
-	saya_hand.place(Vector3(0,-.019,-.15),elbow,t > 0.0 and t < 1.0)
+	blade.position.z = -.082*(1-draw)
+	var offhand := Vector3(0,-.019,-.15).lerp(saya.to_local(to_global(Vector3(0,-.012,.108))),support)
+	var elbow := saya.to_local(get_parent_node_3d().to_global(Vector3(-hand*.43,-.42,-.24)))
+	saya_hand.place(offhand,elbow,support > .001 or (draw > .001 and draw < .999))
+
+func _sheathe(t: float) -> void:
+	var align := smoothstep(0,.48,t)
+	var draw := 1.0-smoothstep(.48,1,t)
+	_tachi_frame(GUARD_ANGLE.lerp(DOCK_ANGLE,align),GUARD_POSITION.lerp(_draw_position(draw),align),draw,0,1.0-align)
+
+func _tachi_closed() -> void:
+	tachi_chain = 0
+	tachi_open = false
+	tachi_returning = false
+	_tachi_frame(DOCK_ANGLE,DOCK_POSITION,0,0)
+
+func _cut_pose(t: float) -> void:
+	var start := GUARD_ANGLE
+	var grip := GUARD_POSITION
+	var wind := Vector3(57,-42,17)
+	var wind_grip := Vector3(.34,-.12,-.47)
+	var finish := Vector3(-19,78,-61)
+	var finish_grip := Vector3(-.28,-.29,-.65)
+	var draw := 1.0
+	if tachi_chain == 0:
+		draw = smoothstep(0,.25,t)
+		start = DOCK_ANGLE
+		grip = _draw_position(draw)
+		wind = DOCK_ANGLE
+		wind_grip = _draw_position(1)
+		finish = Vector3(36,-69,42)
+		finish_grip = Vector3(.33,-.12,-.58)
+	elif tachi_chain == 2:
+		wind = Vector3(-26,66,-54)
+		wind_grip = Vector3(-.24,-.30,-.58)
+		finish = Vector3(62,-45,27)
+		finish_grip = Vector3(.32,-.09,-.55)
+	var prep := smoothstep(0,.29,t)
+	var cut := smoothstep(.29,.53,t)
+	if tachi_hit and t >= .41:
+		cut = lerpf(smoothstep(.29,.53,.41),1,smoothstep(.445,.57,t))
+	var angle := start.lerp(wind,prep).lerp(finish,cut)
+	var location := grip.lerp(wind_grip,prep if tachi_chain != 0 else 0.0).lerp(finish_grip,cut)
+	var recovery := smoothstep(.62,1,t)
+	var support := smoothstep(.24,.38,t) if tachi_chain == 0 else smoothstep(0,.17,t)
+	_tachi_frame(angle.lerp(GUARD_ANGLE,recovery),location.lerp(GUARD_POSITION,recovery),draw,support*(1-recovery),smoothstep(.28,.55,t) if tachi_chain == 0 else 1.0)
 
 func _saber_sequence(t: Tween, seconds: float, impact: Callable) -> void:
 	if tachi_open:
 		tachi_chain = 2 if tachi_chain == 1 else 1
 	tachi_open = false
 	tachi_hit = false
-	_tachi_pose(0.0)
-	t.tween_method(_tachi_pose,0.0,.40,seconds*.40).set_trans(Tween.TRANS_LINEAR)
+	guard_time = 0
+	_cut_pose(0)
+	t.tween_method(_cut_pose,0.0,.41,seconds*.41).set_trans(Tween.TRANS_LINEAR)
 	t.tween_callback(func(): tachi_hit = impact.call(0) == true)
-	t.tween_method(_tachi_pose,.40,.58,seconds*.18).set_trans(Tween.TRANS_LINEAR)
-	t.tween_callback(func(): tachi_open = Input.is_action_pressed(attack_action))
-	t.tween_method(func(v: float):
-		if not tachi_open: _tachi_pose(v)
-	,.58,1.0,seconds*.40).set_trans(Tween.TRANS_LINEAR)
-	t.tween_callback(func():
-		if not tachi_open: _tachi_closed())
-
-func _tachi_closed() -> void:
-	tachi_chain = 0
-	tachi_open = false
-	tachi_returning = false
-	_tachi_pose(0.0)
+	t.tween_method(_cut_pose,.41,1.0,seconds*.57).set_trans(Tween.TRANS_LINEAR)
+	t.tween_callback(func(): tachi_open = true)
 
 func _key(t: Tween, r: Vector3, p: Vector3, sec: float) -> void:
 	var rr: Vector3 = REST[id]+r

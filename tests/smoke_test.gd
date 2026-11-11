@@ -292,7 +292,9 @@ func _check_weapon_views(player) -> void:
 	await _frames(10)
 	_check(tachi.saya_hand.visible and tachi.blade.visible and strokes.is_empty(), "扶鞘拔刀尚未命中")
 	await _frames(46)
-	_check(strokes.size()==1 and strokes[0][1]>.99 and not tachi.blade.visible and not tachi.saya_hand.visible, "全刀出鞘才命中一次，收刀回復待機")
+	_check(strokes.size()==1 and strokes[0][1]>.99 and tachi.blade.visible and tachi.tachi_open, "出鞘後命中一次並回到持刀架勢")
+	await _frames(115)
+	_check(not tachi.blade.visible,"停手後納刀")
 	player.set_physics_process(false)
 	Input.action_press(tachi.attack_action)
 	for strike in 3:
@@ -300,7 +302,7 @@ func _check_weapon_views(player) -> void:
 		await _frames(21)
 		_check(tachi.tachi_open and tachi.tachi_chain==strike, "第%d刀保持出鞘連段" % (strike+1))
 	Input.action_release(tachi.attack_action)
-	await _frames(22)
+	await _frames(115)
 	_check(strokes.size()==4 and not tachi.blade.visible and not tachi.tachi_returning, "三連斬各一次傷害，鬆鍵收刀")
 	player.set_physics_process(true)
 	Game.weapons = old
