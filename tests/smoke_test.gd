@@ -46,16 +46,16 @@ func _run_character(cid: String) -> void:
 			var gate_mesh: MeshInstance3D = meshes[0]
 			var bounds := gate_mesh.global_transform * gate_mesh.get_aabb()
 			_check(bounds.size.distance_to(Vector3(0.6, 4, 6)) < 0.03 and absf(bounds.position.y) < 0.01, "寨門與門洞對齊")
-		for id in ["H01", "H02", "H03"]:
+		for id in ["H01", "H02", "H03", "H07", "H08"]:
 			var enemy = world.spawn_enemy(id, Vector3(-10, 0, 0), false)
-			var parts: Array = enemy._visual.find_children("*", "MeshInstance3D", true, false)
-			_check(parts.size() == 1 and enemy._body_mat != null, "%s 模型與攻擊預警材質" % id)
+			var parts: Array = enemy._visual.find_children("Smart_*", "MeshInstance3D", true, false)
+			_check(parts.size() == 1 and enemy._body_mat.vertex_color_use_as_albedo, "%s 模型與攻擊預警材質" % id)
 			var motion: AnimationPlayer = enemy._anim
 			_check(motion != null and motion.has_animation("Walk") and motion.has_animation("Shoot" if id == "H02" else "Slash"), "%s 的移動與攻擊動作可播放" % id)
 			if parts.size() == 1:
 				var part: MeshInstance3D = parts[0]
 				var bounds := part.global_transform * part.get_aabb()
-				_check(absf(bounds.size.y - 1.8) < 0.02 and absf(bounds.position.y) < 0.02, "%s 站姿與膠囊對齊" % id)
+				_check(absf(bounds.size.y - 1.8 * enemy.size) < 0.02 and absf(bounds.position.y) < 0.02, "%s 站姿與膠囊對齊" % id)
 			if id == "H02":
 				_check_draw(enemy, world)
 			enemy.queue_free()
@@ -288,6 +288,16 @@ func _check_weapon_views(player) -> void:
 	_check(tachi.saya_hand.visible and tachi.blade.visible and strokes.is_empty(), "扶鞘拔刀尚未命中")
 	await _frames(46)
 	_check(strokes.size()==1 and strokes[0][1]>.99 and not tachi.blade.visible and not tachi.saya_hand.visible, "全刀出鞘才命中一次，收刀回復待機")
+	player.set_physics_process(false)
+	Input.action_press(tachi.attack_action)
+	for strike in 3:
+		tachi.attack(.30,1,func(i): strokes.append([i,tachi.blade.scale.z]); return true)
+		await _frames(21)
+		_check(tachi.tachi_open and tachi.tachi_chain==strike, "第%d刀保持出鞘連段" % (strike+1))
+	Input.action_release(tachi.attack_action)
+	await _frames(22)
+	_check(strokes.size()==4 and not tachi.blade.visible and not tachi.tachi_returning, "三連斬各一次傷害，鬆鍵收刀")
+	player.set_physics_process(true)
 	Game.weapons = old
 	Game.recompute()
 

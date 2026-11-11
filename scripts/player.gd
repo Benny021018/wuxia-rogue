@@ -263,7 +263,7 @@ func _attack(slot: int) -> void:
 	refresh_weapon_models()
 	var view = weapon_models[slot]
 	var other = weapon_models[1-slot]
-	if _holding_both(other) or (view.needs_support() and other and other.timeline and other.timeline.is_running()):
+	if view.tachi_returning or _holding_both(other) or (view.needs_support() and other and other.timeline and other.timeline.is_running()):
 		return
 	next_hand = 1-slot
 	queued_press[slot] = false
@@ -335,7 +335,7 @@ func _weapon_impact(slot: int, row: Dictionary, dmg: float, beat: int) -> bool:
 		var trail_center := origin - Vector3.UP * .62
 		var duration := clampf(cooldowns[slot],.14,.26)
 		var cone: float = SWEEP_DEGREES.get(row["class"],0.0)
-		FX.attack_trail(get_parent(),trail_center,heading,range_m,cone,THRUST_HALF_WIDTH,Color("#ffe6a3"),duration)
+		FX.attack_trail(get_parent(),trail_center,heading,range_m,cone,THRUST_HALF_WIDTH,Color("#d7f8ff"),duration)
 		var strike := trail_center + heading * range_m * .82 + cam.global_basis.x * side * .12
 		FX.play(get_parent(), strike, swing, range_m * (.76 if cone == 0 else 1.12), duration, Color.WHITE, slot == 0)
 		# 劍氣縱橫：近戰與中距離武器射出劍氣

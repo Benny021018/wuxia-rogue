@@ -4,9 +4,11 @@ extends CharacterBody3D
 const PROJ := preload("res://scripts/projectile.gd")
 const HAZARD := preload("res://scripts/hazard.gd")
 const BANDIT_MODELS := {
-	"H01": preload("res://assets/models/bandit.glb"),
-	"H02": preload("res://assets/models/archer.glb"),
-	"H03": preload("res://assets/models/shield.glb"),
+	"H01": preload("res://assets/models/greenwood/H01.glb"),
+	"H02": preload("res://assets/models/greenwood/H02.glb"),
+	"H03": preload("res://assets/models/greenwood/H03.glb"),
+	"H07": preload("res://assets/models/greenwood/H07.glb"),
+	"H08": preload("res://assets/models/greenwood/H08.glb"),
 }
 const GRAVITY := 18.0
 const MAP_COLORS := {
@@ -112,6 +114,7 @@ func _ready() -> void:
 	if BANDIT_MODELS.has(eid):
 		var model: Node3D = BANDIT_MODELS[eid].instantiate()
 		_visual.add_child(model)
+		model.scale = Vector3.ONE * size
 		_anim = model.find_child("AnimationPlayer", true, false)
 		for clip in [&"Walk", &"Idle"]:
 			_anim.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
@@ -124,6 +127,15 @@ func _ready() -> void:
 		var mesh: MeshInstance3D = model.find_children("*", "MeshInstance3D", true, false)[0]
 		_body_mat = mesh.get_active_material(0).duplicate()
 		mesh.set_surface_override_material(0, _body_mat)
+		if eid in ["H01","H07","H08"]:
+			var wrist := BoneAttachment3D.new()
+			model.find_children("*","Skeleton3D",true,false)[0].add_child(wrist)
+			wrist.bone_name = "RightHand"
+			var sword := preload("res://assets/models/weapons/Tachi.glb").instantiate()
+			wrist.add_child(sword)
+			sword.find_child("Saya",true,false).hide()
+			sword.rotation_degrees = Vector3(-20,0,0)
+			sword.scale = Vector3.ONE * (.72 if eid=="H01" else .9)
 	else:
 		_build_graybox()
 	_flash.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED

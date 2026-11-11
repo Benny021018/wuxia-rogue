@@ -6,9 +6,9 @@
 
 [青鞘太刀拔刀斬實拍](previews/tachi-draw.gif) · [舊版鐵刀、竹弓與連弩實拍](previews/weapon-weight.gif)
 
-青鞘太刀平時入鞘，攻擊時副手扶鞘，全刀出鞘後橫斬，基礎攻速約 0.34 秒接觸。回收時刀身對準鞘口，納刀後可再拔斬。竹弓從側傾搭箭轉至接近直立的滿弓姿勢，天機弩則側傾補矢、回正發射。這些傾角為第一人稱畫面構圖所設。動畫節奏參考 [Techland 的近戰動畫開發日誌](https://outpost.dyinglightgame.com/news/dev-blog-they-tried-to-break-him)、[Exouch 的第一人稱弓動畫](https://forums.unrealengine.com/t/exouch-first-person-bow-animation-pack/2691165) 及 [Modern First-Person Animation Overhaul 的弩動畫](https://www.nexusmods.com/skyrimspecialedition/mods/115525)。
+青鞘太刀點按拔斬後納刀，按住則保留上一刀的停勢，接反向斬與回斬；鬆鍵後才收刀。基礎攻速約 0.32 秒接觸。竹弓從側傾搭箭轉至接近直立的滿弓姿勢，天機弩則側傾補矢、回正發射。這些傾角為第一人稱畫面構圖所設。動畫節奏參考 [Techland 的近戰動畫開發日誌](https://outpost.dyinglightgame.com/news/dev-blog-they-tried-to-break-him)、[Exouch 的第一人稱弓動畫](https://forums.unrealengine.com/t/exouch-first-person-bow-animation-pack/2691165) 及 [Modern First-Person Animation Overhaul 的弩動畫](https://www.nexusmods.com/skyrimspecialedition/mods/115525)。
 
-- [青鞘太刀（W001，握柄的 Tripo 原稿）](https://studio.tripo3d.ai/zh/workspace/generate/c956c7b4-182b-4272-b6ca-cc9d9b8a06c6)：保留原刀握柄，在 Blender 重建刀身、刀鐔與獨立刀鞘（見 tools/build_tachi.py）。
+- [青鞘太刀（W001，Tripo Smart Mesh 原稿）](https://studio.tripo3d.ai/workspace/generate/0876dc0a-fc44-4152-8188-f8adb9b862a5)：Blender 修形與配鞘，遊戲實作拔斬與連段。[第一批美術規格](greenwood-art.md)。
 - [齊眉棍（W002，Tripo 原稿）](https://studio.tripo3d.ai/zh/workspace/generate/a9be4ff8-43a2-4604-966e-a7b848dd96f2)：轉腕蓄勢、平棍橫掃。
 - [鐵拳套（W003，Tripo 原稿）](https://studio.tripo3d.ai/zh/workspace/generate/2fc5d658-d7d0-4113-b245-b74cfc935970)：短縮拳、快速前送。
 - [青鋼劍（W004，Tripo 原稿）](https://studio.tripo3d.ai/zh/workspace/generate/54580822-6855-4689-9c75-2025827ce83c)：收劍、直刺回鋒。

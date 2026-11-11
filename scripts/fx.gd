@@ -139,6 +139,14 @@ static func attack_trail(parent: Node3D, center: Vector3, forward: Vector3, reac
 	var tool := SurfaceTool.new()
 	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
 	_trail_band(tool,path,inner,tint)
+	if degrees > 0 and degrees < 360:
+		# A dark echo follows only the middle of the sweep, leaving its tips sharp.
+		var ink_outer := PackedVector3Array()
+		var ink_inner := PackedVector3Array()
+		for j in range(steps/5,steps*4/5+1):
+			ink_outer.append(inner[j]*.985)
+			ink_inner.append(inner[j]*(.975-.025*sin(PI*j/steps)))
+		_trail_band(tool,ink_outer,ink_inner,Color("#343754"))
 	if degrees <= 0:
 		for idx in [0,steps]:
 			var end := path[idx]

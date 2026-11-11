@@ -27,6 +27,10 @@ var attack_action: StringName
 var saya: Node3D
 var blade: Node3D
 var saya_hand: LoadingHand
+var tachi_chain := 0
+var tachi_open := false
+var tachi_returning := false
+var tachi_hit := false
 var flex_mesh: MeshInstance3D
 var limb_extent := 0.0
 var top := Vector3.ZERO
@@ -119,6 +123,11 @@ func _add_grip() -> void:
 		Bow.span(wrap,Vector3(-.033*hand,-.01,z),Vector3(.021*hand,.024,z+.004))
 
 func _process(_delta: float) -> void:
+	if tachi_open and not Input.is_action_pressed(attack_action) and not timeline.is_running():
+		timeline = create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+		tachi_returning = true
+		timeline.tween_method(_tachi_pose,.58,1.0,.22)
+		timeline.tween_callback(_tachi_closed)
 	if grip_sleeve and is_visible_in_tree():
 		var elbow := get_parent_node_3d().to_global(Vector3(hand*.40,-.43,-.19))
 		Bow.span(grip_sleeve,to_local(elbow),grip_wrist)
@@ -229,16 +238,34 @@ func _reset_crossbow(progress: float) -> void:
 
 ## Camera-space choreography; the sheath moves separately from the sword hand.
 func _tachi_pose(t: float) -> void:
-	var draw := smoothstep(.08,.34,t) * (1.0-smoothstep(.73,.98,t))
-	var sweep := smoothstep(.34,.50,t) * (1.0-smoothstep(.59,.73,t))
-	var lift := smoothstep(0,.08,t) * (1.0-smoothstep(.98,1.0,t))
+	var chained := tachi_chain != 0
+	var draw := (1.0 if chained else smoothstep(.05,.28,t)) * (1.0-smoothstep(.79,.99,t))
+	var pass_cut := smoothstep(.29,.48,t)
+	if tachi_hit and t > .40 and t < .48:
+		pass_cut = lerpf(smoothstep(.29,.48,.40),1.0,smoothstep(.415,.48,t))
+	var lift := smoothstep(0,.07,t) * (1.0-smoothstep(.98,1.0,t))
 	var dock := Vector3(-.18*hand,-.23 + .035*lift,-.55)
 	var rest_angle := Vector3(-12,74*hand,-15*hand)
-	var dock_basis := Basis.from_euler(rest_angle * PI/180)
-	var axis := dock_basis.z
-	var rest_saya := Transform3D(dock_basis,dock-axis*.32*draw)
-	position = dock + axis*.43*draw + Vector3(.07*hand,.13,-.09)*sweep
-	rotation_degrees = rest_angle.lerp(Vector3(21,-64*hand,24*hand),sweep)
+	var axis := Basis.from_euler(rest_angle * PI/180).z
+	var rest_saya := Transform3D(Basis.from_euler(rest_angle * PI/180),dock-axis*.32*draw)
+	var start := rest_angle
+	var end := Vector3(32,-60*hand,35*hand)
+	var start_offset := Vector3.ZERO
+	var end_offset := Vector3(.045*hand,.12,-.08)
+	var anticipation := sin(PI*clampf(t/.30,0,1))
+	if tachi_chain == 1:
+		start = end
+		start_offset = end_offset
+		end = Vector3(-22,70*hand,-43*hand)
+		end_offset = Vector3(-.29*hand,-.035,-.12)
+	elif tachi_chain == 2:
+		start = Vector3(-22,70*hand,-43*hand)
+		start_offset = Vector3(-.29*hand,-.035,-.12)
+	var recover := smoothstep(.60,.79,t)
+	var wrist := start.lerp(end,pass_cut)
+	wrist.x += (19.0 if tachi_chain == 2 else -7.0) * anticipation
+	position = dock + axis*.43*draw + start_offset.lerp(end_offset,pass_cut)*(1.0-recover)
+	rotation_degrees = wrist.lerp(rest_angle,recover)
 	saya.transform = transform.affine_inverse() * rest_saya
 	# Reveal only the portion outside the mouth; the curved tip cannot poke through the lacquer.
 	blade.visible = draw > .001
@@ -248,10 +275,26 @@ func _tachi_pose(t: float) -> void:
 	saya_hand.place(Vector3(0,-.019,-.15),elbow,t > 0.0 and t < 1.0)
 
 func _saber_sequence(t: Tween, seconds: float, impact: Callable) -> void:
+	if tachi_open:
+		tachi_chain = 2 if tachi_chain == 1 else 1
+	tachi_open = false
+	tachi_hit = false
 	_tachi_pose(0.0)
-	t.tween_method(_tachi_pose,0.0,.42,seconds*.42).set_trans(Tween.TRANS_LINEAR)
-	t.tween_callback(impact.bind(0))
-	t.tween_method(_tachi_pose,.42,1.0,seconds*.58).set_trans(Tween.TRANS_LINEAR)
+	t.tween_method(_tachi_pose,0.0,.40,seconds*.40).set_trans(Tween.TRANS_LINEAR)
+	t.tween_callback(func(): tachi_hit = impact.call(0) == true)
+	t.tween_method(_tachi_pose,.40,.58,seconds*.18).set_trans(Tween.TRANS_LINEAR)
+	t.tween_callback(func(): tachi_open = Input.is_action_pressed(attack_action))
+	t.tween_method(func(v: float):
+		if not tachi_open: _tachi_pose(v)
+	,.58,1.0,seconds*.40).set_trans(Tween.TRANS_LINEAR)
+	t.tween_callback(func():
+		if not tachi_open: _tachi_closed())
+
+func _tachi_closed() -> void:
+	tachi_chain = 0
+	tachi_open = false
+	tachi_returning = false
+	_tachi_pose(0.0)
 
 func _key(t: Tween, r: Vector3, p: Vector3, sec: float) -> void:
 	var rr: Vector3 = REST[id]+r

@@ -11,10 +11,22 @@ signal enemies_changed(count: int)
 
 const ENEMY := preload("res://scripts/enemy.gd")
 const HAZARD := preload("res://scripts/hazard.gd")
-const GATE_MODEL := preload("res://assets/models/gate.glb")
-const PALISADE_MODEL := preload("res://assets/models/palisade.glb")
-const PLATFORM_MODEL := preload("res://assets/models/platform.glb")
+const GATE_MODEL := preload("res://assets/models/greenwood/Gate.glb")
+const PALISADE_MODEL := preload("res://assets/models/greenwood/palisade.glb")
+const PLATFORM_MODEL := preload("res://assets/models/greenwood/platform.glb")
 const SHRINE_MODEL := preload("res://assets/models/shrine.glb")
+const CAMP_ART := {
+	"拒馬":[PALISADE_MODEL,Vector3(6,3,2)], "":[preload("res://assets/models/greenwood/cover.glb"),Vector3(6,3,1.5)],
+	"板車":[preload("res://assets/models/greenwood/cart.glb"),Vector3(3,1.2,2)],
+	"貨箱":[preload("res://assets/models/greenwood/crate.glb"),Vector3(2,1.2,2)],
+	"箭樓":[PLATFORM_MODEL,Vector3(7,1,7)], "擂台":[preload("res://assets/models/greenwood/ring.glb"),Vector3(4,1,4)],
+	"交椅":[preload("res://assets/models/greenwood/ring.glb"),Vector3(4,1,4)],
+	"二樓迴廊":[preload("res://assets/models/greenwood/gallery.glb"),Vector3(6,1,2)],
+	"石階（高台）":[preload("res://assets/models/greenwood/stairs.glb"),Vector3(3,1,4)]
+}
+const CAMP_CHAIR := preload("res://assets/models/greenwood/throne.glb")
+const CAMP_BRAZIER := preload("res://assets/models/greenwood/brazier.glb")
+const CAMP_STELE := preload("res://assets/models/greenwood/shrine.glb")
 const CORRIDOR := 14.0
 const WALL_H := 4.0
 const SPAWN_RATE := 0.12
@@ -133,7 +145,7 @@ func _static_box(size: Vector3, pos: Vector3, color: Color, model: PackedScene =
 		var art: Node3D = model.instantiate()
 		art.position.y = -size.y / 2.0
 		if model == GATE_MODEL:
-			art.rotation.y = PI / 2.0
+			art.rotation.y = -PI / 2.0
 		sb.add_child(art)
 	else:
 		var box := FX.box(size, color)
@@ -143,6 +155,14 @@ func _static_box(size: Vector3, pos: Vector3, color: Color, model: PackedScene =
 	level_root.add_child(sb)
 	sb.position = pos
 	return sb
+
+
+func _camp_block(label: String, extent: Vector3, base: Vector3, tint: Color) -> void:
+	var spec: Array = CAMP_ART.get(label,[]) if map_id == "greenwood" else []
+	var body := _static_box(extent,base+Vector3.UP*extent.y*.5,tint,spec[0] if spec else null)
+	if spec:
+		var visual := body.get_child(1) as Node3D
+		visual.scale = extent / Vector3(spec[1])
 
 
 func _static_cyl(radius: float, h: float, pos: Vector3, color: Color) -> void:
@@ -228,11 +248,13 @@ func _build_room(stage: int, lay: Dictionary, x0: float, theme: Dictionary) -> D
 		match k:
 			"cover":
 				var tall := 1.2 if (ew < 3.0 and eh < 3.0) or label in ["棺", "板車", "草堆", "香爐"] else 3.0
-				var cover_art := PALISADE_MODEL if map_id == "greenwood" and label == "拒馬" else null
-				_static_box(Vector3(ew, tall, eh), c + Vector3(0, tall / 2.0, 0), theme.wall.lightened(0.15), cover_art)
+				_camp_block(label,Vector3(ew,tall,eh),c,theme.wall.lightened(.15))
 			"high":
-				var platform_art := PLATFORM_MODEL if map_id == "greenwood" and label == "箭樓" else null
-				_static_box(Vector3(ew, 1.0, eh), c + Vector3(0, 0.5, 0), Color(0.55, 0.47, 0.33), platform_art)
+				_camp_block(label,Vector3(ew,1.0,eh),c,Color(.55,.47,.33))
+				if map_id == "greenwood" and label == "交椅":
+					var chair := CAMP_CHAIR.instantiate() as Node3D
+					level_root.add_child(chair)
+					chair.position = c + Vector3.UP
 			"round":
 				var big := maxf(ew, eh) >= 8.0
 				_static_cyl(minf(ew, eh) / 2.0, 8.0 if big else 1.4, c, Color(0.35, 0.3, 0.22) if big else theme.wall.lightened(0.1))
@@ -275,9 +297,14 @@ func _build_room(stage: int, lay: Dictionary, x0: float, theme: Dictionary) -> D
 					cliff.position = c + Vector3(0, 0.03, 0)
 					_permanent_hazard(c, minf(ew, eh) / 2.0, stage, Color(0.1, 0.0, 0.0, 0.0), 3.0, &"")
 				elif "血池" in label or ew <= 2.5:
+					if map_id == "greenwood":
+						var basket := CAMP_BRAZIER.instantiate() as Node3D
+						level_root.add_child(basket)
+						basket.position = c
 					var fire := FX.cylinder(minf(ew, eh) / 2.0, 0.8, Color(0.75, 0.05, 0.05) if "血池" in label else Color(0.9, 0.35, 0.1), 2.5)
 					level_root.add_child(fire)
-					fire.position = c + Vector3(0, 0.4, 0)
+					fire.position = c + Vector3(0, 0.72 if map_id == "greenwood" else 0.4, 0)
+					if map_id == "greenwood": fire.scale = Vector3(.53,.38,.53)
 					_permanent_hazard(c, minf(ew, eh) / 2.0 + 0.5, stage, Color(1, 0.4, 0.1, 0.2), 1.5, &"" if "血池" in label else &"campfire")
 	return r
 
@@ -427,7 +454,7 @@ func _clear_zone() -> void:
 		shrine_node = Node3D.new()
 		add_child(shrine_node)
 		shrine_node.global_position = r.shrine
-		var pillar: Node3D = SHRINE_MODEL.instantiate()
+		var pillar: Node3D = (CAMP_STELE if map_id == "greenwood" else SHRINE_MODEL).instantiate()
 		shrine_node.add_child(pillar)
 		pillar.global_position.y = 0.0
 		pillar.rotation.y = PI / 2.0
