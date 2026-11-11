@@ -36,6 +36,7 @@ func _run_character(cid: String) -> void:
 	var player = main.player
 	player.invuln_t = 1.0e9
 	if cid == Data.char_order[0]:
+		await _check_cover_tactics(world, player)
 		var gate = world.rooms[0].gate_out
 		var meshes := (gate as Node).find_children("*", "MeshInstance3D", true, false)
 		_check(meshes.size() == 1, "山寨門只有一個可見模型")
@@ -195,3 +196,56 @@ func _check_draw(enemy, world) -> void:
 	world.child_entered_tree.disconnect(capture)
 	for shot in shots:
 		shot.queue_free()
+
+
+func _check_cover_tactics(world, player) -> void:
+	# 第一房的中央路障佔 x=28..30、z=-3..3。
+	var original: Vector3 = player.global_position
+	world.set_physics_process(false)
+	player.set_physics_process(false)
+	world.current = 0
+	player.global_position = Vector3(33,.1,0)
+	var archer = world.spawn_enemy("H02",Vector3(26,0,0),false)
+	archer._skill_cd = 0
+	await _frames(3)
+	_check(not archer._clear_shot() and archer._draw < 0 and archer.velocity.slide(Vector3.UP).length() > .1, "隔著路障先換位，不原地拉弓")
+	var bolt = preload("res://scripts/projectile.gd").new()
+	world.add_child(bolt)
+	bolt.global_position = Vector3(26,1,0)
+	bolt.from_player = false
+	bolt.direction = Vector3.RIGHT
+	bolt.speed = 80
+	bolt._physics_process(.1)
+	_check(bolt.is_queued_for_deletion() and bolt.global_position.x < 30, "飛行中的敵箭在障礙物表面停止")
+	var fired: Array = []
+	var capture := func(node):
+		if node.get_script() == preload("res://scripts/projectile.gd"):
+			fired.append(node)
+	world.child_entered_tree.connect(capture)
+	for i in 650:
+		await get_tree().physics_frame
+		if not fired.is_empty():
+			break
+	_check(not fired.is_empty() and archer._clear_shot(), "弓手繞出掩體後能恢復射擊")
+	world.child_entered_tree.disconnect(capture)
+	for shot in fired:
+		if is_instance_valid(shot):
+			shot.queue_free()
+	archer.queue_free()
+	var fighter = world.spawn_enemy("H01",Vector3(25,0,0),false)
+	var ally = world.spawn_enemy("H01",Vector3(26,0,0),false)
+	_check(absf(fighter._flank_offset(Vector3.RIGHT).y) > .5, "前方已有近戰同伴會找側面空位")
+	ally.queue_free()
+	var widest := 0.0
+	for i in 550:
+		await get_tree().physics_frame
+		widest = maxf(widest,absf(fighter.global_position.z))
+		if fighter.global_position.x > 31:
+			break
+	_check(widest > 3 and fighter.global_position.x > 31, "近戰實際繞過中央路障並回到玩家這一側")
+	fighter.queue_free()
+	world.current = -1
+	player.global_position = original
+	player.set_physics_process(true)
+	world.set_physics_process(true)
+	await _frames(2)

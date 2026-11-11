@@ -39,6 +39,7 @@ var _bow: Bow
 var _draw := -1.0
 var _anim: AnimationPlayer
 var _atk_cd := 0.8
+var _swing_dir := Vector3.FORWARD
 var _windup := 0.0
 var _skill_cd := 3.0
 var _skill2_cd := 6.0
@@ -59,6 +60,9 @@ var _phase := 1
 var _flying := false
 var _revealed := true
 var _first_strike := true
+var _route := PackedVector2Array()
+var _route_target := Vector2.INF
+var _route_retry := 0.0
 var _armor := 0.0
 
 
@@ -174,6 +178,7 @@ func hit_center() -> Vector3:
 func _physics_process(delta: float) -> void:
 	if dead or player == null:
 		return
+	_route_retry -= delta
 	_tick_status(delta)
 	if _stun_t > 0.0:
 		if _bow:
@@ -188,7 +193,7 @@ func _physics_process(delta: float) -> void:
 	var to_p: Vector3 = player.global_position - global_position
 	var flat := Vector3(to_p.x, 0, to_p.z)
 	var dist := flat.length()
-	if _state == "":
+	if _state == "" and _windup <= 0:
 		if dist > 0.05:
 			rotation.y = atan2(-flat.x, -flat.z)
 	_behaviour(delta, flat, dist)
@@ -215,18 +220,85 @@ func _speed() -> float:
 	return s
 
 
-func _chase(flat: Vector3, dist: float, keep := 0.0) -> void:
+func _clear_shot() -> bool:
+	var origin := global_position + Vector3.UP * (1.3 * size)
+	var query := PhysicsRayQueryParameters3D.create(origin,player.global_position + Vector3.UP,1)
+	query.hit_from_inside = true
+	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()
+
+
+func _ground_direction(goal: Vector2) -> Vector2:
+	var here := Vector2(global_position.x,global_position.z)
+	var direct := here.direction_to(goal)
+	if _flying or world.current < 0:
+		return direct
+	var nav = world.rooms[world.current].navigation
+	var radius := .4 * size + Data.cfg("ai_path_margin")
+	if not nav.bounds.has_point(here):
+		return direct
+	goal = goal.clamp(nav.bounds.position+Vector2.ONE*radius,nav.bounds.end-Vector2.ONE*radius)
+	if nav.clear(here,goal,radius):
+		_route.clear()
+		_route_retry = 0.0
+		return here.direction_to(goal)
+	if _route_retry <= 0 or goal.distance_to(_route_target) > Data.cfg("ai_repath_distance"):
+		_route = nav.route(here,goal,radius)
+		_route_target = goal
+		_route_retry = Data.cfg("ai_repath_seconds")
+	# 從最遠的可達格切角；不能跨過擋路的地圖物件。
+	for i in range(_route.size()-1,-1,-1):
+		if nav.clear(here,_route[i],radius):
+			if here.distance_squared_to(_route[i]) <= .04:
+				return Vector2.ZERO
+			return here.direction_to(_route[i])
+	return Vector2.ZERO
+
+
+func _chase(flat: Vector3, dist: float, keep := 0.0, blocked := false) -> void:
 	var dir := Vector3.ZERO
-	if keep > 0.0:
+	if blocked:
+		dir = flat.normalized()
+	elif keep > 0.0:
 		if dist < keep * 0.6:
 			dir = -flat.normalized()
 		elif dist > keep:
 			dir = flat.normalized()
 	elif dist > reach * 0.8:
 		dir = flat.normalized()
-	dir += _separation() * 0.8
+	if not dir.is_zero_approx():
+		var here := Vector2(global_position.x,global_position.z)
+		var distance := keep if dir.dot(flat) < 0 else dist
+		var goal := here + Vector2(dir.x,dir.z)*distance
+		if keep == 0 and dist < Data.cfg("ai_flank_range") and dist > reach:
+			goal += _flank_offset(dir)
+		var step := _ground_direction(goal)
+		dir = Vector3(step.x,0,step.y)
+	dir = (dir + _separation() * 0.8).limit_length()
 	velocity.x = dir.x * _speed()
 	velocity.z = dir.z * _speed()
+
+
+# 有同伴佔住正前方時，沿另一側接近；以相對站位選邊，避免每幀隨機換向。
+func _flank_offset(forward: Vector3) -> Vector2:
+	var side := Vector2(-forward.z,forward.x)
+	var ahead := Vector2(forward.x,forward.z)
+	var scan := Data.cfg("ai_flank_spacing")
+	var nearest := scan
+	var offset := Vector2.ZERO
+	for ally in world.enemies_near(global_position,scan):
+		if ally == self or ally.dead:
+			continue
+		var d: Vector3 = ally.global_position-global_position
+		var planar := Vector2(d.x,d.z)
+		var gap := planar.length()
+		if gap >= nearest or planar.dot(ahead) <= 0 or absf(planar.dot(side)) > hit_radius+ally.hit_radius:
+			continue
+		var flank := -signf(planar.dot(side))
+		if is_zero_approx(flank):
+			flank = 1 if get_instance_id() % 2 == 0 else -1
+		nearest = gap
+		offset = side * flank * minf(scan,reach+hit_radius)
+	return offset
 
 
 func _separation() -> Vector3:
@@ -245,15 +317,22 @@ func _separation() -> Vector3:
 func _melee(delta: float, dist: float, mult := 1.0) -> void:
 	_atk_cd -= delta
 	if _windup > 0.0:
+		velocity.x = 0
+		velocity.z = 0
 		_windup -= delta
 		if _windup <= 0.0:
 			_body_mat.emission_enabled = false
 			if _anim:
 				FX.play(world, hit_center() - global_basis.z * 0.7, &"sword-slash", 1.1, 0.20)
-			if dist <= reach + 0.8 + hit_radius:
+			var toward: Vector3 = player.global_position-global_position
+			toward.y = 0
+			if dist <= reach + 0.8 + hit_radius and _swing_dir.dot(toward.normalized()) >= 0 and _clear_shot():
 				_hit_player(dmg * mult)
 		return
-	if _atk_cd <= 0.0 and dist <= reach + 0.5 + hit_radius:
+	if _atk_cd <= 0.0 and dist <= reach + 0.5 + hit_radius and _clear_shot():
+		_swing_dir = -global_basis.z
+		velocity.x = 0
+		velocity.z = 0
 		_windup = 0.35
 		_atk_cd = 1.3
 		_body_mat.emission_enabled = true
@@ -286,11 +365,12 @@ func _cancel_draw() -> void:
 
 func _archery(delta: float, flat: Vector3, dist: float) -> void:
 	var target: Vector3 = player.global_position + Vector3.UP
-	if dist >= 22.0 and _draw < Bow.RELEASE:
+	var blocked := not _clear_shot()
+	if (dist >= 22.0 or blocked) and _draw < Bow.RELEASE:
 		_cancel_draw()
 	if _draw < 0.0:
-		if dist >= 22.0 or _skill_cd > Bow.RELEASE:
-			_chase(flat, dist, 10.0)
+		if blocked or dist >= 22.0 or _skill_cd > Bow.RELEASE:
+			_chase(flat, dist, 10.0, blocked)
 			_bow.pose(-1.0, target)
 			return
 		_draw = 0.0
@@ -399,16 +479,18 @@ func _behaviour(delta: float, flat: Vector3, dist: float) -> void:
 		"H02":
 			_archery(delta, flat, dist)
 		"H04":
-			_chase(flat, dist, 8.0)
-			if _skill_cd <= 0.0 and dist < 18.0:
+			var blocked := not _clear_shot()
+			_chase(flat, dist, 8.0, blocked)
+			if not blocked and _skill_cd <= 0.0 and dist < 18.0:
 				_skill_cd = 2.5
 				_shoot(14.0, dmg, Color(0.4, 0.9, 0.3))
 			if _skill2_cd <= 0.0:
 				_skill2_cd = 6.0
 				_raise_corpse()
 		"H05":
-			_chase(flat, dist, 8.0)
-			if _skill_cd <= 0.0 and dist < 16.0:
+			var blocked := not _clear_shot()
+			_chase(flat, dist, 8.0, blocked)
+			if not blocked and _skill_cd <= 0.0 and dist < 16.0:
 				_skill_cd = 4.0
 				_shoot(12.0, dmg * 0.6, Color(0.3, 0.8, 0.2), true)
 		"H06":

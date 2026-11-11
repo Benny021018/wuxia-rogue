@@ -192,6 +192,8 @@ func _build_room(stage: int, lay: Dictionary, x0: float, theme: Dictionary) -> D
 	_set_gate(gate_in, false)
 	var r := {"stage": stage, "x0": x0, "w": w, "h": h, "gate_in": gate_in, "gate_out": gate_out,
 		"spawns": {}, "elites": [], "boss": Vector3.ZERO, "shrine": Vector3(x0 + w - 4.0, 0, 4.0)}
+	var nav := preload("res://scripts/room_routes.gd").new(Rect2(x0,-half,w,h))
+	r["navigation"] = nav
 	var row: Dictionary = Data.stage_row(stage)
 	var title := FX.label3d("第%d區・%s" % [stage, row.area_zh], 96, Color(0.95, 0.9, 0.75))
 	level_root.add_child(title)
@@ -216,6 +218,13 @@ func _build_room(stage: int, lay: Dictionary, x0: float, theme: Dictionary) -> D
 		var eh := float(el.h)
 		var label: String = el.label
 		var c := Vector3(x0 + ex + ew / 2.0, 0, ey + eh / 2.0 - half)
+		if k in ["cover","high","round","tree"]:
+			var extent := Vector2(ew,eh)
+			if k == "round":
+				extent = Vector2.ONE * minf(ew,eh)
+			elif k == "tree":
+				extent = Vector2.ONE
+			nav.blocks.append(Rect2(Vector2(c.x,c.z)-extent/2,extent))
 		match k:
 			"cover":
 				var tall := 1.2 if (ew < 3.0 and eh < 3.0) or label in ["棺", "板車", "草堆", "香爐"] else 3.0

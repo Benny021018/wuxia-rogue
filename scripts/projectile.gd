@@ -33,6 +33,16 @@ func setup(color: Color, size := 0.15) -> void:
 
 func _physics_process(delta: float) -> void:
 	var step := direction * speed * delta
+	if not from_player and not step.is_zero_approx():
+		var query := PhysicsRayQueryParameters3D.create(global_position,global_position+step,1)
+		query.hit_from_inside = true
+		var hit := get_world_3d().direct_space_state.intersect_ray(query)
+		if not hit.is_empty():
+			global_position = hit.position
+			if poison_cloud:
+				_spawn_cloud()
+			queue_free()
+			return
 	global_position += step
 	_travelled += step.length()
 	if poison_cloud:

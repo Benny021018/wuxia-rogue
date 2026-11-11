@@ -17,3 +17,8 @@ pressure_target_start,0.60,第1區目標壓力（P50玩家清場時間 = 壓力�
 pressure_target_end,0.95,第20區目標壓力
 boss_focus,0.7,首領戰時輸出打在首領身上的比例（其餘清小怪）
 boss_zone_add_ratio,0.5,首領區小怪壓力 = 一般目標壓力 × 0.5
+ai_path_margin,0.12,避障時在碰撞半徑外保留的距離（公尺）
+ai_repath_distance,2.0,目標移動幾公尺後立即重算路線
+ai_repath_seconds,0.65,受阻時重算路線的間隔（秒）
+ai_flank_range,7.0,近戰敵人開始找側面空位的距離（公尺）
+ai_flank_spacing,2.5,判斷前方隊友站位的距離（公尺）
