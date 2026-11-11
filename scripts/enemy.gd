@@ -38,6 +38,9 @@ const Bow := preload("res://scripts/archer_bow.gd")
 var _bow: Bow
 var _draw := -1.0
 var _recoil: Tween
+var _flash := StandardMaterial3D.new()
+var _flash_meshes: Array[Node] = []
+var _hit_side := 1.0
 var _impact_pivot := Node3D.new()
 var _anim: AnimationPlayer
 var _atk_cd := 0.8
@@ -123,6 +126,9 @@ func _ready() -> void:
 		mesh.set_surface_override_material(0, _body_mat)
 	else:
 		_build_graybox()
+	_flash.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_flash.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_flash_meshes = _visual.find_children("*", "MeshInstance3D", true, false)
 	if rank != "minion":
 		_label = FX.label3d(row.name_zh, 64, Color(1, 0.85, 0.6) if rank == "elite" else Color(1, 0.4, 0.3))
 		_label.position.y = 2.2 * size + 0.3
@@ -783,24 +789,31 @@ func stun(t: float) -> void:
 func _react_to_hit(away: Vector3, weight: float, guard: bool) -> void:
 	if _recoil:
 		_recoil.kill()
-	var local := (global_basis.inverse() * away).slide(Vector3.UP).normalized()
-	if local.is_zero_approx():
-		local = Vector3.BACK
-	var force := clampf(weight, .55, 2.2)
-	if rank == "boss":
-		force *= .55
-	var lean := Vector3.UP.cross(local) * (0.17 * force if not guard else .08)
-	lean.y = (.14 * force if not guard else -.12) * (1 if local.x >= 0 else -1)
-	var offset := local * size * (.095 * force if not guard else .035)
-	offset.y = -size * (.045 * force if not guard else .10)
+	var right := global_basis.x
+	if is_instance_valid(player):
+		right = player.cam.global_basis.x
+	right = (global_basis.inverse() * right).slide(Vector3.UP).normalized()
+	var side := (global_basis * right).dot(away)
+	_hit_side = signf(side) if absf(side) > .25 else -_hit_side
+	var force := clampf(weight, .65, 2.0) * (.65 if guard or rank == "boss" else 1.0)
+	var offset := right * _hit_side * force * .12 * size
+	var roll := Vector3.UP.cross(right) * _hit_side * force * .14
+	for mesh in _flash_meshes:
+		mesh.material_overlay = _flash
+	_flash.albedo_color = Color(1, .025, .035, .70)
 	_recoil = create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 	_recoil.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	_recoil.tween_property(_impact_pivot, "rotation", lean, .045)
-	_recoil.parallel().tween_property(_impact_pivot, "position", offset, .045)
-	_recoil.tween_interval(.025 * force)
-	_recoil.tween_property(_impact_pivot, "rotation", -lean * .13, .085 * force)
-	_recoil.parallel().tween_property(_impact_pivot, "position", Vector3.ZERO, .085 * force)
-	_recoil.tween_property(_impact_pivot, "rotation", Vector3.ZERO, .10)
+	_recoil.tween_property(_impact_pivot, "position", offset, .04)
+	_recoil.parallel().tween_property(_impact_pivot, "rotation", roll, .04)
+	_recoil.tween_property(_impact_pivot, "position", -offset * .68, .075)
+	_recoil.parallel().tween_property(_impact_pivot, "rotation", -roll * .68, .075)
+	_recoil.parallel().tween_property(_flash, "albedo_color:a", .23, .075)
+	_recoil.tween_property(_impact_pivot, "position", Vector3.ZERO, .095)
+	_recoil.parallel().tween_property(_impact_pivot, "rotation", Vector3.ZERO, .095)
+	_recoil.parallel().tween_property(_flash, "albedo_color:a", 0.0, .095)
+	_recoil.tween_callback(func():
+		for mesh in _flash_meshes:
+			mesh.material_overlay = null)
 
 
 ## 被玩家擊中：回傳實際造成的傷害
