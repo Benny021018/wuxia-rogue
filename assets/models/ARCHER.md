@@ -1,0 +1,1 @@
+H02 的射箭動作取材自 Kay Lousberg 的 [KayKit – Character Animations 1.1](https://kaylousberg.itch.io/kaykit-character-animations)（CC0）。以 Rig_Medium 的 Ranged_Bow_Draw 與 Ranged_Bow_Release 為肩、肘動作參考，在 Blender 依山寨弓手的身形調整雙手接觸點，烘焙為 Shoot 片段。弓身、弦及箭由遊戲繪製。

@@ -34,6 +34,9 @@ var summons: Array = []
 var _visual: Node3D
 var _body_mat: BaseMaterial3D
 var _label: Label3D
+const Bow := preload("res://scripts/archer_bow.gd")
+var _bow: Bow
+var _draw := -1.0
 var _anim: AnimationPlayer
 var _atk_cd := 0.8
 var _windup := 0.0
@@ -103,6 +106,10 @@ func _ready() -> void:
 		for clip in [&"Walk", &"Idle"]:
 			_anim.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
 		_anim.play(&"Idle")
+		if eid == "H02":
+			_bow = Bow.new()
+			add_child(_bow)
+			_bow.bind(model.find_children("*","Skeleton3D",true,false)[0])
 		# 每個敵人各自控制蓄力發光，避免整群共用同一材質。
 		var mesh: MeshInstance3D = model.find_children("*", "MeshInstance3D", true, false)[0]
 		_body_mat = mesh.get_active_material(0).duplicate()
@@ -169,6 +176,9 @@ func _physics_process(delta: float) -> void:
 		return
 	_tick_status(delta)
 	if _stun_t > 0.0:
+		if _bow:
+			_cancel_draw()
+			_bow.pose(-1, player.global_position + Vector3.UP)
 		_stun_t -= delta
 		velocity.x = 0
 		velocity.z = 0
@@ -182,7 +192,7 @@ func _physics_process(delta: float) -> void:
 		if dist > 0.05:
 			rotation.y = atan2(-flat.x, -flat.z)
 	_behaviour(delta, flat, dist)
-	if _anim and _anim.current_animation not in [&"Slash", &"Shoot"]:
+	if _anim and _draw < 0.0 and _anim.current_animation not in [&"Slash", &"Shoot"]:
 		var moving := Vector2(velocity.x, velocity.z).length() > 0.15
 		var clip := &"Walk" if moving else &"Idle"
 		if _anim.current_animation != clip:
@@ -268,11 +278,47 @@ func _hit_player(amount: float) -> void:
 	player.take_damage(amount, self)
 
 
-func _shoot(speed_mps: float, amount: float, color: Color, cloud := false) -> void:
+func _cancel_draw() -> void:
+	if _draw >= 0.0:
+		_draw = -1.0
+		_body_mat.emission_enabled = false
+		_anim.play(&"Idle", .10)
+
+func _archery(delta: float, flat: Vector3, dist: float) -> void:
+	var target: Vector3 = player.global_position + Vector3.UP
+	if dist >= 22.0 and _draw < Bow.RELEASE:
+		_cancel_draw()
+	if _draw < 0.0:
+		if dist >= 22.0 or _skill_cd > Bow.RELEASE:
+			_chase(flat, dist, 10.0)
+			_bow.pose(-1.0, target)
+			return
+		_draw = 0.0
+		_anim.play(&"Shoot")
+		_anim.pause()
+	velocity.x = 0
+	velocity.z = 0
+	var prev := _draw
+	_draw += delta
+	if prev < Bow.RELEASE and _draw >= Bow.RELEASE:
+		_anim.seek(Bow.RELEASE,true)
+		_bow.pose(Bow.RELEASE,target)
+		_shoot(24.0, dmg, Color(0.9,0.8,0.5), false, _bow.tip_position())
+		_skill_cd = 2.0
+	_anim.seek(_draw,true)
+	_bow.pose(_draw,target)
+	_body_mat.emission_enabled = _draw >= Bow.RELEASE - .3 and _draw < Bow.RELEASE
+	_body_mat.emission = Color(.85,.58,.18)
+	if _draw >= Bow.FINISH:
+		_cancel_draw()
+
+func _shoot(speed_mps: float, amount: float, color: Color, cloud := false, arrow_tip := Vector3.INF) -> void:
 	var p := PROJ.new()
 	world.add_child(p)
 	var from := global_position + Vector3(0, 1.3 * size, 0)
 	var target: Vector3 = player.global_position + Vector3(0, 1.0, 0)
+	if arrow_tip.is_finite():
+		from = arrow_tip
 	p.global_position = from
 	p.from_player = false
 	p.direction = (target - from).normalized()
@@ -286,7 +332,13 @@ func _shoot(speed_mps: float, amount: float, color: Color, cloud := false) -> vo
 		p.target_pos = Vector3(player.global_position.x, 0.2, player.global_position.z)
 		p.direction = (p.target_pos - from).normalized()
 		p.max_range = from.distance_to(p.target_pos)
-	p.setup(color, 0.15)
+	if arrow_tip.is_finite():
+		var arrow := Bow.make_arrow()
+		p.add_child(arrow)
+		arrow.basis = Basis.looking_at(p.direction,Vector3.UP)
+		arrow.position = -p.direction*Bow.LENGTH
+	else:
+		p.setup(color, 0.15)
 
 
 func _aoe_after(center: Vector3, r: float, delay: float, amount: float) -> void:
@@ -345,15 +397,7 @@ func _behaviour(delta: float, flat: Vector3, dist: float) -> void:
 			_chase(flat, dist)
 			_melee(delta, dist)
 		"H02":
-			_chase(flat, dist, 10.0)
-			_body_mat.emission_enabled = dist < 22.0 and _skill_cd < 0.3
-			_body_mat.emission = Color(0.85, 0.58, 0.18)
-			if dist < 22.0 and _skill_cd <= 0.3 and _anim.current_animation != &"Shoot":
-				_anim.play(&"Shoot", 0.04)
-				_anim.seek(clampf(0.3 - _skill_cd, 0.0, 0.3), true)
-			if _skill_cd <= 0.0 and dist < 22.0:
-				_skill_cd = 2.0
-				_shoot(24.0, dmg, Color(0.9, 0.8, 0.5))
+			_archery(delta, flat, dist)
 		"H04":
 			_chase(flat, dist, 8.0)
 			if _skill_cd <= 0.0 and dist < 18.0:

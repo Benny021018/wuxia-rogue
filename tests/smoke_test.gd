@@ -53,6 +53,8 @@ func _run_character(cid: String) -> void:
 				var part: MeshInstance3D = parts[0]
 				var bounds := part.global_transform * part.get_aabb()
 				_check(absf(bounds.size.y - 1.8) < 0.02 and absf(bounds.position.y) < 0.02, "%s 站姿與膠囊對齊" % id)
+			if id == "H02":
+				_check_draw(enemy, world)
 			enemy.queue_free()
 		var spark := FX.play(world, Vector3.ZERO, &"hit-spark", 1.0, 0.1)
 		await _frames(12)
@@ -160,3 +162,36 @@ func _run_character(cid: String) -> void:
 	print("SMOKE_OK ", cid)
 	main._to_menu()
 	await _frames(3)
+
+
+func _check_draw(enemy, world) -> void:
+	var flat: Vector3 = Vector3.FORWARD * 12
+	var shots: Array = []
+	var capture := func(child):
+		if child.get_script() == preload("res://scripts/projectile.gd"):
+			shots.append(child)
+	world.child_entered_tree.connect(capture)
+	enemy._skill_cd = -5.0
+	enemy._behaviour(.35, flat, 12)
+	_check(shots.is_empty() and enemy._bow.arrow.visible, "進入射程時先搭箭")
+	enemy._behaviour(.02, flat, 24)
+	_check(enemy._draw < 0 and not enemy._bow.arrow.visible, "離開射程會收弓")
+	enemy._behaviour(.5, flat, 12)
+	enemy._stun_t = .05
+	enemy._physics_process(.05)
+	_check(enemy._draw < 0 and shots.is_empty(), "暈眩中斷引弓")
+	enemy._behaviour(.25, flat, 12)
+	var start_gap: float = enemy._bow.palm(0).distance_to(enemy._bow.palm(1))
+	enemy._behaviour(.88, flat, 12)
+	var full_gap: float = enemy._bow.palm(0).distance_to(enemy._bow.palm(1))
+	_check(shots.is_empty() and full_gap > start_gap + .28, "滿弓時雙手拉開，箭仍在弦上")
+	var tip: Vector3 = enemy._bow.tip_position()
+	enemy._behaviour(.04, flat, 12)
+	_check(shots.size() == 1 and not enemy._bow.arrow.visible, "放弦只發射一支箭")
+	if shots.size() == 1:
+		_check(tip.distance_to(shots[0].global_position) < .035, "飛箭與弦上箭頭對齊")
+	enemy._behaviour(.65, flat, 12)
+	_check(enemy._draw < 0 and shots.size() == 1, "收勢不會重複發射")
+	world.child_entered_tree.disconnect(capture)
+	for shot in shots:
+		shot.queue_free()
