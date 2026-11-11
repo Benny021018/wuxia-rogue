@@ -393,10 +393,6 @@ func _shoot(pos: Vector3, dir: Vector3, dmg: float, pierce: int, rng: float, col
 		p.add_child(missile)
 		missile.basis = Basis.looking_at(p.direction).scaled(Vector3.ONE*factor)
 		missile.position = -p.direction * preload("res://scripts/archer_bow.gd").LENGTH * factor
-	elif visual_id == "W006":
-		var knife := preload("res://assets/models/weapons/W006.glb").instantiate()
-		p.add_child(knife)
-		knife.basis = Basis.looking_at(p.direction)
 	else:
 		p.setup(color, 0.1)
 

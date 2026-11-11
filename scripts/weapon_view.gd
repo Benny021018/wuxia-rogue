@@ -46,8 +46,9 @@ func setup(wid: String, slot: int) -> void:
 	id = wid
 	attack_action = "attack_%d" % (slot+1)
 	hand = 1.0 if slot == 0 else -1.0
-	var asset := "Tachi" if id == "W001" else id
-	var packed := load("res://assets/models/weapons/%s.glb" % asset) as PackedScene
+	const MODELS := {"W001": preload("res://assets/models/weapons/Tachi.glb"),
+		"W007": preload("res://assets/models/weapons/W007.glb"), "W301": preload("res://assets/models/weapons/W301.glb")}
+	var packed: PackedScene = MODELS[id]
 	art = packed.instantiate()
 	add_child(art)
 	home = Vector3(.32*hand,-.23,-.49)

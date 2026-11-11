@@ -62,7 +62,7 @@ func _run_character(cid: String) -> void:
 		var spark := FX.play(world, Vector3.ZERO, &"hit-spark", 1.0, 0.1)
 		await _frames(12)
 		_check(not is_instance_valid(spark), "一次性命中特效播放完畢會釋放")
-	var wids: Array = Data.weapons.keys()
+	var wids: Array = Game.FEATURED_WEAPONS.duplicate()
 	for mi in Data.map_order.size():
 		if mi > 0:
 			world.build_map(mi)
@@ -260,13 +260,13 @@ func _check_weapon_views(player) -> void:
 	_check(allowed==["W001","W007","W301"],"此版本只開放太刀、弓、大劍")
 	var old: Array = Game.weapons.duplicate(true)
 	Game.weapons[0] = {"id":"W007","lv":1}
-	Game.weapons[1] = {"id":"W303","lv":1}
+	Game.weapons[1] = {"id":"W301","lv":1}
 	Game.recompute()
 	var bow = player.weapon_models[0]
-	var crossbow = player.weapon_models[1]
+	var greatsword = player.weapon_models[1]
 	var events: Array = []
-	bow.attack(.8,1,func(i): events.append("弓%d"%i))
-	crossbow.attack(.8,3,func(i): events.append("弩%d"%i))
+	bow.attack(.8,1,func(i): events.append("bow%d"%i))
+	greatsword.attack(.8,1,func(i): events.append("sword%d"%i))
 	await _frames(8)
 	_check(events.is_empty() and bow.arrow.visible,"蓄力尚未放箭")
 	_check(bow.loader.visible and bow.loader.position.distance_to(bow.arrow.position)<.001,"搭箭時副手夾住箭尾")
@@ -275,14 +275,14 @@ func _check_weapon_views(player) -> void:
 	await _frames(21)
 	_check(bow.flex_mesh.get_blend_shape_value(0)>.95 and bow.arrow.visible and bow.loader.position.distance_to(bow.arrow.position)<.001,"滿弓時弓身變形且箭尾仍在指間")
 	await _frames(28)
-	_check(events.count("弓0")==1 and events.count("弩0")==1 and events.count("弩1")==1 and events.count("弩2")==1 and events.size()==4,"雙手節拍獨立且每次放箭只觸發一次")
+	_check(events.count("bow0")==1 and events.count("sword0")==1 and events.size()==2,"一箭與一次大劍揮擊各觸發一次")
 	_check(not bow.arrow.visible and not bow.loader.visible and bow.position.is_equal_approx(bow.home),"放箭後收臂回到握位")
 	player._attack(0)
 	var count: int = player.attack_count
 	player._attack(1)
-	_check(not crossbow.visible and player.attack_count==count,"副手搭箭時另一把武器收起並等待")
+	_check(not greatsword.visible and player.attack_count==count,"副手搭箭時另一把武器收起並等待")
 	await _frames(62)
-	_check(crossbow.visible,"收勢後恢復另一把武器")
+	_check(greatsword.visible,"收勢後恢復另一把武器")
 	Game.weapons[0] = {"id":"W001","lv":1}
 	Game.recompute()
 	var tachi = player.weapon_models[0]

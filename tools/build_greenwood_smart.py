@@ -65,8 +65,11 @@ def fit(key,target):
     if key in donors:
         co[:,:2]*=-1;co*=1.8/dims[2]
         o.data.vertices.foreach_set('co',co.astype('f').ravel());o.data.update();paint(o,co,key)
-        bpy.ops.import_scene.gltf(filepath=str(ROOT/'assets/models'/(donors[key]+'.glb')))
-        rig=next(r for r in bpy.context.scene.objects if r.type=='ARMATURE')
+        with bpy.data.libraries.load(str(ROOT/'tools/blender_sources/rigs'/(donors[key]+'.blend'))) as (src, dst):
+            dst.objects=src.objects
+        rig,=dst.objects
+        bpy.context.collection.objects.link(rig)
+        bpy.context.view_layer.update()
         # Map capture T-pose into the actual game bind pose before inheriting the motion clips.
         bones=list(rig.data.bones);scores=[];deforms=[]
         for bone in bones:

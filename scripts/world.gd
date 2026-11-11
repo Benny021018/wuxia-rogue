@@ -14,7 +14,6 @@ const HAZARD := preload("res://scripts/hazard.gd")
 const GATE_MODEL := preload("res://assets/models/greenwood/Gate.glb")
 const PALISADE_MODEL := preload("res://assets/models/greenwood/palisade.glb")
 const PLATFORM_MODEL := preload("res://assets/models/greenwood/platform.glb")
-const SHRINE_MODEL := preload("res://assets/models/shrine.glb")
 const CAMP_ART := {
 	"拒馬":[PALISADE_MODEL,Vector3(6,3,2)], "":[preload("res://assets/models/greenwood/cover.glb"),Vector3(6,3,1.5)],
 	"板車":[preload("res://assets/models/greenwood/cart.glb"),Vector3(3,1.2,2)],
@@ -454,7 +453,7 @@ func _clear_zone() -> void:
 		shrine_node = Node3D.new()
 		add_child(shrine_node)
 		shrine_node.global_position = r.shrine
-		var pillar: Node3D = (CAMP_STELE if map_id == "greenwood" else SHRINE_MODEL).instantiate()
+		var pillar: Node3D = CAMP_STELE.instantiate()
 		shrine_node.add_child(pillar)
 		pillar.global_position.y = 0.0
 		pillar.rotation.y = PI / 2.0
