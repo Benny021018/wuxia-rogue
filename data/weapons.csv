@@ -1,0 +1,18 @@
+weapon_id,name_zh,rarity,class,range_type,dmg,hits,interval_s,range_m,avg_targets,pattern_desc,awaken_desc,awaken_power,awaken_basis,tags,needs_sim
+W001,鐵刀,common,刀,melee,56,1,0.8,2.5,2.5,前方120°扇形揮砍,揮砍範圍+12%,1.0,依stat_values area,blade|area,0
+W002,齊眉棍,common,棍,melee,60,1,1.2,2.8,3.5,360°橫掃並擊退,擊退距離加倍並暈眩0.3秒,1.0,控場價值；主觀估值,staff|area|control,1
+W003,鐵拳套,common,拳,melee,44,1,0.3,1.5,1.2,快速連拳單體,攻速+8%,1.0,依stat_values atk_speed,fist|atk_speed,0
+W004,青鋼劍,common,劍,mid,49,1,0.5,3.5,1.5,直線突刺,突刺距離+1m並可穿透,1.0,平均命中1.5→1.65 ≈ +10%,sword|pierce,0
+W005,紅纓槍,common,槍,mid,61,1,0.9,4.0,2.2,長距離直線穿刺,暴擊率+16%,1.0,依stat_values crit,spear|pierce,0
+W006,柳葉飛刀,common,暗器,ranged,74,1,0.5,15,1.0,射出單發飛刀,命中後10%機率彈射一次,1.0,≈ +10%,hidden|projectile,0
+W007,竹弓,common,弓,ranged,89,1,0.9,25,1.5,長射程箭矢穿透1,對15m外敵人傷害+12%,1.0,遠距命中佔約80% → +10%,bow|projectile|pierce,0
+W101,鬼頭大刀,rare,刀,melee,65,1,1.0,3.0,3.0,大範圍劈砍擊退,每第3刀震地（範圍+50%）,2.2,平均範圍+17% ≈ 1.4＋控場0.8,blade|area,1
+W102,鐵骨扇,rare,扇,mid,66,1,0.8,4.5,2.0,扇形打出3道風刃,風刃 3→4 道,2.2,命中數約+22%,fan|projectile|area,0
+W103,袖箭,rare,暗器,ranged,55,3,1.0,15,1.0,連發3支袖箭,連發 3→4 支，單支傷害-10%,2.2,4×0.9/3 = +20%,hidden|projectile,0
+W201,雙鉤,epic,鉤,melee,41,2,0.6,2.2,1.8,雙鉤連斬兩下,連斬第2下必定暴擊且暴擊傷害+50%,5.0,一半攻擊必暴＋爆傷 ≈ +35%,hook|crit,0
+W202,九節鞭,epic,鞭,mid,53,1,0.9,5.0,3.5,環形鞭掃,鞭掃範圍+25%並把敵人拉近,5.0,範圍≈+25%命中(3.5)＋聚怪(1.5),whip|area|control,1
+W203,暴雨針匣,epic,暗器,ranged,62,5,1.2,12,0.8,扇形射出5根針,針數 5→7,5.0,+40%針數×命中效率90% ≈ +36%,hidden|projectile|poison,0
+W204,霸王槍,epic,槍,mid,76,1,1.1,4.5,3.0,橫掃與突刺交替,擊殺後下一擊傷害+100%,5.0,割草時觸發率高；主觀估值,spear|area,1
+W301,開天巨劍,legendary,巨劍,melee,103,1,1.4,3.5,5.0,重劈震地,每次重劈產生8m劍氣衝擊波（100%傷害）,12.0,衝擊波平均3目標 → +60%,greatsword|area|projectile,1
+W302,驚鴻劍,legendary,劍,mid,39,2,0.5,5.0,2.0,劍光雙閃,雙閃→三閃，射程+3m,12.0,+50%(10.5)＋射程安全(1.5),sword|projectile,0
+W303,天機弩,legendary,弩,ranged,41,3,0.8,25,2.0,連弩三矢穿透,每第5輪改為15矢扇形齊射,12.0,平均每輪+2.4矢×命中效率約70% ≈ +55%,crossbow|projectile|pierce,1

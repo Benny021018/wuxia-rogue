@@ -1,0 +1,28 @@
+# 每次 push 或 PR 時，用 Godot 無頭模式跑冒煙測試
+name: smoke-test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: "4.7.1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: 下載 Godot
+        run: |
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O godot.zip
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot
+          chmod +x godot
+      - name: 匯入資源
+        run: ./godot --headless --path . --import || true
+      - name: 冒煙測試
+        run: |
+          ./godot --headless --fixed-fps 60 --path . res://tests/Smoke.tscn 2>&1 | tee smoke.log
+          grep -q "SMOKE_DONE errors=0" smoke.log
+          ! grep -q "SCRIPT ERROR" smoke.log

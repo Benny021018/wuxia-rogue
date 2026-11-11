@@ -1,0 +1,34 @@
+key,value,note
+base_cost,10,第一抽價格（金幣）
+cost_growth_k,0.15,cost(n)=base×(1+k)^n，n=本波已抽次數，每波重置
+choices_per_draw,3,三選一
+weapon_pool_ratio,0.30,每個候選位30%為武器，70%為武學
+reroll_cost_ratio,0.5,重抽價格 = 當前抽價 × 0.5
+soft_pity_start,12,連續12抽未出絕世後開始軟保底
+soft_pity_step,1.5,軟保底每抽增加的絕世權重
+hard_pity,20,第20抽必出絕世（候選位之一）
+owned_upgrade_weight_mult,1.4,已習得的武學/武器在池中權重倍率（升級機會）；模擬調整後為1.4
+sect_weight_per_owned,0.6,每習得1門同門武學，該門派「尚未習得」武學權重+60%（不影響已習得的，避免圓滿過易）
+sect_weight_cap,4.0,門派權重倍率上限
+origin_sect_count,1,角色出身門派視為已擁有1門（只影響權重，不計入羈絆）
+bond_tiers,2|4|5,門派傳承門檻：習得同門武學門數（6門時達成率僅1%，下修為5）
+bond_tier_power,3|8|15,各階羈絆效果的戰力預算（逐階獨立，不含前階）
+weapon_slots,2,武器欄位（可近戰遠程混搭）
+martial_slots,8,武學欄位
+max_level,5,武學與武器最高等級（重複抽到+1級）
+breakthrough_lv3,3,武學第一次突破「小成」
+breakthrough_lv5,5,武學第二次突破「圓滿」／武器「覺醒」
+weapon_levelup_pct,15,武器每升一級傷害+15%
+uptime_melee,0.60,近戰預估貼身輸出時間佔比（第一人稱視野窄，比俯視角低）
+uptime_mid,0.75,中距離預估輸出時間佔比
+uptime_ranged,0.90,遠程預估輸出時間佔比
+hit_rate_melee,0.95,第一人稱命中率：近戰有揮砍判定與吸附輔助
+hit_rate_mid,0.90,中距離命中率
+hit_rate_ranged,0.75,遠程需要手動瞄準；可用輔助瞄準調整
+base_crit_rate_pct,5,全角色基礎暴擊率
+base_crit_dmg_pct,150,全角色基礎暴擊傷害
+ref_hp,120,基準角色生命
+ref_move_speed,5.0,基準角色移速（m/s）
+char_max_level,30,角色等級上限（三流→一流→絕頂→化境）
+xiuwei_formula,round(40×L^0.9+40),第L級精進到L+1所需修為（擊殺獎勵見 enemies.csv；倍率見 combat_config）
+sim_draws_per_run,50,模擬用：一局預估抽獎次數

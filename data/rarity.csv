@@ -1,0 +1,5 @@
+rarity,name_zh,weight,luck_scale,power_budget,weapon_eff_dps,levelup_ratio,lv3_ratio,lv5_ratio,color
+common,凡品,60,-0.5,1.0,100,0.8,1.0,2.0,#B0B0B0
+rare,良品,28,0.5,2.2,112,0.8,1.0,2.0,#4A90E2
+epic,神兵,10,1.0,5.0,140,0.8,1.0,2.0,#9B59B6
+legendary,絕世,1.2,1.5,12.0,210,0.8,1.0,2.0,#F5A623

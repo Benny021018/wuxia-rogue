@@ -1,0 +1,19 @@
+key,value,note
+zone_ref_time_s,60,清場時間基準秒數（壓力1.0 = 清場60秒）
+max_alive_per_wave,30,每波同時在場的小怪上限（效能與畫面可讀性）；波數由腳本自動計算
+base_enemy_hp,230,第1區「行屍」血量（第一人稱：怪少而耐打，為俯視角版本的2倍）
+enemy_hp_growth,1.030,每過一個區域敵人血量倍率（指數成長）
+base_enemy_dmg,8,第1區「行屍」傷害
+enemy_dmg_growth,1.06,每過一個區域敵人傷害倍率
+minion_budget_base,30,第1區小怪威脅預算
+minion_budget_per_stage,2,每區增加的小怪威脅預算（基礎曲線；逐區微調見 stages.csv）
+xiuwei_per_threat,7.991,每點威脅給的修為（再乘地圖倍率）
+gold_per_threat,0.856,每點威脅給的銀兩（再乘地圖倍率）
+draw_cost_stage_growth,0.10,參悟基礎價格每區成長：base_cost×(1+g)^(區-1)
+overkill_efficiency,0.80,輸出有效率（溢傷、走位空檔）
+offense_share,0.70,戰力點中屬於輸出的比例（其餘為生存/經濟）
+dps_per_point,10,1 戰力點 ≈ 10 有效DPS
+pressure_target_start,0.60,第1區目標壓力（P50玩家清場時間 = 壓力×60秒）
+pressure_target_end,0.95,第20區目標壓力
+boss_focus,0.7,首領戰時輸出打在首領身上的比例（其餘清小怪）
+boss_zone_add_ratio,0.5,首領區小怪壓力 = 一般目標壓力 × 0.5

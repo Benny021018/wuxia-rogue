@@ -1,0 +1,17 @@
+stat_id,name_zh,unit,per_point,basis
+dmg_pct,傷害,%,10,基準：+10% 傷害 = 1 戰力點 = 基準角色約 10 有效DPS
+atk_speed_pct,攻速,%,8,略高於傷害：攻速同時加快被動觸發
+crit_rate_pct,暴擊率,%,16,基礎爆傷150%：+20%暴擊≈+10%DPS，因與爆傷相乘再加價
+crit_dmg_pct,暴擊傷害,%,40,假設中期暴擊率約25%：+40%爆傷≈+10%DPS
+max_hp_pct,生命上限,%,12,生存屬性：略低於輸出屬性的單位價值
+dmg_reduction_pct,減傷,%,4,遞減收益；上限60%
+dodge_pct,閃避,%,5,與減傷相近但有隨機性；上限60%
+hp_regen,每秒回血,HP/s,1,以基礎生命120計約0.8%/s
+lifesteal_pct,吸血,%,2.5,吸血同時提供生存與續戰
+move_speed_pct,移動速度,%,6,風箏/閃避價值高
+area_pct,範圍,%,12,割草遊戲中範圍≈命中數
+range_pct,射程,%,15,主要是安全距離
+gold_gain_pct,金幣獲得,%,12,經濟屬性：多抽約等同戰力
+xiuwei_gain_pct,修為獲得,%,15,角色精進更快
+pickup_range_pct,拾取範圍,%,40,便利性為主
+luck,幸運,值,0.1,幸運0.1 → 絕世權重 ×1.15（高幸運非線性，需模擬）
