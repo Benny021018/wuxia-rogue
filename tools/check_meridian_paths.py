@@ -1,7 +1,7 @@
 """檢查經脈連線與穴位是否都落在招式剪影內。
 用法：python3 tools/check_meridian_paths.py [--sheet out.png]
 穴位位置：acupoints.csv 的 fx、fy；via＝從上一穴走到這一穴途中的轉折點（"x,y;x,y"，佔圖比例）。"""
-import csv, os, sys
+import csv, math, os, sys
 from PIL import Image, ImageDraw
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -46,6 +46,15 @@ def main():
             if out > 4:   # 容許穿過剪影內部的白色描線（例如拳頭的輪廓）
                 bad += 1
                 print(f"{mid}: {last} → {n1 or '轉折點'} 有 {out*100//41}% 在身體外")
+        for i in range(1, len(line) - 1):
+            ax, ay = line[i][0] - line[i - 1][0], line[i][1] - line[i - 1][1]
+            bx, by = line[i + 1][0] - line[i][0], line[i + 1][1] - line[i][1]
+            na, nb = math.hypot(ax, ay), math.hypot(bx, by)
+            if na > 0.03 and nb > 0.03:
+                turn = math.degrees(math.acos(max(-1, min(1, (ax * bx + ay * by) / (na * nb)))))
+                if turn > 120:
+                    bad += 1
+                    print(f"{mid}: 在 {line[i][2] or '轉折點'} 折返（轉 {turn:.0f} 度）")
         for r in pts:
             if not inside(float(r["fx"]), float(r["fy"])):
                 bad += 1
