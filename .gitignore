@@ -3,3 +3,6 @@
 tests/*.log
 tests/finished.txt
 export/
+
+__pycache__/
+*.pyc
