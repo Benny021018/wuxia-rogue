@@ -1382,6 +1382,13 @@ def meridian_points(mid_):
     return sorted(rows, key=lambda r: int(r["depth"]))
 
 
+def point_layout(pts, ox, oy, size):
+    """回傳（穴位座標, 每個穴位前面的轉折點）。"""
+    P = [(ox + float(r["fx"]) * size, oy + float(r["fy"]) * size) for r in pts]
+    V = [[(ox + float(v.split(",")[0]) * size, oy + float(v.split(",")[1]) * size) for v in r.get("via", "").split(";") if v] for r in pts]
+    return P, V
+
+
 def ink_disc(cx, cy, r, uid):
     o = [f'<defs><radialGradient id="disc{uid}" cx="42%" cy="38%" r="75%"><stop offset="0" stop-color="#3a9ea5"/><stop offset=".6" stop-color="#175a61"/><stop offset="1" stop-color="#0b2a2f"/></radialGradient></defs>']
     o.append(f'<circle cx="{cx}" cy="{cy}" r="{r*1.25}" fill="url(#tealBloom)" opacity=".35"/>')
@@ -1390,14 +1397,14 @@ def ink_disc(cx, cy, r, uid):
     return "".join(o)
 
 
-def star_nodes(P, n, sel_idx, fails_k=0, sc=1.0, labels=None):
+def star_nodes(P, n, sel_idx, fails_k=0, sc=1.0, labels=None, vias=None):
     """穴位星圖：已通＝青色亮點與亮線；下一穴＝橘點＋準框；未通＝白色小點細線；最後一穴是大珠。"""
     o = []
     N = len(P)
     for i in range(N - 1):
-        (x0, y0), (x1, y1) = P[i], P[i + 1]
+        seg = [P[i]] + (vias[i + 1] if vias else []) + [P[i + 1]]
         lit = i + 1 < n
-        o.append(f'<path d="M{x0:.1f},{y0:.1f} L{x1:.1f},{y1:.1f}" stroke="{TEAL if lit else BONE}" stroke-width="{(3.5 if lit else 1.5)*sc}" opacity="{1 if lit else .6}" {"filter=\'url(#glowTeal)\'" if lit else ""}/>')
+        o.append(f'<path d="M{" L".join(f"{x:.1f},{y:.1f}" for x, y in seg)}" fill="none" stroke-linejoin="round" stroke="{TEAL if lit else BONE}" stroke-width="{(3.5 if lit else 1.5)*sc}" opacity="{1 if lit else .6}" {"filter=\'url(#glowTeal)\'" if lit else ""}/>')
     for i, (x, y) in enumerate(P):
         on, nxt, big = i < n, i == n, i == N - 1
         r = (13 if big else 8) * sc
@@ -1468,8 +1475,8 @@ def s12c_meridian_pose():
     size, ox, oy = 600, 290, 112
     b.append(ink_disc(ox + size / 2, oy + size / 2 + 10, 262, "c"))
     b.append(pose_image(sel, ox, oy, size))
-    P = [(ox + float(r["fx"]) * size, oy + float(r["fy"]) * size) for r in pts]
-    b.append(star_nodes(P, n, n, fails.get(f"{sel}{n+1}", 0), 1.0, [r["name_zh"] for r in pts]))
+    P, V = point_layout(pts, ox, oy, size)
+    b.append(star_nodes(P, n, n, fails.get(f"{sel}{n+1}", 0), 1.0, [r["name_zh"] for r in pts], V))
     for x, dr in ((236, 1), (944, -1)):
         b.append(f'<path d="M{x+dr*14},{424} L{x-dr*14},{460} L{x+dr*14},{496} L{x+dr*4},{460} Z" fill="{BONE}" stroke="{INK}" stroke-width="3"/>')
     b.append(text(236, 526, "A", 14, GREY, SANS, 900, "middle"))
@@ -1530,8 +1537,8 @@ def s12d_meridian_poses():
         pts = meridian_points(mid_)
         b.append(ink_disc(cx, cy + 6, 150, f"d{i}"))
         b.append(pose_image(mid_, ox, oy, size))
-        P = [(ox + float(r["fx"]) * size, oy + float(r["fy"]) * size) for r in pts]
-        b.append(star_nodes(P, opened.get(mid_, 0), -1, 0, 0.6))
+        P, V = point_layout(pts, ox, oy, size)
+        b.append(star_nodes(P, opened.get(mid_, 0), -1, 0, 0.6, None, V))
         b.append(brush_title(cx - 180, cy - 160, mer[mid_]["name_zh"], 28, EMBER, INK, 6, "start", -2))
         b.append(text(cx + 184, cy - 164, f'{mer[mid_]["pose_zh"]}・{len(pts)} 穴', 16, BONE, SERIF, 900, "end"))
         b.append(text(cx, cy + 186, "　".join(r["name_zh"] for r in pts), 12.5, GREY, SERIF, 700, "middle"))
