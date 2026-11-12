@@ -69,6 +69,8 @@ class Data:
         self.meridians = {r["meridian_id"]: r for r in mer} if mer and not rev else {}
         self.acupoints = acu if acu and not rev else []
         self.mc = _kv(mc) if mc and not rev else {}
+        rl = _read("realms", rev)
+        self.realms = rl if rl and not rev else []
         self.xiuwei = {s: float(r["xiuwei"]) for s, r in self.report.items()}
         self.minions = {s: int(r["minions"]) for s, r in self.report.items()}
         self.elites = {s: len([e for e in r["elites"].split("|") if e]) for s, r in self.report.items()}
@@ -151,6 +153,18 @@ class Run:
     def _offense_pts(self, stat, pts):
         return float(pts) * float(self.d.mc.get("sim_acu_scale", 1.0)) if stat in OFFENSE_STATS else 0.0
 
+    def completed_mid(self, mid):
+        return self.opened.get(mid, 0) >= self.mlen(mid)
+
+    def completed(self):
+        return sum(1 for m in self.d.meridians if self.opened.get(m, 0) >= self.mlen(m))
+
+    def effect_pts(self, mid):
+        return float(self.d.meridians[mid].get("special_points") or 0) * float(self.d.mc.get("sim_acu_scale", 1.0))
+
+    def realm_pts(self, n):
+        return float(self.d.realms[min(n, len(self.d.realms) - 1)]["dmg_pct"]) / 10.0 if self.d.realms else 0.0
+
     def meridian_dps(self):
         if not self.d.acupoints:
             return 0.0
@@ -160,11 +174,11 @@ class Run:
                 r = self.acu(mid, dep)
                 pts += self._offense_pts(r["stat_id"], r["points"])
             if n >= self.mlen(mid):
-                m = self.d.meridians[mid]
-                pts += self._offense_pts(m["bonus_stat"], m["bonus_points"])
+                pts += self.effect_pts(mid)
         if self.opened.get("ren", 0) >= self.mlen("ren") and self.opened.get("du", 0) >= self.mlen("du"):
             for st, pt in zip(self.d.mc["ren_du_stat"].split("|"), self.d.mc["ren_du_points"].split("|")):
                 pts += self._offense_pts(st, pt)
+        pts += self.realm_pts(self.completed())
         return 10 * pts
 
     def total_open(self):
@@ -175,24 +189,28 @@ class Run:
         return round(float(self.d.mc["cost_a"]) * (n + 1) ** float(self.d.mc["cost_exp"]) + float(self.d.mc["cost_b"]))
 
     def chance(self, r):
-        return min(1.0, float(r["base_chance"]) + float(self.d.mc["chance_step"]) * self.fails[r["point_id"]])
+        step = float(self.d.mc["chance_step"])
+        if self.opened.get("yinqiao", 0) >= self.mlen("yinqiao"):
+            step += float(self.d.mc.get("yinqiao_extra_step", 0))
+        return min(1.0, float(r["base_chance"]) + step * self.fails[r["point_id"]])
 
     def spend_zhenqi(self):
         while True:
             c = self.attempt_cost()
             if self.zhenqi < c:
                 return
+            # 玩家會盯著一條經脈打到全通：已經開始的經脈優先，其次選「整條的輸出價值÷剩餘穴數」最高的
             best, bv = None, -1.0
             for mid in self.d.meridians:
                 dep = self.opened[mid] + 1
                 r = self.acu(mid, dep)
                 if r is None:
                     continue
-                v = self._offense_pts(r["stat_id"], r["points"]) + 0.01
-                if dep == self.mlen(mid):
-                    m = self.d.meridians[mid]
-                    v += self._offense_pts(m["bonus_stat"], m["bonus_points"])
-                v *= self.chance(r)
+                rest = [self.acu(mid, k) for k in range(dep, self.mlen(mid) + 1)]
+                v = sum(self._offense_pts(x["stat_id"], x["points"]) for x in rest) + self.effect_pts(mid) + 0.6
+                v /= len(rest)
+                if self.opened[mid] > 0:
+                    v *= 3.0
                 if v > bv:
                     best, bv = (mid, r), v
             if best is None:
@@ -498,14 +516,15 @@ class Run:
                 for item in self.drops(s):
                     self.consider_drop(item)
             if self.free_shrine and self.d.acupoints:
-                self.zhenqi += self.d.xiuwei[s]
+                self.zhenqi += self.d.xiuwei[s] * (1.2 if self.completed_mid("yinqiao") else 1.0)   # 心靜神凝
                 self.spend_zhenqi()
             self.gold += self.d.gold[s] * self.gold_mult()
             self.log["gold_in"] += self.d.gold[s] * self.gold_mult()
-            out.append({"stage": s, "dps": dps_in, **self.parts()})
+            out.append({"stage": s, "dps": dps_in, "realm": self.completed(), **self.parts()})
             self.shop(rest_stop=self.new and s in rest)
         self.log["gold_end"] = self.gold
         self.log["acu_open"] = self.total_open()
+        self.log["realm"] = self.completed()
         return out
 
 
@@ -518,7 +537,7 @@ def simulate(d, rules, runs, seed=7, start=None):
         r = Run(d, rules, rng, start_wid=start or FEATURED[i % len(FEATURED)])
         for row in r.play():
             curves[row["stage"]].append(row["dps"])
-            for k in ("weapon", "affix", "martial", "meridian"):
+            for k in ("weapon", "affix", "martial", "meridian", "realm"):
                 parts[row["stage"]][k].append(row[k])
         logs.append(r.log)
     return curves, logs, parts
@@ -551,7 +570,7 @@ def report(args):
     old, _, _ = simulate(old_d, "old", args.runs)
     new, logs, parts = simulate(new_d, "new", args.runs)
     rows = []
-    print(f"{'區':>2} {'目標s':>5} {'舊DPS':>6} {'新P10':>6} {'新P50':>6} {'新P90':>6} {'新/舊':>5} {'清場P50':>7} {'P90慢':>6}")
+    print(f"{'區':>2} {'目標s':>5} {'舊DPS':>6} {'新P10':>6} {'新P50':>6} {'新P90':>6} {'新/舊':>5} {'清場P50':>7} {'P90慢':>6} {'境界':>4}")
     for s in range(1, 21):
         ref = statistics.median(old[s])
         t = new_d.target[s]
@@ -564,7 +583,7 @@ def report(args):
                      "share_affix": round(statistics.mean(parts[s]["affix"]) / statistics.mean(new[s]), 3),
                      "share_martial": round(statistics.mean(parts[s]["martial"]) / statistics.mean(new[s]), 3),
                      "share_meridian": round(statistics.mean(parts[s]["meridian"]) / statistics.mean(new[s]), 3)})
-        print(f"{s:>2} {t:>5.0f} {ref:>6.0f} {p10:>6.0f} {p50:>6.0f} {p90:>6.0f} {p50/ref:>5.2f} {clear50:>7.1f} {clear_slow:>6.1f}")
+        print(f"{s:>2} {t:>5.0f} {ref:>6.0f} {p10:>6.0f} {p50:>6.0f} {p90:>6.0f} {p50/ref:>5.2f} {clear50:>7.1f} {clear_slow:>6.1f} {statistics.mean(parts[s]['realm']):>4.1f}")
     tot = defaultdict(float)
     for lg in logs:
         for k, v in lg.items():
@@ -575,7 +594,7 @@ def report(args):
         print("  %-8s %5.0f 銀兩 (%4.1f%%)  %5.1f 次" % (k, tot["spend_" + k], 100 * tot["spend_" + k] / max(spend, 1), tot["n_" + k]))
     print("  掉落 %.1f 把，換上手 %.1f 把；終局剩餘 %.0f" % (tot["drops"], tot["drops_taken"], tot["gold_end"]))
     print("  輸出占比(第10/20區)：", {k: (rows[9]["share_" + k], rows[19]["share_" + k]) for k in ("weapon", "affix", "martial", "meridian")})
-    print("  衝穴 %.1f 次，打通 %.1f 穴" % (tot["acu_attempts"], tot["acu_open"]))
+    print("  衝穴 %.1f 次，打通 %.1f 穴，平均全通 %.1f 條經脈（境界）" % (tot["acu_attempts"], tot["acu_open"], tot["realm"]))
     if args.csv:
         with open(args.csv, "w", encoding="utf-8", newline="") as f:
             w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))

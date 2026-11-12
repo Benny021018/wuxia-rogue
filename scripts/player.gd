@@ -57,6 +57,13 @@ var bow_held := false
 var aim := 0.0                     # 瞄準程度 0~1（平滑過渡）
 var arrow_speed_mult := 1.0        # 滿弓箭速較快
 var arrow_spread_deg := 0.0        # 這一箭的散射半角；拉越滿越小
+# 經脈全通的特殊效果
+var du_charged := false            # 督脈貫頂：下一擊必暴＋增傷
+var ren_cd := 0.0                  # 任脈歸元冷卻
+var chong_t := 0.0                 # 氣血奔湧剩餘時間
+var dai_t := 0.0                   # 束脈護體剩餘時間
+var dai_cd := 0.0
+var qiao_ready := false            # 蹻捷如風：衝刺後下一擊增傷
 const BASE_FOV := 80.0
 
 
@@ -138,6 +145,9 @@ func _physics_process(delta: float) -> void:
 			FX.play(get_parent(), cam.global_position - cam.global_basis.z * 1.1 - cam.global_basis.y * 0.32, &"blink-out", 0.5, 0.18)
 			dash_t = 0.2
 			dash_cd = 1.0
+			if Game.special_on("yangqiao"):   # 陽蹻脈・蹻捷如風
+				dash_cd *= 1.0 - Game.special("yangqiao", "a") / 100.0
+				qiao_ready = true
 			invuln_t = maxf(invuln_t, 0.2)
 		if Input.is_action_just_pressed("jump") and is_on_floor():
 			velocity.y = JUMP_V
@@ -177,12 +187,19 @@ func is_bow() -> bool:
 	return w != null and String(Data.weapons[w.id]["class"]) == "弓" and weapon_models[Game.active_weapon] != null and weapon_models[Game.active_weapon].has_method("bow_begin")
 
 
-func _bow_interval(a: int) -> float:
+func atk_speed_now() -> float:
 	var atk_speed := Game.st("atk_speed_pct")
 	if taiji_active > 0.0:
 		atk_speed += 50.0
 	if demon_speed:
 		atk_speed += 100.0
+	if chong_t > 0.0:   # 衝脈・氣血奔湧
+		atk_speed += Game.special("chong", "a")
+	return atk_speed
+
+
+func _bow_interval(a: int) -> float:
+	var atk_speed := atk_speed_now()
 	return float(Data.weapons[Game.weapons[a].id].interval_s) / (1.0 + atk_speed / 100.0)
 
 
@@ -240,6 +257,7 @@ func _release_arrow(a: int, draw: float) -> void:
 	var recover := iv * Data.cfg("bow_recover_frac")
 	cooldowns[a] = recover
 	attack_count += 1
+	_count_du()
 	var lo := Data.cfg("bow_min_dmg")
 	var mn := Data.cfg("bow_min_draw")
 	var mult := lerpf(lo, 1.0, clampf((draw - mn) / (1.0 - mn), 0.0, 1.0))
@@ -255,6 +273,12 @@ func _release_arrow(a: int, draw: float) -> void:
 			arrow_spread_deg = 0.0
 			return r
 		return false)
+
+
+func _count_du() -> void:
+	## 督脈・督脈貫頂：每出招 a 次，下一擊必暴並增傷
+	if Game.special_on("du") and attack_count % int(Game.special("du", "a")) == 0:
+		du_charged = true
 
 
 func request_switch(slot := -1) -> void:
@@ -296,6 +320,10 @@ func _timers(delta: float) -> void:
 	invuln_t -= delta
 	cheat_cd -= delta
 	demon_cd -= delta
+	ren_cd -= delta
+	chong_t -= delta
+	dai_t -= delta
+	dai_cd -= delta
 	array_t -= delta
 	if demon_t > 0.0:
 		demon_t -= delta
@@ -399,15 +427,12 @@ func _attack(slot: int) -> void:
 	queued_press[slot] = false
 	var w = Game.weapons[slot]
 	var row: Dictionary = Data.weapons[w.id]
-	var atk_speed := Game.st("atk_speed_pct")
-	if taiji_active > 0.0:
-		atk_speed += 50.0
-	if demon_speed:
-		atk_speed += 100.0
+	var atk_speed := atk_speed_now()
 	cooldowns[slot] = float(row.interval_s) / (1.0 + atk_speed / 100.0)
 	if Game.f("instant_repeat") > 0.0 and randf() < Game.f("instant_repeat"):
 		cooldowns[slot] = 0.05
 	attack_count += 1
+	_count_du()
 	var dmg := Game.weapon_hit_dmg(w.id, int(w.lv))
 	view.attack(cooldowns[slot],int(row.hits),func(beat:int):
 		if is_instance_valid(view) and weapon_models[slot] == view and hp > 0:
@@ -623,9 +648,16 @@ func deal(e, base: float, _is_dot: bool, weight := 1.0, source := Vector3.INF) -
 		mult += 0.5
 	if demon_t > 0.0 and Game.f("demon_form") > 0.0:
 		mult *= 2.0
+	var du_hit := du_charged
+	if du_hit:
+		du_charged = false
+		mult *= 1.0 + Game.special("du", "b") / 100.0
+	if qiao_ready:
+		qiao_ready = false
+		mult *= 1.0 + Game.special("yangqiao", "b") / 100.0
 	# 暴擊
 	var crit_rate := float(Data.gacha.base_crit_rate_pct) + Game.st("crit_rate_pct")
-	var forced := array_t > 0.0 or dodge_crit_ready
+	var forced := array_t > 0.0 or dodge_crit_ready or du_hit
 	if Game.f("every3_crit") > 0.0 and attack_count % 3 == 0:
 		forced = true
 	if Game.f("low30_crit_ls") > 0.0 and hp < Game.max_hp() * 0.3:
@@ -656,6 +688,12 @@ func deal(e, base: float, _is_dot: bool, weight := 1.0, source := Vector3.INF) -
 			e.apply_vuln(Game.f("crit_vuln"), 3.0)
 		if Game.f("crit_heal") > 0.0:
 			heal(Game.max_hp() * 0.01, false)
+		if Game.special_on("yangwei"):   # 陽維脈・陽氣外發
+			for o in _enemies_within(e.global_position, Game.special("yangwei", "b")):
+				if o != e and not o.dead:
+					o.take_hit(dealt * Game.special("yangwei", "a") / 100.0, global_position, false)
+		if Game.special_on("yinwei"):    # 陰維脈・陰勁透骨
+			e.apply_vuln(Game.special("yinwei", "a"), Game.special("yinwei", "b"))
 		if Game.f("crit_splash") > 0.0:
 			for o in _enemies_within(e.global_position, 2.0):
 				if o != e:
@@ -664,6 +702,8 @@ func deal(e, base: float, _is_dot: bool, weight := 1.0, source := Vector3.INF) -
 
 
 func on_enemy_killed(e) -> void:
+	if Game.special_on("chong"):
+		chong_t = Game.special("chong", "b")
 	if Game.f("kill_heal") > 0.0:
 		heal(Game.max_hp() * Game.f("kill_heal") / 100.0, false)
 	if Game.f("kill_stack") > 0.0 and kill_stacks.size() < int(Game.f("kill_stack")):
@@ -699,6 +739,8 @@ func take_damage(amount: float, attacker = null, is_dot := false) -> void:
 			FX.float_text(get_parent(), global_position + Vector3(0, 2, 0), "護體", Color(1, 0.85, 0.3))
 			return
 	var dr := Game.st("dmg_reduction_pct")
+	if dai_t > 0.0:   # 帶脈・束脈護體
+		dr += Game.special("dai", "a")
 	if Game.f("low50_dr") > 0.0 and hp < Game.max_hp() * 0.5:
 		dr += Game.f("low50_dr")
 	if taiji_active > 0.0:
@@ -711,6 +753,14 @@ func take_damage(amount: float, attacker = null, is_dot := false) -> void:
 		shield -= absorbed
 		dmg -= absorbed
 	hp -= dmg
+	if Game.special_on("dai") and dai_cd <= 0.0 and dmg > 0.0:
+		dai_t = Game.special("dai", "b")
+		dai_cd = 6.0
+	# 任脈・任脈歸元：生命低於 a% 時回復 b%
+	if Game.special_on("ren") and ren_cd <= 0.0 and hp > 0.0 and hp < Game.max_hp() * Game.special("ren", "a") / 100.0:
+		ren_cd = 60.0
+		heal(Game.max_hp() * Game.special("ren", "b") / 100.0)
+		Game.message.emit("任脈歸元！")
 	# 反彈（移花接木、先天罡氣・小成）
 	var refl := Game.f("reflect_pct") + Game.f("thorns")
 	if refl > 0.0 and attacker and is_instance_valid(attacker) and not attacker.dead and not is_dot:

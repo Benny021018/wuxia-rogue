@@ -8,7 +8,7 @@ signal gold_changed
 signal zhenqi_changed
 signal acupoint_tried(point_id: String, ok: bool)
 signal leveled_up(level: int)
-signal realm_broken(level: int, realm_name: String, effect: String)
+signal realm_broken(realm: int, realm_name: String, effect: String)
 signal martial_breakthrough(mid: String, lv: int, desc: String)
 signal bond_activated(sect_id: String, tier: int, name: String)
 signal message(text: String)
@@ -17,7 +17,9 @@ signal weapon_switched(slot: int)
 const MAX_LV := 5
 
 var char_id := "nangong"
-var level := 1
+var level := 1                         # 角色被動用的等級：依打通的穴位數換算（1～30）
+var realm := 0                         # 境界：全通幾條經脈（0＝三流 … 8＝自然境）
+var stage_zhenqi := 0.0                # 本區吸納的真氣（陰蹻脈・心靜神凝用）
 var zhenqi := 0.0                      # 真氣：殺敵吸納，用來衝穴
 var acu_open := {}                     # meridian_id -> 已依序打通的穴數
 var acu_fails := {}                    # point_id -> 衝擊失敗次數（越多次成功率越高）
@@ -57,6 +59,8 @@ func _process(delta: float) -> void:
 func new_run(cid: String, start_wid := "") -> void:
 	char_id = cid
 	level = 1
+	realm = 0
+	stage_zhenqi = 0.0
 	zhenqi = 0.0
 	acu_open = {}
 	acu_fails = {}
@@ -99,33 +103,35 @@ func recompute() -> void:
 			"han_p2": _flag("low_hp_dmg_per10", v)
 			"tang_p1": _flag("poison_pct", v)
 			_: s[p.stat_id] += v
-	# 境界
+	# 角色的境界招式（一流＝2、絕頂＝3、化境＝5）
 	for r in Data.realms:
-		if r.char_id == char_id and int(r.level) <= level:
-			match [char_id, int(r.level)]:
-				["nangong", 10]: _flag("extra_hit_mult", 0.7)
-				["nangong", 20]: _flag("extra_hit_qi", 0.5)
-				["nangong", 30]: _flag("extra_hit_chain", 1)
-				["han", 10]: _flag("low50_dr", 15)
-				["han", 20]: _flag("kill_heal", 1.5)
-				["han", 30]: _flag("blood_demon", 1)
-				["tang", 10]: _flag("vs_poison_dmg", 20)
-				["tang", 20]: _flag("poison_spread", 1)
-				["tang", 30]: _flag("extra_choice", 1)
-	# 經脈：打通的穴位、整條全通的加成、打通任督二脈
+		if r.char_id == char_id and int(r.realm) <= realm:
+			match [char_id, String(r.realm_zh)]:
+				["nangong", "一流"]: _flag("extra_hit_mult", 0.7)
+				["nangong", "絕頂"]: _flag("extra_hit_qi", 0.5)
+				["nangong", "化境"]: _flag("extra_hit_chain", 1)
+				["han", "一流"]: _flag("low50_dr", 15)
+				["han", "絕頂"]: _flag("kill_heal", 1.5)
+				["han", "化境"]: _flag("blood_demon", 1)
+				["tang", "一流"]: _flag("vs_poison_dmg", 20)
+				["tang", "絕頂"]: _flag("poison_spread", 1)
+				["tang", "化境"]: _flag("extra_choice", 1)
+	# 境界本身的加成（realms.csv，累計值）
+	var rr: Dictionary = Data.realm_list[realm]
+	s["dmg_pct"] += float(rr.dmg_pct)
+	s["max_hp_pct"] += float(rr.max_hp_pct)
+	# 經脈：打通的穴位加屬性；整條全通啟動特殊效果（效果在 player.gd）
 	for mid in acu_open:
 		var n := acu_level(mid)
 		for d in range(1, n + 1):
 			var a: Dictionary = Data.acupoint(mid, d)
 			s[a.stat_id] += float(a.value)
 		if n >= Data.meridian_len(mid):
-			var m: Dictionary = Data.meridians[mid]
-			s[m.bonus_stat] += float(m.bonus_value)
-	if ren_du_open():
-		var sts := String(Data.meridian_cfg.ren_du_stat).split("|")
-		var pts := String(Data.meridian_cfg.ren_du_points).split("|")
-		for i in sts.size():
-			s[sts[i]] += float(pts[i]) * float(Data.stat_values[sts[i]])
+			_flag(String(Data.meridians[mid].special_id), 1)
+	if ren_du_open():   # 小周天
+		_add_points(s, "ren_du_stat", "ren_du_points")
+	if realm >= Data.meridian_order.size():   # 大周天
+		_add_points(s, "zhou_tian_stat", "zhou_tian_points")
 	# 手上那把武器的詞條（收起的武器不生效）
 	var held = current_weapon()
 	if held != null:
@@ -516,15 +522,47 @@ func buy_martial(i: int) -> bool:
 
 
 # ------------------------------------------------------------------ 真氣、衝穴與境界
-func realm_name(lv: int) -> String:
-	return String(Data.levels[mini(lv, Data.levels.size()) - 1].display_zh)
+func realm_name(r := -1) -> String:
+	return String(Data.realm_list[clampi(realm if r < 0 else r, 0, Data.realm_list.size() - 1)].name_zh)
+
+
+func realm_list_ok() -> bool:
+	## 冒煙測試用：目前境界的傷害加成有算進屬性
+	return float(Data.realm_list[realm].dmg_pct) <= st("dmg_pct")
+
+
+func special(mid: String, key: String) -> float:
+	## 經脈全通特殊效果的數值（meridians.csv 的 special_a、special_b）
+	return float(Data.meridians[mid]["special_" + key])
+
+
+func special_on(mid: String) -> bool:
+	return f(String(Data.meridians[mid].special_id)) > 0.0
+
+
+func special_text(mid: String) -> String:
+	var m: Dictionary = Data.meridians[mid]
+	return String(m.special_desc).replace("{a}", _num(float(m.special_a))).replace("{b}", _num(float(m.special_b)))
+
+
+static func _num(v: float) -> String:
+	return ("%.2f" % v).rstrip("0").rstrip(".")
+
+
+func _add_points(s: Dictionary, stat_key: String, pts_key: String) -> void:
+	var sts := String(Data.meridian_cfg[stat_key]).split("|")
+	var pts := String(Data.meridian_cfg[pts_key]).split("|")
+	for i in sts.size():
+		s[sts[i]] += float(pts[i]) * float(Data.stat_values[sts[i]])
 
 
 func add_kill(eid: String) -> void:
 	kills += 1
 	var r := Data.enemy_rewards(eid)
 	gold += r.y * (1.0 + st("gold_gain_pct") / 100.0)
-	add_zhenqi(r.x * (1.0 + st("xiuwei_gain_pct") / 100.0))
+	var zq: float = r.x * (1.0 + st("xiuwei_gain_pct") / 100.0)
+	stage_zhenqi += zq
+	add_zhenqi(zq)
 	gold_changed.emit()
 
 
@@ -579,12 +617,13 @@ func try_break(mid: String) -> int:
 		var had_ren_du := ren_du_open()
 		acu_open[mid] = acu_level(mid) + 1
 		acu_fails.erase(pid)
-		_set_level(level_for_points(acu_total()))
+		_set_level(1 + int(floor(float(acu_total()) * 29.0 / float(Data.acupoints.size()))))
 		var m: Dictionary = Data.meridians[mid]
 		if acu_level(mid) >= Data.meridian_len(mid):
-			message.emit("%s全通：%s" % [m.name_zh, Data.stat_text(m.bonus_stat, float(m.bonus_value))])
+			message.emit("%s全通・%s" % [m.name_zh, m.special_name])
+			_break_realm()
 		if ren_du_open() and not had_ren_du:
-			message.emit("打通任督二脈！")
+			message.emit("打通任督二脈・小周天")
 	else:
 		acu_fails[pid] = int(acu_fails.get(pid, 0)) + 1
 		zhenqi += c * float(Data.meridian_cfg.fail_refund)
@@ -594,40 +633,26 @@ func try_break(mid: String) -> int:
 	return 1 if ok else 0
 
 
-func level_for_points(n: int) -> int:
-	## 打通 n 個穴位對應的等級：realm_points 的三個門檻對到 Lv10／20／30，中間依比例
-	var th: Array = [0]
-	for part in String(Data.meridian_cfg.realm_points).split("|"):
-		th.append(int(part))
-	var lv: Array = [1, 10, 20, 30]
-	for i in 3:
-		if n < int(th[i + 1]):
-			return int(lv[i]) + int(floor(float(n - int(th[i])) * float(int(lv[i + 1]) - int(lv[i])) / float(int(th[i + 1]) - int(th[i]))))
-	return 30
-
-
-func points_to_next_realm() -> int:
-	var n := acu_total()
-	for part in String(Data.meridian_cfg.realm_points).split("|"):
-		if n < int(part):
-			return int(part) - n
-	return 0
-
-
 func _set_level(new_level: int) -> void:
-	## 境界由打通的穴位數決定（level_for_points），Lv10／20／30 突破一流／絕頂／化境
-	new_level = mini(new_level, Data.levels.size())
+	## 角色被動的等級：1＋打通穴位數×29÷總穴數（只影響被動數值，不再決定境界）
+	new_level = mini(new_level, 30)
 	while level < new_level:
 		level += 1
-		leveled_up.emit(level)
-		if level in [10, 20, 30]:
-			var eff := ""
-			for r in Data.realms:
-				if r.char_id == char_id and int(r.level) == level:
-					eff = "%s：%s" % [r.name_zh, r.effect_desc]
-			if f("realm_free_draw") > 0:
-				free_draws += 1
-			realm_broken.emit(level, String(Data.levels[level - 1].realm_zh), eff)
+	leveled_up.emit(level)   # 每打通一穴都觸發（頓悟心法・小成：回復生命）
+
+
+func _break_realm() -> void:
+	## 全通一條經脈＝進入下一個境界
+	realm = mini(realm + 1, Data.realm_list.size() - 1)
+	var eff := String(Data.realm_list[realm].title_zh)
+	for r in Data.realms:
+		if r.char_id == char_id and int(r.realm) == realm:
+			eff = "%s：%s" % [r.name_zh, r.effect_desc]
+	if f("realm_free_draw") > 0:
+		free_draws += 1
+	realm_broken.emit(realm, realm_name(), eff)
+	if realm >= Data.meridian_order.size():
+		message.emit("奇經八脈全通・大周天")
 
 
 # ------------------------------------------------------------------ 參悟（抽獎）
@@ -636,6 +661,12 @@ func on_zone_cleared() -> void:
 	shrine_charges += int(Data.per_stage("shrine_free_per_stage", stage))   # 沒用完的留到下一座悟道碑
 	refreshes_this_stage = 0
 	draws_this_stage = 0
+	# 陰蹻脈・心靜神凝：破陣時額外獲得本區吸納真氣的 a%
+	if special_on("yinqiao") and stage_zhenqi > 0.0:
+		var bonus := stage_zhenqi * special("yinqiao", "a") / 100.0
+		add_zhenqi(bonus)
+		message.emit("心靜神凝：真氣 +%d" % int(bonus))
+	stage_zhenqi = 0.0
 
 
 func draws_left() -> int:
@@ -655,6 +686,8 @@ func take_draw() -> bool:
 
 func refresh_cost() -> int:
 	## 刷新候選的價格；同一區每多刷新一次變貴
+	if refreshes_this_stage == 0 and special_on("yinqiao"):
+		return 0   # 陰蹻脈・心靜神凝：每區第一次刷新免費
 	var g := Data.cfg("refresh_cost_growth")
 	if f("cost_growth_override") > 0:
 		g = f("cost_growth_override")

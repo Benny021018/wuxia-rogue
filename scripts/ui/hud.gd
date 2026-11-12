@@ -5,6 +5,9 @@ extends Control
 var player
 var hp_bar: ComicBar
 var xw_bar: ComicBar
+var crosshair: Control
+var reticle: Control                   # 弓：紅圈準星（圈的範圍＝散射）
+var reticle_r := 0.0
 var name_text: Label
 var realm_chip: ComicBox
 var realm_text: Label
@@ -78,7 +81,37 @@ func _build_crosshair() -> void:
 	for d in [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]:
 		f.add_line(PackedVector2Array([Vector2(20 + d.x * 14, 20 + d.y * 5), Vector2(20 + d.x * 14, 20 + d.y * 14), Vector2(20 + d.x * 5, 20 + d.y * 14)]), Color(UIKit.BONE, 0.9), 2.5)
 	f.add_poly(PackedVector2Array([Vector2(18, 18), Vector2(22, 18), Vector2(22, 22), Vector2(18, 22)]), UIKit.TEAL)
-	_at(f, 780, 430, 40, 40)
+	crosshair = _at(f, 780, 430, 40, 40)
+	reticle = Control.new()
+	reticle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	reticle.draw.connect(_draw_reticle)
+	reticle.visible = false
+	_at(reticle, 600, 250, 400, 400)
+
+
+const AIM_RED := Color("#f0222e")
+
+
+func _draw_reticle() -> void:
+	## 一個紅圈：半徑＝這一箭的散射範圍投影到畫面上；拉滿時最小、線變粗
+	var c := Vector2(200, 200)
+	var full: bool = player != null and player.bow_draw() >= 0.999
+	reticle.draw_arc(c, reticle_r + 2.0, 0.0, TAU, 64, Color(AIM_RED, 0.25), 6.0 if full else 4.0, true)
+	reticle.draw_arc(c, reticle_r, 0.0, TAU, 64, AIM_RED, 3.5 if full else 2.5, true)
+
+
+func _update_reticle() -> void:
+	var bow: bool = player.is_bow()
+	reticle.visible = bow
+	crosshair.visible = not bow
+	if not bow:
+		return
+	var half_fov := deg_to_rad(player.cam.fov / 2.0)
+	var r := tan(deg_to_rad(player.bow_spread_deg())) / tan(half_fov) * 450.0
+	r = clampf(r, 4.0, 190.0)
+	if not is_equal_approx(r, reticle_r):
+		reticle_r = r
+		reticle.queue_redraw()
 
 
 func _build_vitals() -> void:
@@ -232,8 +265,8 @@ func _process(_delta: float) -> void:
 	xw_bar.max_value = maxf(1.0, need)
 	xw_bar.value = minf(Game.zhenqi, need)
 	name_text.text = Data.characters[Game.char_id].name_zh
-	if realm_text.text != Game.realm_name(Game.level):
-		realm_text.text = Game.realm_name(Game.level)
+	if realm_text.text != Game.realm_name():
+		realm_text.text = Game.realm_name()
 		realm_chip.reset_size()
 	gold_text.text = "銀兩 %d" % int(Game.gold)
 	var chips: Array = []
@@ -245,6 +278,7 @@ func _process(_delta: float) -> void:
 	if free_chip.visible and free_text.text != "　".join(chips):
 		free_text.text = "　".join(chips)
 		free_chip.reset_size()
+	_update_reticle()
 	_refresh_weapons()
 	_refresh_martial()
 	if boss and is_instance_valid(boss) and not boss.dead:

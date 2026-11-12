@@ -81,6 +81,32 @@ func _ready() -> void:
 	player.rotation.y = PI
 	player.cam.rotation.x = -0.08
 	await _shot("12-rest-stop", 10)
+	# 弓：拉弓中的紅圈
+	Game.weapons = [Game.make_weapon("W007", 2), Game.make_weapon("W001", 1)]
+	Game.active_weapon = 0
+	Game.recompute()
+	player.refresh_weapon_models()
+	player.cam.rotation.x = 0.0
+	player.yaw = 0.0
+	player.rotation.y = 0.0
+	Input.action_press("aim")
+	Input.action_press("attack_1")
+	await _shot("13-bow-aim", 30)
+	Input.action_release("attack_1")
+	Input.action_release("aim")
+	await _frames(20)
+	# 經脈頁
+	Game.acu_open = {"ren": 9, "du": 4, "chong": 2, "yangwei": 5, "yinwei": 1}
+	Game.acu_fails = {"du5": 2}
+	Game.realm = 1
+	Game.zhenqi = 1284.0
+	Game.recompute()
+	main.open_meridian()
+	main.meridian._select("du")
+	await _shot("12-meridian", 8)
+	main.meridian._select("yangqiao")
+	await _shot("12b-meridian-yangqiao", 6)
+	main.meridian._on_close()
 	get_tree().paused = true
 	main.screens.show_inventory(false)
 	await _shot("05-martial-panel")

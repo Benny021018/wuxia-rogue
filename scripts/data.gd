@@ -30,6 +30,7 @@ var meridians := {}         # meridian_id -> row（奇經八脈）
 var meridian_order: Array = []
 var acupoints := {}         # point_id -> row
 var meridian_cfg := {}      # key -> value（衝穴）
+var realm_list: Array = []  # index＝境界（0 三流 … 8 自然境）
 
 
 func _ready() -> void:
@@ -71,6 +72,7 @@ func _ready() -> void:
 	for r in _csv("acupoints"):
 		acupoints[r.point_id] = r
 	meridian_cfg = _kv("meridian_config")
+	realm_list = _csv("realms")
 	stages = _csv("stages")
 	stage_report = _csv("stage_report")
 	var f := FileAccess.open("res://data/zones.json", FileAccess.READ)

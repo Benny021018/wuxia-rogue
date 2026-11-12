@@ -199,7 +199,7 @@ func _char_card(cid: String, i: int) -> void:
 		if r.char_id == cid:
 			var line := UIKit.label("◆ %s・%s" % [r.realm_zh, r.name_zh], 14, UIKit.TEAL if on else Color("#3e5b5d"))
 			line.autowrap_mode = TextServer.AUTOWRAP_OFF
-			line.tooltip_text = "%s（Lv%s）%s：%s" % [r.realm_zh, r.level, r.name_zh, r.effect_desc]
+			line.tooltip_text = "%s（全通 %s 條經脈）%s：%s" % [r.realm_zh, r.realm, r.name_zh, r.effect_desc]
 			line.mouse_filter = Control.MOUSE_FILTER_PASS
 			realms.add_child(line)
 	if on:
@@ -362,7 +362,7 @@ func show_pause() -> void:
 	lines.add_speed_lines(Vector2(420, 450), 330, 1200, 90, Color(UIKit.INK, 0.7), 51, 1.6)
 	lines.add_slash(Vector2(-40, 900), Vector2(900, -40), 20)
 	_at(UIKit.title("暫停", 150, UIKit.BONE, 14, false, -5), 170, 220, 500, 170)
-	_at(UIKit.box_text("narration", "%s　%s\n第 %d 區　銀兩 %d　已參悟 %d 次" % [Data.characters[Game.char_id].name_zh, Game.realm_name(Game.level), Game.stage, int(Game.gold), Game.total_draws], 21), 170, 410, 500, 110)
+	_at(UIKit.box_text("narration", "%s　%s\n第 %d 區　銀兩 %d　已參悟 %d 次" % [Data.characters[Game.char_id].name_zh, Game.realm_name(), Game.stage, int(Game.gold), Game.total_draws], 21), 170, 410, 500, 110)
 	var panel := UIKit.box("slant")
 	panel.slant = 30
 	_at(panel, 900, 250, 520, 420)
@@ -416,7 +416,7 @@ func _inventory_character(x: float, y: float, w: float, h: float) -> void:
 	_at(bg, x + 20, y + 10, w - 40, 180)
 	_at(UIKit.clipped(UIKit.portrait_crop(Game.char_id, (w - 20) / 190.0, 0.42, 0.45), pclip, UIKit.BONE, 3.0), x + 10, y + 10, w - 20, 190)
 	_at(UIKit.title(Data.characters[Game.char_id].name_zh, 44, UIKit.BONE, 8, false, -2, HORIZONTAL_ALIGNMENT_LEFT), x + 26, y + 196, 220, 64)
-	var realm := _chip(Game.realm_name(Game.level), UIKit.TEAL, UIKit.INK, 15)
+	var realm := _chip(Game.realm_name(), UIKit.TEAL, UIKit.INK, 15)
 	_at(realm, x + 226, y + 210, 140, 28)
 	var lines: Array = ["生命　%d" % int(Game.max_hp()), "暴擊率　%.0f%%" % (float(Data.gacha.base_crit_rate_pct) + Game.st("crit_rate_pct")),
 		"暴擊傷害　%.0f%%" % (float(Data.gacha.base_crit_dmg_pct) + Game.st("crit_dmg_pct"))]
@@ -622,7 +622,7 @@ func show_end(won: bool) -> void:
 	for wpn in Game.weapons:
 		if wpn != null:
 			ws.append("%s+%d" % [Data.weapons[wpn.id].name_zh, int(wpn.lv)])
-	var cells := [["角色", Data.characters[Game.char_id].name_zh], ["境界", Game.realm_name(Game.level)], ["擊殺", str(Game.kills)],
+	var cells := [["角色", Data.characters[Game.char_id].name_zh], ["境界", Game.realm_name()], ["擊殺", str(Game.kills)],
 		["參悟", "%d 次" % Game.total_draws], ["時間", "%d 分 %02d 秒" % [t / 60, t % 60]],
 		["武器", "、".join(ws)], ["精進武學", "、".join(best.slice(0, 3)) if not best.is_empty() else "無"],
 		["門派傳承", "、".join(bonds) if not bonds.is_empty() else "無"]]

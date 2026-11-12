@@ -45,7 +45,7 @@ func _run_character(cid: String) -> void:
 	if cid == Data.char_order[0]:
 		await _check_weapon_views(player)
 		await _check_loot_and_shops(world, player)
-		_check_meridians_and_shrine()
+		_check_meridians_and_shrine(player)
 		await _check_bow(player)
 		await _check_cover_tactics(world, player)
 		await _check_hit_reactions(world)
@@ -136,7 +136,7 @@ func _run_character(cid: String) -> void:
 					await get_tree().physics_frame
 				Input.action_release("move_forward")
 				_check(player.global_position.x >= r.x0 + r.w + 2.0, "第%d區出口可走出" % r.stage)
-			print("  區域 %d 完成，境界 %s，武學 %d 門，抽數 %d" % [r.stage, Game.realm_name(Game.level), Game.martial.size(), Game.total_draws])
+			print("  區域 %d 完成，境界 %s，武學 %d 門，抽數 %d" % [r.stage, Game.realm_name(), Game.martial.size(), Game.total_draws])
 		# 走到出口
 		player.global_position = Vector3(world.portal_x, 0.5, 0.0)
 		await _frames(3)
@@ -237,6 +237,35 @@ func _run_character(cid: String) -> void:
 	_check(Game.merchant_stock.is_empty() or (Game.merchant_stock[0].sold and stamps == 1), "商人賣出後蓋已售出印章")
 	main.shop._on_close()
 	_check(main.mode == "play" and not main.shop.visible, "離開商人回到遊戲")
+	# 經脈頁
+	var keep_acu: Dictionary = Game.acu_open.duplicate()
+	var keep_zq := Game.zhenqi
+	Game.acu_open = {"du": 3}
+	Game.zhenqi = 1.0e6
+	main.open_meridian()
+	await _frames(2)
+	_check(main.mode == "meridian" and main.meridian.visible and main.meridian.chart.pos.size() == Data.meridian_len(main.meridian.mid), "K 打開經脈頁，穴位照該脈數量畫出")
+	var open0 := Game.acu_total()
+	main.meridian._on_break()
+	_check(Game.acu_total() >= open0 and Game.zhenqi < 1.0e6, "經脈頁衝擊扣真氣")
+	main.meridian._cycle(1)
+	_check(main.meridian.mid != "" and main.meridian.chart.mid == main.meridian.mid, "A／D 切換經脈")
+	main.meridian._on_close()
+	_check(main.mode == "play" and not main.meridian.visible, "離開經脈頁回到遊戲")
+	Game.acu_open = keep_acu
+	Game.zhenqi = keep_zq
+	Game.recompute()
+	# 弓的紅圈準星
+	Game.weapons = [Game.make_weapon("W007", 0), Game.make_weapon("W001", 0)]
+	Game.active_weapon = 0
+	Game.recompute()
+	main.player.refresh_weapon_models()
+	await _frames(3)
+	_check(main.hud.reticle.visible and not main.hud.crosshair.visible and main.hud.reticle_r > 4.0, "拿弓時改用紅圈準星")
+	Game.switch_weapon(1)
+	main.player.refresh_weapon_models()
+	await _frames(3)
+	_check(not main.hud.reticle.visible and main.hud.crosshair.visible, "換回刀時恢復一般準星")
 	main.screens.show_pause()
 	main.screens.show_inventory(true)
 	main.screens.show_end(true)
@@ -248,15 +277,20 @@ func _run_character(cid: String) -> void:
 	await _frames(3)
 
 
-func _check_meridians_and_shrine() -> void:
-	var keep := [Game.zhenqi, Game.acu_open.duplicate(), Game.acu_fails.duplicate(), Game.level, Game.gold, Game.shrine_charges, Game.refreshes_this_stage, Game.free_draws]
+func _check_meridians_and_shrine(player) -> void:
+	var keep := [Game.zhenqi, Game.acu_open.duplicate(), Game.acu_fails.duplicate(), Game.level, Game.gold, Game.shrine_charges, Game.refreshes_this_stage, Game.free_draws, Game.realm]
 	# 真氣與衝穴
 	Game.acu_open = {}
 	Game.acu_fails = {}
 	Game.level = 1
+	Game.realm = 0
 	Game.zhenqi = 0.0
 	Game.recompute()
-	_check(Data.meridian_order.size() == 8 and Data.meridian_len("du") >= 6 and Data.meridian_len("dai") <= 10 and Data.acupoints.size() == 61, "奇經八脈每條 6～10 個穴位")
+	_check(Data.meridian_order.size() == 8 and Data.acupoints.size() == 61 and Data.realm_list.size() == 9, "奇經八脈 61 穴、九個境界")
+	var lens_ok := true
+	for mid in Data.meridian_order:
+		lens_ok = lens_ok and Data.meridian_len(mid) >= 6 and Data.meridian_len(mid) <= 10
+	_check(lens_ok, "每條經脈 6～10 個穴位")
 	_check(Game.try_break("du") == -1, "真氣不夠時不能衝穴")
 	var pid: String = Game.next_point("du").point_id
 	var c0 := Game.break_chance(pid)
@@ -266,26 +300,60 @@ func _check_meridians_and_shrine() -> void:
 	var dmg0 := Game.st("dmg_pct")
 	Game.zhenqi = 1.0e9
 	var tries := 0
-	while Game.acu_level("du") < 1 and tries < 20:
+	while Game.acu_level("du") < 1 and tries < 30:
 		tries += 1
 		Game.try_break("du")
-	_check(Game.acu_level("du") == 1 and Game.st("dmg_pct") > dmg0, "打通長強：傷害提升")
-	_check(Game.level_for_points(0) == 1 and Game.level_for_points(12) == 10 and Game.level_for_points(26) == 20 and Game.level_for_points(40) == 30, "穴位數對應境界")
+	_check(Game.acu_level("du") == 1 and Game.st("dmg_pct") > dmg0 and Game.realm == 0, "打通長強：傷害提升，還沒進境界")
+	tries = 0
+	while not Game.next_point("du").is_empty() and tries < 200:
+		tries += 1
+		Game.try_break("du")
+	_check(Game.realm == 1 and Game.realm_name() == "二流" and Game.special_on("du"), "督脈全通：進入二流、啟動督脈貫頂")
+	_check(Game.realm_list_ok(), "境界加成依 realms.csv")
+	# 特殊效果
+	player.du_charged = false
+	var a0: int = player.attack_count
+	for k in int(Game.special("du", "a")):
+		player.attack_count += 1
+		player._count_du()
+	_check(player.du_charged or a0 < 0, "督脈貫頂：出招數到了會充能")
+	player.du_charged = false
 	for mid in Data.meridian_order:
-		var guard := 0
-		while not Game.next_point(mid).is_empty() and guard < 60:
-			guard += 1
+		tries = 0
+		while not Game.next_point(mid).is_empty() and tries < 200:
+			tries += 1
 			Game.try_break(mid)
-	_check(Game.acu_total() == Data.acupoints.size() and Game.ren_du_open() and Game.realm_name(Game.level) == "化境", "奇經八脈全通、打通任督二脈、境界化境")
-	# 悟道碑：每區免費參悟、刷新花銀兩
+	_check(Game.acu_total() == 61 and Game.realm == 8 and Game.realm_name() == "自然境" and Game.ren_du_open(), "八脈全通：自然境、小周天")
+	var sp0: float = player.atk_speed_now()
+	player.chong_t = 0.0
+	player.chong_t = Game.special("chong", "b")
+	_check(player.atk_speed_now() > sp0, "氣血奔湧：擊殺後攻速提升")
+	player.chong_t = 0.0
+	var hp_keep: float = player.hp
+	player.ren_cd = 0.0
+	player.invuln_t = 0.0
+	for k in 20:   # 可能被閃避或減傷吃掉，多打幾下
+		if player.ren_cd > 0.0:
+			break
+		player.hp = Game.max_hp() * 0.29
+		player.take_damage(1.0)   # 低於 30% 時受到任何傷害就觸發；傷害很小不會死
+		player.invuln_t = 0.0
+	_check(player.hp > Game.max_hp() * 0.5 and player.ren_cd > 0.0, "任脈歸元：低血量時回復")
+	player.hp = hp_keep
+	player.invuln_t = 1.0e9
+	# 悟道碑：每區免費參悟、刷新花銀兩（陰蹻脈全通：每區第一次刷新免費）
 	Game.shrine_charges = 0
 	Game.free_draws = 0
+	Game.stage_zhenqi = 100.0
+	var zq0 := Game.zhenqi
 	Game.on_zone_cleared()
+	_check(Game.zhenqi > zq0, "心靜神凝：破陣額外獲得真氣")
 	var n := Game.draws_left()
 	_check(n >= 1 and Game.take_draw() and Game.draws_left() == n - 1, "破陣後悟道碑可免費參悟")
 	Game.gold = 1000.0
+	_check(Game.refresh_cost() == 0 and Game.pay_refresh() and Game.refresh_cost() > 0, "心靜神凝：每區第一次刷新免費，之後花銀兩")
 	var r0 := Game.refresh_cost()
-	_check(Game.pay_refresh() and Game.refresh_cost() > r0 and Game.gold <= 1000.0, "刷新候選花銀兩，同區越刷越貴")
+	_check(Game.pay_refresh() and Game.refresh_cost() > r0 and Game.gold < 1000.0, "刷新候選花銀兩，同區越刷越貴")
 	Game.zhenqi = keep[0]
 	Game.acu_open = keep[1]
 	Game.acu_fails = keep[2]
@@ -294,6 +362,7 @@ func _check_meridians_and_shrine() -> void:
 	Game.shrine_charges = keep[5]
 	Game.refreshes_this_stage = keep[6]
 	Game.free_draws = keep[7]
+	Game.realm = keep[8]
 	Game.recompute()
 
 

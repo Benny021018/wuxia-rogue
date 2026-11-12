@@ -7,15 +7,17 @@ const HUD := preload("res://scripts/ui/hud.gd")
 const GACHA := preload("res://scripts/ui/gacha_ui.gd")
 const SCREENS := preload("res://scripts/ui/screens.gd")
 const SHOP := preload("res://scripts/ui/shop_ui.gd")
+const MERIDIAN := preload("res://scripts/ui/meridian_ui.gd")
 
 var world
 var player
 var hud
 var gacha
 var shop
+var meridian
 var screens
 var ui_layer: CanvasLayer
-var mode := "menu"          # menu / play / pause / inventory / gacha / end
+var mode := "menu"          # menu / play / pause / inventory / gacha / shop / meridian / end
 
 
 func _ready() -> void:
@@ -59,6 +61,9 @@ func _to_menu() -> void:
 	if shop:
 		shop.queue_free()
 		shop = null
+	if meridian:
+		meridian.queue_free()
+		meridian = null
 	mode = "menu"
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	screens.show_main()
@@ -88,6 +93,11 @@ func _start(cid: String, start_wid := "") -> void:
 	ui_layer.add_child(shop)
 	shop.visible = false
 	shop.closed.connect(_resume)
+	meridian = MERIDIAN.new()
+	meridian.theme = UIKit.theme()
+	ui_layer.add_child(meridian)
+	meridian.visible = false
+	meridian.closed.connect(_resume)
 	player.died.connect(_on_died)
 	player.interact_pressed.connect(_on_interact)
 	world.zone_locked.connect(_on_zone_locked)
@@ -202,6 +212,13 @@ func open_shop(kind: String) -> void:
 		shop.open_merchant()
 
 
+func open_meridian() -> void:
+	mode = "meridian"
+	get_tree().paused = true
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	meridian.open()
+
+
 func _resume() -> void:
 	if mode == "end" or mode == "menu":
 		return
@@ -210,6 +227,8 @@ func _resume() -> void:
 		gacha.visible = false
 	if shop:
 		shop.visible = false
+	if meridian:
+		meridian.visible = false
 	get_tree().paused = false
 	mode = "play"
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -243,6 +262,14 @@ func _unhandled_input(event: InputEvent) -> void:
 				gacha._on_close()
 			"shop":
 				shop._on_close()
+			"meridian":
+				meridian._on_close()
+	elif event.is_action_pressed("meridian"):
+		match mode:
+			"play":
+				open_meridian()
+			"meridian":
+				meridian._on_close()
 	elif event.is_action_pressed("inventory"):
 		match mode:
 			"play":
