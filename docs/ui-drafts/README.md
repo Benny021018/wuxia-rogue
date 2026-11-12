@@ -18,7 +18,8 @@
 | 09-drop-compare.svg 掉落兵器比較 | `hud.gd` `show_drop_compare` |
 | 10-smith.svg 鐵匠 | `shop_ui.gd` `open_smith` |
 | 11-merchant.svg 商人 | `shop_ui.gd` `open_merchant` |
-| 12-meridian.svg 奇經八脈・衝穴 | 待實作（K 鍵） |
+| 12-meridian.svg 奇經八脈・衝穴（A 案：正背面人形） | 待定稿（K 鍵） |
+| 12b-meridian-scroll.svg 奇經八脈・衝穴（B 案：古卷打坐圖） | 待定稿 |
 | 13-bow-aim.svg 弓・拉弓與瞄準 | 待實作（`hud.gd` 準星） |
 
 ## 語彙

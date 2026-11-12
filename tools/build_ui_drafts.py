@@ -1137,31 +1137,7 @@ def meridian_figures(fx0, bx0, oy, opened, fails, sel):
     return "\n".join(o)
 
 
-def s12_meridian():
-    mer = _csv("meridians", "meridian_id")
-    acu = _csv("acupoints", "point_id")
-    cfg = {r["key"]: r["value"] for r in _csv("meridian_config")}
-    levels = _csv("character_levels")
-    opened = {"ren": 4, "du": 2, "chong": 1, "yangwei": 3, "yinwei": 1}
-    fails = {"du3": 2}
-    sel = "du"
-    total = sum(opened.values())
-    realm = levels[total]["display_zh"]
-    cost = round(float(cfg["cost_a"]) * (total + 1) ** float(cfg["cost_exp"]) + float(cfg["cost_b"]))
-    zq = 1284
-    b = []
-    _dim_scene(b, 0.9)
-    b.append(f'<circle cx="430" cy="470" r="400" fill="url(#tealBloom)" opacity=".3"/>')
-    b.append(brush_title(800, 82, "奇經八脈・衝穴", 62, BONE, INK, 9, "middle", -1))
-    b.append(narration(470, 104, 660, 46, [f"真氣 {zq:,}　｜　衝穴一次耗 {cost} 真氣　｜　已通 {total} / 32 穴"], 18))
-    # 左：正面、背面人形
-    b.append(meridian_figures(60, 480, 160, opened, fails, sel))
-    # 兩個人形之間：境界
-    nxt_realm = next(t for t in (9, 19, 29) if t > total)
-    b.append(f'<circle cx="420" cy="238" r="58" fill="{INK}" stroke="{TEAL}" stroke-width="4" filter="url(#glowTeal)"/>')
-    b.append(text(420, 234, realm.split("・")[0], 30, TEAL, SERIF, 900, "middle"))
-    b.append(text(420, 260, realm.split("・")[1] if "・" in realm else "", 16, BONE, SANS, 900, "middle"))
-    b.append(text(420, 318, f"再通 {nxt_realm-total} 穴突破", 14, GREY, SANS, 700, "middle"))
+def _meridian_tabs(b, mer, opened, sel):
     # 下：八脈選擇
     for i, mid_ in enumerate(mer):
         n = opened.get(mid_, 0)
@@ -1170,6 +1146,9 @@ def s12_meridian():
         b.append(slant(x, 846, 96, 40, 10, BLOOD if on else INK, BONE if on else ("#2a8f93" if n >= 4 else "#55505a"), 3 if on else 2))
         b.append(text(x + 40, 872, mer[mid_]["name_zh"], 16, BONE if (on or n) else GREY, SERIF, 900, "middle"))
         b.append(text(x + 80, 871, f"{n}/4", 12, TEAL if n >= 4 else GREY, SANS, 900, "middle"))
+
+
+def _meridian_right(b, mer, acu, cfg, opened, fails, sel, cost):
     # 右：選中的經脈
     x, y, w, h = 860, 164, 700, 700
     m = mer[sel]
@@ -1217,8 +1196,170 @@ def s12_meridian():
     b.append(text(x + 40, by + 196, "打通任督二脈（任脈、督脈都全通）：傷害、生命再提升", 15, GOLD, SANS, 700))
     b.append(button(x + 40, y + h - 70, 300, 54, f"衝穴（{cost} 真氣）", "hover", 24, "空白"))
     b.append(button(x + 370, y + h - 70, 220, 54, "關閉（K）", "normal", 22))
+
+
+def s12_meridian():
+    mer = _csv("meridians", "meridian_id")
+    acu = _csv("acupoints", "point_id")
+    cfg = {r["key"]: r["value"] for r in _csv("meridian_config")}
+    levels = _csv("character_levels")
+    opened = {"ren": 4, "du": 2, "chong": 1, "yangwei": 3, "yinwei": 1}
+    fails = {"du3": 2}
+    sel = "du"
+    total = sum(opened.values())
+    realm = levels[total]["display_zh"]
+    cost = round(float(cfg["cost_a"]) * (total + 1) ** float(cfg["cost_exp"]) + float(cfg["cost_b"]))
+    zq = 1284
+    b = []
+    _dim_scene(b, 0.9)
+    b.append(f'<circle cx="430" cy="470" r="400" fill="url(#tealBloom)" opacity=".3"/>')
+    b.append(brush_title(800, 82, "奇經八脈・衝穴", 62, BONE, INK, 9, "middle", -1))
+    b.append(narration(470, 104, 660, 46, [f"真氣 {zq:,}　｜　衝穴一次耗 {cost} 真氣　｜　已通 {total} / 32 穴"], 18))
+    # 左：正面、背面人形
+    b.append(meridian_figures(60, 480, 160, opened, fails, sel))
+    # 兩個人形之間：境界
+    nxt_realm = next(t for t in (9, 19, 29) if t > total)
+    b.append(f'<circle cx="420" cy="238" r="58" fill="{INK}" stroke="{TEAL}" stroke-width="4" filter="url(#glowTeal)"/>')
+    b.append(text(420, 234, realm.split("・")[0], 30, TEAL, SERIF, 900, "middle"))
+    b.append(text(420, 260, realm.split("・")[1] if "・" in realm else "", 16, BONE, SANS, 900, "middle"))
+    b.append(text(420, 318, f"再通 {nxt_realm-total} 穴突破", 14, GREY, SANS, 700, "middle"))
+    _meridian_tabs(b, mer, opened, sel)
+    _meridian_right(b, mer, acu, cfg, opened, fails, sel, cost)
     b.append(note(24, 14, ["稿註：穴位畫在正面、背面兩個人形上（仿明堂圖）；", "青＝已通、橘框＝下一穴；只有選中的經脈標穴名。", "點穴位、點下方八脈，或 A／D 切換經脈。"]))
     return doc("\n".join(b), "12 奇經八脈・衝穴")
+
+
+# 打坐人形（520×540 框，左半邊；右半邊鏡射）。自繪。
+_SIT_L = [(260, 44), (224, 54), (214, 92), (228, 130), (244, 142), (242, 160), (188, 174), (158, 204), (146, 272), (128, 342),
+          (100, 394), (66, 424), (48, 456), (78, 490), (170, 500), (260, 502)]
+# 穴位在打坐圖上的位置（這張稿專用；定稿後才寫進 acupoints.csv）
+_SIT_POS = {
+    "ren1": (260, 474), "ren2": (260, 408), "ren3": (260, 376), "ren4": (260, 240),
+    "du1": (260, 524), "du2": (260, 322), "du3": (260, 176), "du4": (260, 26),
+    "chong1": (292, 456), "chong2": (286, 430), "chong3": (286, 398), "chong4": (282, 290),
+    "dai1": (340, 348), "dai2": (332, 382), "dai3": (320, 408), "dai4": (336, 300),
+    "yinwei1": (170, 466), "yinwei2": (214, 414), "yinwei3": (212, 272), "yinwei4": (260, 144),
+    "yinqiao1": (312, 482), "yinqiao2": (356, 470), "yinqiao3": (284, 154), "yinqiao4": (273, 86),
+    "yangwei1": (112, 482), "yangwei2": (84, 444), "yangwei3": (192, 180), "yangwei4": (232, 130),
+    "yangqiao1": (408, 482), "yangqiao2": (444, 462), "yangqiao3": (436, 430), "yangqiao4": (372, 404),
+}
+PAPER, PAPER_D, SUMI, CINNABAR = "#d9c8a2", "#b89f72", "#1a1612", "#b3121c"
+
+
+def vtext(x, y, s_, size, fill, weight=900):
+    """直排字（一字一行）。"""
+    return "".join(text(x, y + i * size * 1.08, ch, size, fill, SERIF, weight, "middle") for i, ch in enumerate(s_))
+
+
+def sitting_figure(ox, oy):
+    pts = _SIT_L + [(520 - x, y) for x, y in reversed(_SIT_L[1:-1])]
+    n = len(pts)
+    mid = lambda p, q: ((p[0] + q[0]) / 2, (p[1] + q[1]) / 2)
+    m0 = mid(pts[-1], pts[0])
+    d = f"M{ox+m0[0]:.1f},{oy+m0[1]:.1f}"
+    for i in range(n):
+        c, m = pts[i], mid(pts[i], pts[(i + 1) % n])
+        d += f" Q{ox+c[0]:.1f},{oy+c[1]:.1f} {ox+m[0]:.1f},{oy+m[1]:.1f}"
+    o = []
+    for r, op in ((250, .10), (200, .08), (150, .07)):   # 背光
+        o.append(f'<circle cx="{ox+260}" cy="{oy+250}" r="{r}" fill="{CINNABAR}" opacity="{op}"/>')
+    o.append(f'<circle cx="{ox+260}" cy="{oy+250}" r="262" fill="none" stroke="{SUMI}" stroke-width="1.5" opacity=".35" stroke-dasharray="2 8"/>')
+    o.append(f'<path d="{d} Z" fill="#efe3c6" stroke="{SUMI}" stroke-width="4" stroke-linejoin="round" filter="url(#rough)"/>')
+    ink = f'fill="none" stroke="{SUMI}" stroke-linecap="round" filter="url(#rough)"'
+    X = lambda v: ox + v
+    Y = lambda v: oy + v
+    o.append(f'<ellipse cx="{X(260)}" cy="{Y(34)}" rx="17" ry="13" fill="{SUMI}"/>')                       # 髮髻
+    o.append(f'<path d="M{X(222)},{Y(70)} Q{X(260)},{Y(40)} {X(298)},{Y(70)}" {ink} stroke-width="5"/>')     # 髮際
+    o.append(f'<path d="M{X(240)},{Y(92)} h14 M{X(266)},{Y(92)} h14 M{X(252)},{Y(118)} h16" {ink} stroke-width="2.5" opacity=".8"/>')
+    for sx in (1, -1):                                                                                   # 衣襟、手臂、盤腿
+        c = lambda v: X(260 + sx * (v - 260))
+        o.append(f'<path d="M{c(244)},{Y(160)} L{c(262)},{Y(250)}" {ink} stroke-width="3" opacity=".7"/>')
+        o.append(f'<path d="M{c(182)},{Y(232)} Q{c(170)},{Y(310)} {c(150)},{Y(376)} Q{c(140)},{Y(404)} {c(120)},{Y(410)}" {ink} stroke-width="3" opacity=".7"/>')
+        o.append(f'<path d="M{c(108)},{Y(424)} Q{c(190)},{Y(430)} {c(300)},{Y(486)}" {ink} stroke-width="3" opacity=".7"/>')
+        o.append(f'<circle cx="{c(122)}" cy="{Y(414)}" r="13" fill="#efe3c6" stroke="{SUMI}" stroke-width="3"/>')
+    o.append(f'<path d="M{X(176)},{Y(350)} Q{X(260)},{Y(366)} {X(344)},{Y(350)}" {ink} stroke-width="3" opacity=".7"/>')  # 腰帶
+    return "\n".join(o)
+
+
+def s12b_meridian_scroll():
+    mer = _csv("meridians", "meridian_id")
+    acu = _csv("acupoints", "point_id")
+    cfg = {r["key"]: r["value"] for r in _csv("meridian_config")}
+    levels = _csv("character_levels")
+    opened = {"ren": 4, "du": 2, "chong": 1, "yangwei": 3, "yinwei": 1}
+    fails = {"du3": 2}
+    sel = "du"
+    total = sum(opened.values())
+    realm = levels[total]["display_zh"]
+    cost = round(float(cfg["cost_a"]) * (total + 1) ** float(cfg["cost_exp"]) + float(cfg["cost_b"]))
+    b = []
+    _dim_scene(b, 0.9)
+    b.append(brush_title(800, 82, "奇經八脈・衝穴", 62, BONE, INK, 9, "middle", -1))
+    b.append(narration(470, 104, 660, 46, [f"真氣 1,284　｜　衝穴一次耗 {cost} 真氣　｜　已通 {total} / 32 穴"], 18))
+    # 古卷
+    sx, sy, sw, sh = 50, 176, 760, 640
+    b.append(f'<defs><linearGradient id="paperG" x1="0" x2="1"><stop offset="0" stop-color="{PAPER_D}"/><stop offset=".08" stop-color="{PAPER}"/><stop offset=".92" stop-color="{PAPER}"/><stop offset="1" stop-color="{PAPER_D}"/></linearGradient></defs>')
+    b.append(f'<rect x="{sx}" y="{sy}" width="{sw}" height="{sh}" fill="url(#paperG)" stroke="{SUMI}" stroke-width="3"/>')
+    b.append(f'<rect x="{sx+12}" y="{sy+12}" width="{sw-24}" height="{sh-24}" fill="none" stroke="{SUMI}" stroke-width="1.5" opacity=".5"/>')
+    for yy in (sy - 12, sy + sh - 4):   # 卷軸
+        b.append(f'<rect x="{sx-18}" y="{yy}" width="{sw+36}" height="16" rx="8" fill="#3a2418" stroke="{SUMI}" stroke-width="2"/>')
+    r_ = random.Random(4)
+    for _ in range(26):                 # 紙漬
+        b.append(f'<circle cx="{sx+r_.random()*sw:.0f}" cy="{sy+r_.random()*sh:.0f}" r="{4+r_.random()*26:.0f}" fill="{PAPER_D}" opacity="{.08+r_.random()*.12:.2f}"/>')
+    b.append(vtext(sx + sw - 44, sy + 62, "奇經八脈圖", 30, SUMI))
+    b.append(f'<rect x="{sx+sw-64}" y="{sy+238}" width="40" height="40" fill="{CINNABAR}" transform="rotate(-4 {sx+sw-44} {sy+258})"/>')
+    b.append(text(sx + sw - 44, sy + 266, "天", 24, PAPER, SERIF, 900, "middle"))
+    # 境界：朱印
+    b.append(f'<rect x="{sx+30}" y="{sy+30}" width="64" height="150" fill="none" stroke="{CINNABAR}" stroke-width="4"/>')
+    b.append(vtext(sx + 62, sy + 70, realm.split("・")[0], 34, CINNABAR))
+    b.append(vtext(sx + 62, sy + 146, "", 16, CINNABAR))
+    b.append(text(sx + 62, sy + 166, realm.split("・")[1] if "・" in realm else "", 15, CINNABAR, SERIF, 900, "middle"))
+    nxt_realm = next(t for t in (9, 19, 29) if t > total)
+    b.append(text(sx + 30, sy + 204, f"再通 {nxt_realm-total} 穴突破", 14, SUMI, SANS, 900))
+    # 打坐人形與經脈
+    ox, oy = sx + 120, sy + 56
+    b.append(sitting_figure(ox, oy))
+    b.append(f'<path d="M{ox+176},{oy+350} Q{ox+260},{oy+366} {ox+344},{oy+350}" fill="none" stroke="{EMBER if sel=="dai" else SUMI}" stroke-width="2" stroke-dasharray="5 4" opacity=".6"/>')
+    for mid_ in [m for m in mer if m != sel] + [sel]:
+        is_sel = mid_ == sel
+        n = opened.get(mid_, 0)
+        P = [(ox + _SIT_POS[f"{mid_}{d}"][0], oy + _SIT_POS[f"{mid_}{d}"][1]) for d in range(1, 5)]
+        path = "M" + " L".join(f"{x},{y}" for x, y in P)
+        dash = 'stroke-dasharray="7 5"' if mid_ == "du" else ""   # 督脈走背後：虛線
+        b.append(f'<path d="{path}" fill="none" stroke="{SUMI}" stroke-width="{3 if is_sel else 1.6}" opacity="{.9 if is_sel else .45}" {dash}/>')
+        if n >= 2:
+            done = "M" + " L".join(f"{x},{y}" for x, y in P[:n])
+            b.append(f'<path d="{done}" fill="none" stroke="{CINNABAR}" stroke-width="{5 if is_sel else 3.5}" {dash}/>')
+        for d, (px, py) in enumerate(P):
+            pid = f"{mid_}{d+1}"
+            on, nxt = d < n, d == n
+            rr = 10 if is_sel else 7
+            if on:
+                b.append(f'<circle cx="{px}" cy="{py}" r="{rr}" fill="{CINNABAR}" stroke="{SUMI}" stroke-width="2.5"/>')
+                b.append(f'<circle cx="{px}" cy="{py}" r="{rr*0.35:.1f}" fill="{PAPER}"/>')
+            elif nxt:
+                if is_sel:
+                    b.append(f'<circle cx="{px}" cy="{py}" r="{rr+9}" fill="none" stroke="{EMBER}" stroke-width="3" stroke-dasharray="4 4"/>')
+                b.append(f'<circle cx="{px}" cy="{py}" r="{rr}" fill="{PAPER}" stroke="{EMBER}" stroke-width="4"/>')
+            else:
+                b.append(f'<circle cx="{px}" cy="{py}" r="{rr}" fill="{PAPER}" stroke="{SUMI}" stroke-width="2" opacity=".75"/>')
+            if is_sel:   # 榜題：直排穴名
+                a = acu[pid]
+                side = 1 if d % 2 == 0 else -1
+                lx = px + side * 150
+                col = CINNABAR if on else (EMBER if nxt else "#6b5d48")
+                nm = a["name_zh"]
+                b.append(f'<path d="M{px+side*(rr+4)},{py} H{lx-side*18}" stroke="{col}" stroke-width="1.8"/>')
+                b.append(f'<rect x="{lx-17}" y="{py-30}" width="34" height="{len(nm)*27+10}" fill="{PAPER}" stroke="{col}" stroke-width="2.5"/>')
+                b.append(vtext(lx, py - 6, nm, 23, col))
+                k = fails.get(pid, 0)
+                if k and nxt:
+                    b.append(text(lx + side * 26, py + 6, f"×{k}", 18, EMBER, SANS, 900, "start" if side > 0 else "end"))
+    b.append(text(sx + 30, sy + sh - 26, "朱點＝已通　橘圈＝下一穴　虛線＝行於背後（督脈）", 14, SUMI, SANS, 900))
+    _meridian_tabs(b, mer, opened, sel)
+    _meridian_right(b, mer, acu, cfg, opened, fails, sel, cost)
+    b.append(note(24, 14, ["稿註（B 案）：泛黃古卷＋打坐人形，穴位像珠子串在經脈上；", "已通點朱砂、選中的經脈用直排榜題標穴名，境界蓋成朱印。", "任脈走身前中線、督脈走背後（虛線），兩脈在中軸合成小周天。"]))
+    return doc("\n".join(b), "12b 奇經八脈・古卷打坐圖")
 
 
 def reticle(cx, cy, r, full=False):
@@ -1289,7 +1430,7 @@ def build(only=None):
             continue
         slug = {"s00": "00-style", "s01": "01-main-menu", "s02": "02-character-select", "s03": "03-hud",
                 "s04": "04-shrine", "s05": "05-martial-panel", "s06": "06-pause", "s07": "07-result",
-                "s08": "08-start-weapon", "s09": "09-drop-compare", "s10": "10-smith", "s11": "11-merchant", "s12": "12-meridian", "s13": "13-bow-aim"}[name[:3]]
+                "s08": "08-start-weapon", "s09": "09-drop-compare", "s10": "10-smith", "s11": "11-merchant", "s12": "12-meridian", "s12b": "12b-meridian-scroll", "s13": "13-bow-aim"}[name.split("_")[0]]
         path = os.path.join(OUT, slug + ".svg")
         with open(path, "w", encoding="utf-8") as f:
             f.write(fn())
