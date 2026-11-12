@@ -1,5 +1,5 @@
 key,value,note
-base_cost,10,第一抽價格（金幣）
+base_cost,9,第一抽價格（銀兩）；單武器制後由10下修為9
 cost_growth_k,0.15,cost(n)=base×(1+k)^n，n=本波已抽次數，每波重置
 choices_per_draw,3,三選一
 weapon_pool_ratio,0.30,每個候選位30%為武器，70%為武學
@@ -18,7 +18,7 @@ martial_slots,8,武學欄位
 max_level,5,武學與武器最高等級（重複抽到+1級）
 breakthrough_lv3,3,武學第一次突破「小成」
 breakthrough_lv5,5,武學第二次突破「圓滿」／武器「覺醒」
-weapon_levelup_pct,15,武器每升一級傷害+15%
+weapon_levelup_pct,25,武器每淬煉一級傷害+25%（單武器制後上調，原15%）
 uptime_melee,0.60,近戰預估貼身輸出時間佔比（第一人稱視野窄，比俯視角低）
 uptime_mid,0.75,中距離預估輸出時間佔比
 uptime_ranged,0.90,遠程預估輸出時間佔比

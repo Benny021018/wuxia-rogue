@@ -11,6 +11,26 @@ signal enemies_changed(count: int)
 
 const ENEMY := preload("res://scripts/enemy.gd")
 const HAZARD := preload("res://scripts/hazard.gd")
+const GATE_MODEL := preload("res://assets/models/greenwood/Gate.glb")
+const PALISADE_MODEL := preload("res://assets/models/greenwood/palisade.glb")
+const PLATFORM_MODEL := preload("res://assets/models/greenwood/platform.glb")
+const CAMP_ART := {
+	"拒馬":[PALISADE_MODEL,Vector3(6,3,2)], "":[preload("res://assets/models/greenwood/cover.glb"),Vector3(6,3,1.5)],
+	"板車":[preload("res://assets/models/greenwood/cart.glb"),Vector3(3,1.2,2)],
+	"貨箱":[preload("res://assets/models/greenwood/crate.glb"),Vector3(2,1.2,2)],
+	"箭樓":[PLATFORM_MODEL,Vector3(7,1,7)], "擂台":[preload("res://assets/models/greenwood/ring.glb"),Vector3(4,1,4)],
+	"交椅":[preload("res://assets/models/greenwood/ring.glb"),Vector3(4,1,4)],
+	"二樓迴廊":[preload("res://assets/models/greenwood/gallery.glb"),Vector3(6,1,2)],
+	"石階（高台）":[preload("res://assets/models/greenwood/stairs.glb"),Vector3(3,1,4)]
+}
+const CAMP_CHAIR := preload("res://assets/models/greenwood/throne.glb")
+const CAMP_BRAZIER := preload("res://assets/models/greenwood/brazier.glb")
+const CAMP_STELE := preload("res://assets/models/greenwood/shrine.glb")
+const SMITH_PROP := preload("res://assets/models/npc/Smith.glb")         # tools/build_rest_stops.py
+const MERCHANT_PROP := preload("res://assets/models/npc/Merchant.glb")
+const STALL_SIZE := Vector3(3.2, 2.6, 2.2)
+const DROP_MODELS := {"W001": preload("res://assets/models/weapons/Tachi.glb"),
+	"W007": preload("res://assets/models/weapons/W007.glb"), "W301": preload("res://assets/models/weapons/W301.glb")}
 const CORRIDOR := 14.0
 const WALL_H := 4.0
 const SPAWN_RATE := 0.12
@@ -39,6 +59,9 @@ var hazards: Array = []
 var portal_x := 0.0
 var shrine_node: Node3D
 var shrine_room := -1
+var smith_node: Node3D           # 休息區的鐵匠（stages.csv 的 rest_stop）
+var merchant_node: Node3D        # 休息區的商人
+var drops: Array = []            # 地上的掉落武器（meta "item"）
 
 
 func _ready() -> void:
@@ -80,6 +103,7 @@ func build_map(index: int) -> void:
 	var portal := FX.cylinder(1.6, 0.2, Color(0.3, 0.9, 0.7), 2.0)
 	level_root.add_child(portal)
 	portal.position = Vector3(portal_x, 0.1, 0)
+	FX.play(portal, portal.global_position + Vector3.UP, &"portal", 2.25, 2.0)
 	var pl := FX.label3d("前往下一處" if index < 3 else "離開天魔殿", 72, Color(0.6, 1, 0.85))
 	level_root.add_child(pl)
 	pl.position = Vector3(portal_x, 2.5, 0)
@@ -102,12 +126,21 @@ func _apply_env() -> void:
 	e.fog_enabled = true
 	e.fog_light_color = th.fog
 	e.fog_density = 0.018
+	if map_id == "greenwood":
+		e.background_mode = Environment.BG_SKY
+		e.sky = Sky.new()
+		var mountain_sky := ShaderMaterial.new()
+		mountain_sky.shader = preload("res://assets/greenwood/ridges.gdshader")
+		e.sky.sky_material = mountain_sky
+		e.fog_light_color = Color(0.38, 0.46, 0.43)
+		e.fog_density = 0.01
+		e.fog_sky_affect = 0.12
 	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	e.glow_enabled = true
 	env.environment = e
 
 
-func _static_box(size: Vector3, pos: Vector3, color: Color, parent: Node = null) -> StaticBody3D:
+func _static_box(size: Vector3, pos: Vector3, color: Color, model: PackedScene = null) -> StaticBody3D:
 	var sb := StaticBody3D.new()
 	sb.collision_layer = 1
 	var col := CollisionShape3D.new()
@@ -115,10 +148,28 @@ func _static_box(size: Vector3, pos: Vector3, color: Color, parent: Node = null)
 	shape.size = size
 	col.shape = shape
 	sb.add_child(col)
-	sb.add_child(FX.box(size, color))
-	(parent if parent else level_root).add_child(sb)
+	if model:
+		var art: Node3D = model.instantiate()
+		art.position.y = -size.y / 2.0
+		if model == GATE_MODEL:
+			art.rotation.y = -PI / 2.0
+		sb.add_child(art)
+	else:
+		var box := FX.box(size, color)
+		if map_id == "greenwood":
+			box.material_override = preload("res://assets/greenwood/surfaces.tres")
+		sb.add_child(box)
+	level_root.add_child(sb)
 	sb.position = pos
 	return sb
+
+
+func _camp_block(label: String, extent: Vector3, base: Vector3, tint: Color) -> void:
+	var spec: Array = CAMP_ART.get(label,[]) if map_id == "greenwood" else []
+	var body := _static_box(extent,base+Vector3.UP*extent.y*.5,tint,spec[0] if spec else null)
+	if spec:
+		var visual := body.get_child(1) as Node3D
+		visual.scale = extent / Vector3(spec[1])
 
 
 func _static_cyl(radius: float, h: float, pos: Vector3, color: Color) -> void:
@@ -162,11 +213,14 @@ func _build_room(stage: int, lay: Dictionary, x0: float, theme: Dictionary) -> D
 	for wx in [x0, x0 + w]:
 		_static_box(Vector3(0.5, WALL_H, seg), Vector3(wx, WALL_H / 2.0, -3.0 - seg / 2.0), theme.wall)
 		_static_box(Vector3(0.5, WALL_H, seg), Vector3(wx, WALL_H / 2.0, 3.0 + seg / 2.0), theme.wall)
-	var gate_in := _static_box(Vector3(0.6, WALL_H, 6.0), Vector3(x0, WALL_H / 2.0, 0), Color(0.75, 0.2, 0.15))
-	var gate_out := _static_box(Vector3(0.6, WALL_H, 6.0), Vector3(x0 + w, WALL_H / 2.0, 0), Color(0.75, 0.2, 0.15))
+	var gate_art := GATE_MODEL if map_id == "greenwood" else null
+	var gate_in := _static_box(Vector3(0.6, WALL_H, 6.0), Vector3(x0, WALL_H / 2.0, 0), Color(0.75, 0.2, 0.15), gate_art)
+	var gate_out := _static_box(Vector3(0.6, WALL_H, 6.0), Vector3(x0 + w, WALL_H / 2.0, 0), Color(0.75, 0.2, 0.15), gate_art)
 	_set_gate(gate_in, false)
 	var r := {"stage": stage, "x0": x0, "w": w, "h": h, "gate_in": gate_in, "gate_out": gate_out,
 		"spawns": {}, "elites": [], "boss": Vector3.ZERO, "shrine": Vector3(x0 + w - 4.0, 0, 4.0)}
+	var nav := preload("res://scripts/room_routes.gd").new(Rect2(x0,-half,w,h))
+	r["navigation"] = nav
 	var row: Dictionary = Data.stage_row(stage)
 	var title := FX.label3d("第%d區・%s" % [stage, row.area_zh], 96, Color(0.95, 0.9, 0.75))
 	level_root.add_child(title)
@@ -191,12 +245,23 @@ func _build_room(stage: int, lay: Dictionary, x0: float, theme: Dictionary) -> D
 		var eh := float(el.h)
 		var label: String = el.label
 		var c := Vector3(x0 + ex + ew / 2.0, 0, ey + eh / 2.0 - half)
+		if k in ["cover","high","round","tree"]:
+			var extent := Vector2(ew,eh)
+			if k == "round":
+				extent = Vector2.ONE * minf(ew,eh)
+			elif k == "tree":
+				extent = Vector2.ONE
+			nav.blocks.append(Rect2(Vector2(c.x,c.z)-extent/2,extent))
 		match k:
 			"cover":
 				var tall := 1.2 if (ew < 3.0 and eh < 3.0) or label in ["棺", "板車", "草堆", "香爐"] else 3.0
-				_static_box(Vector3(ew, tall, eh), c + Vector3(0, tall / 2.0, 0), theme.wall.lightened(0.15))
+				_camp_block(label,Vector3(ew,tall,eh),c,theme.wall.lightened(.15))
 			"high":
-				_static_box(Vector3(ew, 1.0, eh), c + Vector3(0, 0.5, 0), Color(0.55, 0.47, 0.33))
+				_camp_block(label,Vector3(ew,1.0,eh),c,Color(.55,.47,.33))
+				if map_id == "greenwood" and label == "交椅":
+					var chair := CAMP_CHAIR.instantiate() as Node3D
+					level_root.add_child(chair)
+					chair.position = c + Vector3.UP
 			"round":
 				var big := maxf(ew, eh) >= 8.0
 				_static_cyl(minf(ew, eh) / 2.0, 8.0 if big else 1.4, c, Color(0.35, 0.3, 0.22) if big else theme.wall.lightened(0.1))
@@ -237,20 +302,25 @@ func _build_room(stage: int, lay: Dictionary, x0: float, theme: Dictionary) -> D
 					var cliff := FX.box(Vector3(ew, 0.05, eh), Color(0.02, 0.02, 0.02))
 					level_root.add_child(cliff)
 					cliff.position = c + Vector3(0, 0.03, 0)
-					_permanent_hazard(c, minf(ew, eh) / 2.0, stage, Color(0.1, 0.0, 0.0, 0.0), 3.0)
+					_permanent_hazard(c, minf(ew, eh) / 2.0, stage, Color(0.1, 0.0, 0.0, 0.0), 3.0, &"")
 				elif "血池" in label or ew <= 2.5:
+					if map_id == "greenwood":
+						var basket := CAMP_BRAZIER.instantiate() as Node3D
+						level_root.add_child(basket)
+						basket.position = c
 					var fire := FX.cylinder(minf(ew, eh) / 2.0, 0.8, Color(0.75, 0.05, 0.05) if "血池" in label else Color(0.9, 0.35, 0.1), 2.5)
 					level_root.add_child(fire)
-					fire.position = c + Vector3(0, 0.4, 0)
-					_permanent_hazard(c, minf(ew, eh) / 2.0 + 0.5, stage, Color(1, 0.4, 0.1, 0.2), 1.5)
+					fire.position = c + Vector3(0, 0.72 if map_id == "greenwood" else 0.4, 0)
+					if map_id == "greenwood": fire.scale = Vector3(.53,.38,.53)
+					_permanent_hazard(c, minf(ew, eh) / 2.0 + 0.5, stage, Color(1, 0.4, 0.1, 0.2), 1.5, &"" if "血池" in label else &"campfire")
 	return r
 
 
-func _permanent_hazard(c: Vector3, radius: float, stage: int, color: Color, mult := 0.5) -> void:
+func _permanent_hazard(c: Vector3, radius: float, stage: int, color: Color, mult := 0.5, clip: StringName = &"poison-cloud") -> void:
 	var hz := HAZARD.new()
 	level_root.add_child(hz)
 	hz.position = Vector3(c.x, 0, c.z)
-	hz.configure(radius, Data.cfg("base_enemy_dmg") * pow(Data.cfg("enemy_dmg_growth"), stage - 1) * mult, -1.0, true, color)
+	hz.configure(radius, Data.cfg("base_enemy_dmg") * pow(Data.cfg("enemy_dmg_growth"), stage - 1) * mult, -1.0, true, color, clip)
 
 
 func _set_gate(g: StaticBody3D, closed: bool) -> void:
@@ -269,6 +339,9 @@ func _clear_dynamic() -> void:
 	hazards = []
 	spawn_queue = []
 	shrine_node = null
+	smith_node = null
+	merchant_node = null
+	drops = []
 
 
 # ------------------------------------------------------------------ 區域流程
@@ -292,6 +365,11 @@ func _physics_process(delta: float) -> void:
 					run_won.emit()
 		"fighting":
 			_process_spawns(delta)
+	for d in drops:
+		if is_instance_valid(d):
+			d.get_child(0).rotate_y(delta * 1.2)
+			# 靠近時改看比較面板，名牌收起來免得擋住畫面
+			d.get_meta("label").visible = d.global_position.distance_to(player.global_position) > 3.5
 
 
 func _lock(i: int) -> void:
@@ -300,9 +378,12 @@ func _lock(i: int) -> void:
 	var r: Dictionary = rooms[i]
 	Game.stage = r.stage
 	_set_gate(r.gate_in, true)
-	if shrine_node and is_instance_valid(shrine_node):
-		shrine_node.queue_free()
-		shrine_node = null
+	for n in [shrine_node, smith_node, merchant_node]:
+		if n and is_instance_valid(n):
+			n.queue_free()
+	shrine_node = null
+	smith_node = null
+	merchant_node = null
 	var row: Dictionary = Data.stage_row(r.stage)
 	var rep: Dictionary = Data.report_row(r.stage)
 	var total := int(rep.minions)
@@ -370,7 +451,7 @@ func _process_spawns(delta: float) -> void:
 			if spawn_queue[i][2] == wave:
 				var q = spawn_queue[i]
 				spawn_queue.remove_at(i)
-				FX.flash(self, q[1] + Vector3(0, 0.5, 0), 0.6, Color(0.6, 0.1, 0.1), 0.25)
+				FX.play(self, q[1] + Vector3(0, 0.5, 0), &"poof", 1.3, 0.3, Color(0.95, 0.62, 0.5))
 				spawn_enemy(q[0], q[1], false)
 				break
 	var pending_this_wave := spawn_queue.any(func(q): return q[2] == wave)
@@ -386,18 +467,22 @@ func _clear_zone() -> void:
 	state = "cleared"
 	var r: Dictionary = rooms[current]
 	_set_gate(r.gate_out, false)
-	Game.draws_this_stage = 0
+	Game.on_zone_cleared()
 	if r.stage < Data.stages.size():
 		shrine_node = Node3D.new()
 		add_child(shrine_node)
 		shrine_node.global_position = r.shrine
-		var pillar := FX.box(Vector3(1.2, 2.6, 0.5), Color(0.25, 0.6, 0.48), 1.2)
-		pillar.position.y = 1.3
+		var pillar: Node3D = CAMP_STELE.instantiate()
 		shrine_node.add_child(pillar)
+		pillar.global_position.y = 0.0
+		pillar.rotation.y = PI / 2.0
+		FX.play(shrine_node, pillar.global_position + Vector3.UP, &"magic-circle-cast", 2.5, 0.8)
 		var lab := FX.label3d("悟道碑\n［E］參悟", 64, Color(0.7, 1, 0.85))
 		lab.position.y = 3.3
 		shrine_node.add_child(lab)
 		shrine_room = current
+		if String(Data.stage_row(r.stage).get("rest_stop", "0")) == "1":
+			_spawn_rest_stop(r.shrine)
 	for h in hazards:
 		if is_instance_valid(h):
 			h.queue_free()
@@ -406,7 +491,131 @@ func _clear_zone() -> void:
 
 
 func near_shrine() -> bool:
-	return shrine_node != null and is_instance_valid(shrine_node) and shrine_node.global_position.distance_to(player.global_position) < 3.0
+	return _near(shrine_node, 3.0)
+
+
+func near_smith() -> bool:
+	return _near(smith_node, 3.2)
+
+
+func near_merchant() -> bool:
+	return _near(merchant_node, 3.2)
+
+
+func _near(n: Node3D, r: float) -> bool:
+	return n != null and is_instance_valid(n) and n.global_position.distance_to(player.global_position) < r
+
+
+func _spawn_rest_stop(shrine_pos: Vector3) -> void:
+	## 休息區：悟道碑旁邊擺鐵匠與商人，商人重新上架
+	var r: Dictionary = rooms[0]
+	for room in rooms:
+		if shrine_pos.x >= room.x0 and shrine_pos.x <= room.x0 + room.w:
+			r = room
+	var smith_at := _stall_spot(r, shrine_pos, [])
+	smith_node = _rest_npc(SMITH_PROP, smith_at, "鐵匠\n［E］強化／重鑄", Color(1.0, 0.62, 0.3))
+	merchant_node = _rest_npc(MERCHANT_PROP, _stall_spot(r, shrine_pos, [smith_at]), "商人\n［E］購買武學", Color(0.95, 0.85, 0.5))
+	Game.restock_merchant()
+
+
+func _stall_spot(r: Dictionary, near: Vector3, taken: Array) -> Vector3:
+	## 在悟道碑附近找一塊放得下攤位的空地：由近到遠，留在房間內、不擋中央通道，
+	## 不與障礙物、悟道碑或已放的攤位重疊
+	var space := get_world_3d().direct_space_state
+	var probe := PhysicsShapeQueryParameters3D.new()
+	var box := BoxShape3D.new()
+	box.size = STALL_SIZE + Vector3(0.8, -0.4, 0.8)
+	probe.shape = box
+	probe.collision_mask = 1
+	var half_h: float = r.h / 2.0
+	var cands: Array = []
+	for dx in range(-int(r.w), int(r.w) + 1):
+		for dz in range(-10, 11, 2):
+			var p := Vector3(near.x + dx, 0.0, near.z + dz)
+			if p.x - STALL_SIZE.x / 2.0 < r.x0 + 1.0 or p.x + STALL_SIZE.x / 2.0 > r.x0 + r.w - 1.0:
+				continue
+			if absf(p.z) + STALL_SIZE.z / 2.0 > half_h - 0.6 or absf(p.z) - STALL_SIZE.z / 2.0 < 3.5:
+				continue
+			var d := Vector2(p.x - near.x, p.z - near.z).length()
+			if d < 4.0:
+				continue
+			cands.append([d, p])
+	cands.sort_custom(func(a, b): return a[0] < b[0])
+	for c in cands:
+		var p: Vector3 = c[1]
+		if taken.any(func(t): return absf(t.x - p.x) < STALL_SIZE.x + 1.2 and absf(t.z - p.z) < STALL_SIZE.z + 1.0):
+			continue
+		probe.transform = Transform3D(Basis(), p + Vector3.UP * (STALL_SIZE.y / 2.0 + 0.3))
+		if space.intersect_shape(probe, 1).is_empty():
+			return p
+	return near + Vector3(0, 0, -4.0 * signf(near.z if near.z != 0.0 else 1.0))
+
+
+func _rest_npc(model: PackedScene, pos: Vector3, title: String, color: Color) -> Node3D:
+	var n := Node3D.new()
+	add_child(n)
+	n.global_position = pos
+	var prop: Node3D = model.instantiate()
+	n.add_child(prop)
+	prop.rotation.y = PI if pos.z > 0.0 else 0.0   # 模型正面朝 +Z；轉向房間中央
+	var body := StaticBody3D.new()
+	body.collision_layer = 1
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = STALL_SIZE
+	shape.shape = box
+	shape.position.y = STALL_SIZE.y / 2.0
+	body.add_child(shape)
+	n.add_child(body)
+	var lab := FX.label3d(title, 56, color)
+	lab.position.y = 3.4
+	n.add_child(lab)
+	return n
+
+
+# ------------------------------------------------------------------ 掉落武器
+func spawn_drop(pos: Vector3, item: Dictionary) -> Node3D:
+	var row: Dictionary = Data.weapons[item.id]
+	var col := UIKit.TEAL.lerp(UIKit.BONE, 0.3)
+	var d := Node3D.new()
+	add_child(d)
+	d.global_position = Vector3(pos.x, 0.0, pos.z)
+	var spin := Node3D.new()
+	spin.position.y = 0.9
+	d.add_child(spin)
+	if DROP_MODELS.has(item.id):
+		var m: Node3D = DROP_MODELS[item.id].instantiate()
+		m.rotation_degrees = Vector3(0, 0, 70)
+		spin.add_child(m)
+	var beam := FX.cylinder(0.05, 2.4, Color(col, 0.55), 2.0)
+	beam.position.y = 1.2
+	d.add_child(beam)
+	var lab := FX.label3d("%s　詞條 %d" % [row.name_zh, item.get("affixes", []).size()], 40, col)
+	lab.position.y = 2.1
+	d.add_child(lab)
+	d.set_meta("item", item)
+	d.set_meta("label", lab)
+	drops.append(d)
+	return d
+
+
+func nearest_drop(radius: float) -> Node3D:
+	var best: Node3D = null
+	var best_d := radius
+	for d in drops:
+		if is_instance_valid(d):
+			var dist: float = d.global_position.distance_to(player.global_position)
+			if dist <= best_d:
+				best = d
+				best_d = dist
+	return best
+
+
+func take_drop(d: Node3D) -> Dictionary:
+	drops.erase(d)
+	var item: Dictionary = d.get_meta("item")
+	d.queue_free()
+	return item
 
 
 # ------------------------------------------------------------------ 給敵人用的介面
@@ -422,6 +631,9 @@ func boss_spawned(e) -> void:
 
 
 func on_enemy_died(e) -> void:
+	var item := Game.roll_weapon_drop(String(Data.enemies[e.eid].rank))
+	if not item.is_empty():
+		spawn_drop(e.global_position, item)
 	corpses.append(e.global_position)
 	if corpses.size() > 40:
 		corpses.pop_front()

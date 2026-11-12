@@ -17,3 +17,20 @@ pressure_target_start,0.60,第1區目標壓力（P50玩家清場時間 = 壓力�
 pressure_target_end,0.95,第20區目標壓力
 boss_focus,0.7,首領戰時輸出打在首領身上的比例（其餘清小怪）
 boss_zone_add_ratio,0.5,首領區小怪壓力 = 一般目標壓力 × 0.5
+ai_path_margin,0.12,避障時在碰撞半徑外保留的距離（公尺）
+ai_repath_distance,2.0,目標移動幾公尺後立即重算路線
+ai_repath_seconds,0.65,受阻時重算路線的間隔（秒）
+ai_flank_range,7.0,近戰敵人開始找側面空位的距離（公尺）
+ai_flank_spacing,2.5,判斷前方隊友站位的距離（公尺）
+weapon_swap_s,0.3,切換主副武器的收刀出刀時間（秒）；期間不能出招
+bow_load_frac,0.20,弓：搭箭時間佔武器間隔的比例（按下左鍵後先搭箭）
+bow_draw_frac,0.55,弓：從搭好箭到拉滿弓的時間佔間隔的比例（按住左鍵）
+bow_recover_frac,0.25,弓：放箭後收弓的時間佔間隔的比例；三段合計＝間隔，滿弓連射的DPS與原本相同
+bow_min_draw,0.15,弓：拉弓不到此比例就放開，視為收弓不射
+bow_min_dmg,0.35,弓：剛過最低拉弓時的傷害倍率；拉滿為1.0，中間線性
+bow_full_speed,1.4,弓：滿弓時箭速倍率（未拉滿時線性到1.0）
+bow_aim_fov,48,弓：右鍵瞄準時的視角（一般為80）
+bow_aim_move_mult,0.6,弓：瞄準時移動速度倍率
+bow_spread_max_deg,5,弓：剛開始拉弓時箭的散射半角（度）；紅圈大小就是這個範圍
+bow_spread_min_deg,0.6,弓：滿弓時的散射半角（度），紅圈縮到最小
+bow_aim_spread_mult,0.5,弓：右鍵瞄準時散射乘上此值

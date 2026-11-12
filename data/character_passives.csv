@@ -1,6 +1,6 @@
 char_id,passive_id,name_zh,effect_template,stat_id,lv1_value,per_level,points_per_unit,tags,basis
-nangong,ng_p1,追風劍意,攻擊後有{v}%機率追加一擊（100%傷害）,custom,20,1.0,0.1,extra_hit,追加機率v% ≈ 傷害+v%
-nangong,ng_p2,劍心,暴擊率+{v}%,crit_rate_pct,16,1.6,0.0625,crit,依stat_values
+nangong,ng_p1,追風殘影,攻擊後有{v}%機率追加一擊（100%傷害）,custom,20,1.0,0.1,extra_hit,追加機率v% ≈ 傷害+v%
+nangong,ng_p2,心眼,暴擊率+{v}%,crit_rate_pct,16,1.6,0.0625,crit,依stat_values
 han,han_p1,嗜血,吸血+{v}%,lifesteal_pct,2.5,0.25,0.4,lifesteal,依stat_values
 han,han_p2,狂血,每損失10%生命，傷害+{v}%,custom,5.7,0.29,0.35,low_hp,假設戰鬥中平均損失35%生命 → 傷害+3.5v%
 tang,tang_p1,淬毒,攻擊使敵人中毒，3秒內造成該次攻擊{v}%的傷害,custom,25,1.25,0.08,poison,約20%毒傷因敵人先死而浪費 → 0.8×v%

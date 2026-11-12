@@ -1,4 +1,4 @@
-char_id,name_zh,title,hp,origin_sect,move_speed,affinity_tags,bio
-nangong,南宮劍,劍宗天才,120,tianjian,5.0,extra_hit|crit,名門劍宗百年一遇的天才，劍意隨心，一劍未落一劍又起
-han,韓天狼,魔教棄徒,144,tianmo,4.5,lifesteal|low_hp,被逐出魔教的狂徒，越接近死亡越瘋狂
-tang,唐七,暗器世家,100,tangmen,5.4,poison|luck,暗器世家的么子，手快、眼尖、運氣好
+char_id,name_zh,title,hp,origin_sect,move_speed,affinity_tags,bio,portrait_x,portrait_y,portrait_face
+nangong,南宮逸,名門天才,120,tianjian,5.0,extra_hit|crit,天劍宗百年一遇的天才，出手快得只剩殘影，一招未落一招又起,0.635,0.215,0.143
+han,韓天狼,魔教棄徒,144,tianmo,4.5,lifesteal|low_hp,被逐出魔教的狂徒，越接近死亡越瘋狂,0.752,0.215,0.124
+tang,唐七,暗器世家,100,tangmen,5.4,poison|luck,暗器世家的么女，笑裡藏毒，手快、眼尖、運氣好,0.464,0.250,0.143

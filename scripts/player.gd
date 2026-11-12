@@ -1,5 +1,9 @@
 extends CharacterBody3D
-## 第一人稱玩家：移動、雙武器攻擊、受傷流程，以及武學／門派／境界的戰鬥效果
+
+const MELEE_EFFECTS := {"劍": &"thrust", "槍": &"thrust", "棍": &"spin-slash", "鞭": &"whip-crack", "鉤": &"double-slash", "拳": &"blunt-hit", "巨劍": &"heavy-cleave"}
+const SWEEP_DEGREES := {"刀": 120.0, "棍": 360.0, "拳": 60.0, "鉤": 90.0, "巨劍": 140.0, "扇": 50.0, "鞭": 360.0}
+const THRUST_HALF_WIDTH := 0.9
+## 第一人稱玩家：移動、主副武器切換與攻擊、受傷流程，以及武學／門派／境界的戰鬥效果
 
 signal hp_changed
 signal died
@@ -13,8 +17,11 @@ const PROJ := preload("res://scripts/projectile.gd")
 var hp := 100.0
 var shield := 0.0
 var cam: Camera3D
-var weapon_models: Array = [null, null]
+var weapon_models: Array = [null, null]   # 對應 Game.weapons；只有手上那把可見
+var queued_press := [false,false]
 var cooldowns := [0.0, 0.0]
+var swap_t := 0.0                          # 切換武器的收出時間，期間不能出招
+var switch_request := -9                   # 待切換的武器格（-9＝無）
 var yaw := 0.0
 var pitch := 0.0
 var dash_t := 0.0
@@ -44,6 +51,20 @@ var arhat_nodes: Array = []
 var regen_acc := 0.0
 var still_t := 0.0
 var input_enabled := true
+# 弓：按住左鍵拉弓、放開射出；右鍵瞄準
+var bow_t := 0.0                   # 這一箭按住多久
+var bow_held := false
+var aim := 0.0                     # 瞄準程度 0~1（平滑過渡）
+var arrow_speed_mult := 1.0        # 滿弓箭速較快
+var arrow_spread_deg := 0.0        # 這一箭的散射半角；拉越滿越小
+# 經脈全通的特殊效果
+var du_charged := false            # 督脈貫頂：下一擊必暴＋增傷
+var ren_cd := 0.0                  # 任脈歸元冷卻
+var chong_t := 0.0                 # 氣血奔湧剩餘時間
+var dai_t := 0.0                   # 束脈護體剩餘時間
+var dai_cd := 0.0
+var qiao_ready := false            # 蹻捷如風：衝刺後下一擊增傷
+const BASE_FOV := 80.0
 
 
 func _ready() -> void:
@@ -76,33 +97,41 @@ func _on_stats_changed() -> void:
 
 
 func refresh_weapon_models() -> void:
-	for m in weapon_models:
-		if m:
-			m.queue_free()
-	weapon_models = [null, null]
 	for i in 2:
 		var w = Game.weapons[i]
-		if w == null:
+		var previous = weapon_models[i]
+		if previous and w != null and previous.id == w.id:
 			continue
-		var row: Dictionary = Data.weapons[w.id]
-		var length := 0.9 if row.range_type == "melee" else (1.1 if row.range_type == "mid" else 0.45)
-		var m := FX.box(Vector3(0.06, 0.06, length), Data.rarity_color(row.rarity), 0.6)
-		cam.add_child(m)
-		m.position = Vector3(0.45 if i == 0 else -0.45, -0.35, -0.5 - length * 0.3)
-		m.rotation_degrees = Vector3(10, 8 if i == 0 else -8, 0)
-		weapon_models[i] = m
+		if previous:
+			cam.remove_child(previous)
+			previous.queue_free()
+		weapon_models[i] = null
+		if w != null:
+			var view := preload("res://scripts/weapon_view.gd").new()
+			cam.add_child(view)
+			view.setup(w.id,0)   # 兩格都用慣用手的握位；同時只拿一把
+			weapon_models[i] = view
+			queued_press[i] = false
+	_show_hands()
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not input_enabled:
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		yaw -= event.relative.x * MOUSE_SENS
-		pitch = clampf(pitch - event.relative.y * MOUSE_SENS, -1.45, 1.45)
+		var sens := MOUSE_SENS * cam.fov / BASE_FOV   # 瞄準放大時滑鼠跟著變細
+		yaw -= event.relative.x * sens
+		pitch = clampf(pitch - event.relative.y * sens, -1.45, 1.45)
 		rotation.y = yaw
 		cam.rotation.x = pitch
 	elif event.is_action_pressed("interact"):
 		interact_pressed.emit()
+	elif event.is_action_pressed("switch_weapon"):
+		request_switch(-1)
+	elif event.is_action_pressed("weapon_main"):
+		request_switch(0)
+	elif event.is_action_pressed("weapon_sub"):
+		request_switch(1)
 
 
 func _physics_process(delta: float) -> void:
@@ -113,12 +142,16 @@ func _physics_process(delta: float) -> void:
 		var iv := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 		dir = (transform.basis * Vector3(iv.x, 0, iv.y)).normalized()
 		if Input.is_action_just_pressed("dash") and dash_cd <= 0.0:
+			FX.play(get_parent(), cam.global_position - cam.global_basis.z * 1.1 - cam.global_basis.y * 0.32, &"blink-out", 0.5, 0.18)
 			dash_t = 0.2
 			dash_cd = 1.0
+			if Game.special_on("yangqiao"):   # 陽蹻脈・蹻捷如風
+				dash_cd *= 1.0 - Game.special("yangqiao", "a") / 100.0
+				qiao_ready = true
 			invuln_t = maxf(invuln_t, 0.2)
 		if Input.is_action_just_pressed("jump") and is_on_floor():
 			velocity.y = JUMP_V
-	var spd := Game.move_speed() * (3.2 if dash_t > 0.0 else 1.0)
+	var spd := Game.move_speed() * (3.2 if dash_t > 0.0 else 1.0) * lerpf(1.0, Data.cfg("bow_aim_move_mult"), aim)
 	if dash_t > 0.0 and dir == Vector3.ZERO:
 		dir = -transform.basis.z
 	velocity.x = move_toward(velocity.x, dir.x * spd, 60.0 * delta)
@@ -130,11 +163,154 @@ func _physics_process(delta: float) -> void:
 	if global_position.y < -10.0:
 		global_position.y = 2.0
 		velocity = Vector3.ZERO
-	# 攻擊
+	# 同時只用一把武器：左鍵出招，出招動作結束後才換手
 	for i in 2:
-		cooldowns[i] = maxf(0.0, cooldowns[i] - delta)
-		if input_enabled and Input.is_action_pressed("attack_%d" % (i + 1)) and cooldowns[i] <= 0.0 and Game.weapons[i] != null:
-			_attack(i)
+		cooldowns[i] = maxf(0.0,cooldowns[i]-delta)
+	swap_t = maxf(0.0, swap_t - delta)
+	if switch_request != -9 and not _busy(weapon_models[Game.active_weapon]):
+		_do_switch(switch_request)
+	var a := Game.active_weapon
+	var bow := is_bow()
+	var want_aim := bow and input_enabled and Input.is_action_pressed("aim") and swap_t <= 0.0
+	aim = move_toward(aim, 1.0 if want_aim else 0.0, delta / 0.15)
+	cam.fov = lerpf(BASE_FOV, Data.cfg("bow_aim_fov"), aim)
+	if bow:
+		_bow_update(a, delta)
+		return
+	queued_press[a] = input_enabled and Game.weapons[a]!=null and (queued_press[a] or Input.is_action_just_pressed("attack_1"))
+	if input_enabled and Game.weapons[a]!=null and cooldowns[a]<=0 and swap_t<=0 and switch_request == -9 and (queued_press[a] or Input.is_action_pressed("attack_1")):
+		_attack(a)
+
+
+func is_bow() -> bool:
+	var w = Game.current_weapon()
+	return w != null and String(Data.weapons[w.id]["class"]) == "弓" and weapon_models[Game.active_weapon] != null and weapon_models[Game.active_weapon].has_method("bow_begin")
+
+
+func atk_speed_now() -> float:
+	var atk_speed := Game.st("atk_speed_pct")
+	if taiji_active > 0.0:
+		atk_speed += 50.0
+	if demon_speed:
+		atk_speed += 100.0
+	if chong_t > 0.0:   # 衝脈・氣血奔湧
+		atk_speed += Game.special("chong", "a")
+	return atk_speed
+
+
+func _bow_interval(a: int) -> float:
+	var atk_speed := atk_speed_now()
+	return float(Data.weapons[Game.weapons[a].id].interval_s) / (1.0 + atk_speed / 100.0)
+
+
+func bow_draw() -> float:
+	## 目前拉弓程度 0~1（HUD 準星用）
+	if not bow_held or not is_bow():
+		return 0.0
+	var iv := _bow_interval(Game.active_weapon)
+	var load_s := iv * Data.cfg("bow_load_frac")
+	return clampf((bow_t - load_s) / (iv * Data.cfg("bow_draw_frac")), 0.0, 1.0)
+
+
+func bow_spread_deg(draw := -1.0) -> float:
+	## 箭的散射半角（度）：拉越滿越小，瞄準時再縮小。HUD 的紅圈就畫這個範圍
+	if draw < 0.0:
+		draw = bow_draw()
+	var deg := lerpf(Data.cfg("bow_spread_max_deg"), Data.cfg("bow_spread_min_deg"), clampf(draw, 0.0, 1.0))
+	return deg * lerpf(1.0, Data.cfg("bow_aim_spread_mult"), aim)
+
+
+func _spread_dir(d: Vector3, half_deg: float) -> Vector3:
+	## 在半角 half_deg 的圓錐內均勻取一個方向
+	var r := tan(deg_to_rad(half_deg)) * sqrt(randf())
+	var th := randf() * TAU
+	return (d + (cam.global_basis.x * cos(th) + cam.global_basis.y * sin(th)) * r).normalized()
+
+
+func _bow_update(a: int, delta: float) -> void:
+	var view = weapon_models[a]
+	var pressed := input_enabled and Input.is_action_pressed("attack_1")
+	if not bow_held:
+		if pressed and cooldowns[a] <= 0.0 and swap_t <= 0.0 and switch_request == -9:
+			bow_held = true
+			bow_t = 0.0
+			view.bow_begin(_bow_interval(a) * Data.cfg("bow_load_frac"))
+		return
+	bow_t += delta
+	var draw := bow_draw()
+	view.bow_hold(draw, aim)
+	if pressed and switch_request == -9:
+		return
+	# 放開（或要換武器）：拉夠了就射，不夠就收弓
+	bow_held = false
+	if draw < Data.cfg("bow_min_draw") or switch_request != -9 or not input_enabled:
+		view.bow_cancel()
+		return
+	_release_arrow(a, draw)
+
+
+func _release_arrow(a: int, draw: float) -> void:
+	var view = weapon_models[a]
+	var w = Game.weapons[a]
+	var row: Dictionary = Data.weapons[w.id]
+	var iv := _bow_interval(a)
+	var recover := iv * Data.cfg("bow_recover_frac")
+	cooldowns[a] = recover
+	attack_count += 1
+	_count_du()
+	var lo := Data.cfg("bow_min_dmg")
+	var mn := Data.cfg("bow_min_draw")
+	var mult := lerpf(lo, 1.0, clampf((draw - mn) / (1.0 - mn), 0.0, 1.0))
+	var dmg := Game.weapon_hit_dmg(w.id, int(w.lv)) * mult
+	var speed_mult := lerpf(1.0, Data.cfg("bow_full_speed"), draw)
+	var spread := bow_spread_deg(draw)
+	view.bow_release(recover, func(beat: int):
+		if is_instance_valid(view) and weapon_models[a] == view and hp > 0:
+			arrow_speed_mult = speed_mult
+			arrow_spread_deg = spread
+			var r := _weapon_impact(a, row, dmg, beat)
+			arrow_speed_mult = 1.0
+			arrow_spread_deg = 0.0
+			return r
+		return false)
+
+
+func _count_du() -> void:
+	## 督脈・督脈貫頂：每出招 a 次，下一擊必暴並增傷
+	if Game.special_on("du") and attack_count % int(Game.special("du", "a")) == 0:
+		du_charged = true
+
+
+func request_switch(slot := -1) -> void:
+	## 排入切換；手上的動作做完才換（Q／滾輪＝另一把，1／2＝指定）
+	var target := 1 - Game.active_weapon if slot < 0 else slot
+	if target == Game.active_weapon or Game.weapons[target] == null:
+		return
+	switch_request = target
+
+
+func _busy(view) -> bool:
+	return view != null and (view.tachi_returning or view.bow_drawing or (view.timeline != null and view.timeline.is_running()))
+
+
+func _do_switch(target: int) -> void:
+	switch_request = -9
+	var old = weapon_models[Game.active_weapon]
+	if not Game.switch_weapon(target):
+		return
+	if old and old.tachi_open:
+		old._tachi_closed()
+	queued_press = [false, false]
+	swap_t = Data.cfg("weapon_swap_s")
+	_show_hands()
+
+
+func _show_hands() -> void:
+	for i in 2:
+		var view = weapon_models[i]
+		if view:
+			view.visible = i == Game.active_weapon
+
 
 
 # ------------------------------------------------------------------ 計時器與週期效果
@@ -144,6 +320,10 @@ func _timers(delta: float) -> void:
 	invuln_t -= delta
 	cheat_cd -= delta
 	demon_cd -= delta
+	ren_cd -= delta
+	chong_t -= delta
+	dai_t -= delta
+	dai_cd -= delta
 	array_t -= delta
 	if demon_t > 0.0:
 		demon_t -= delta
@@ -230,31 +410,43 @@ func _update_arhats(delta: float) -> void:
 
 # ------------------------------------------------------------------ 攻擊
 func ref_hit() -> float:
-	## 參考單擊傷害：第一把武器的單段傷害（含淬煉）
-	var w = Game.weapons[0] if Game.weapons[0] != null else Game.weapons[1]
+	## 參考單擊傷害：手上那把武器的單段傷害（含淬煉）
+	var w = Game.current_weapon()
 	if w == null:
 		return 20.0
-	return float(Data.weapons[w.id].dmg) * (1.0 + 0.15 * (int(w.lv) - 1))
+	return Game.weapon_hit_dmg(w.id, int(w.lv))
 
 
 func _attack(slot: int) -> void:
+	refresh_weapon_models()
+	if slot != Game.active_weapon:
+		return
+	var view = weapon_models[slot]
+	if view == null or view.tachi_returning:
+		return
+	queued_press[slot] = false
 	var w = Game.weapons[slot]
 	var row: Dictionary = Data.weapons[w.id]
-	var atk_speed := Game.st("atk_speed_pct")
-	if taiji_active > 0.0:
-		atk_speed += 50.0
-	if demon_speed:
-		atk_speed += 100.0
+	var atk_speed := atk_speed_now()
 	cooldowns[slot] = float(row.interval_s) / (1.0 + atk_speed / 100.0)
 	if Game.f("instant_repeat") > 0.0 and randf() < Game.f("instant_repeat"):
 		cooldowns[slot] = 0.05
 	attack_count += 1
-	var dmg := float(row.dmg) * (1.0 + 0.15 * (int(w.lv) - 1))
+	_count_du()
+	var dmg := Game.weapon_hit_dmg(w.id, int(w.lv))
+	view.attack(cooldowns[slot],int(row.hits),func(beat:int):
+		if is_instance_valid(view) and weapon_models[slot] == view and hp > 0:
+			return _weapon_impact(slot,row,dmg,beat)
+		return false)
+
+
+func _weapon_impact(slot: int, row: Dictionary, dmg: float, beat: int) -> bool:
 	var hits := int(row.hits)
+	var staggered: bool = row.weapon_id in ["W201","W302","W103","W303"]
 	var range_m := float(row.range_m)
 	var fwd := -cam.global_transform.basis.z
 	var origin := cam.global_position
-	_swing_anim(slot)
+	var made_contact := false
 	var targets: Array = []
 	if row.range_type == "ranged":
 		range_m *= 1.0 + Game.st("range_pct") / 100.0
@@ -262,10 +454,22 @@ func _attack(slot: int) -> void:
 		if "pierce" in String(row.tags):
 			pierce = 2 if row["class"] == "弩" else 1
 		var spread := 0.12 if hits >= 5 else 0.05
-		for h in hits:
+		for index in (1 if staggered else hits):
+			var h := beat if staggered else index
 			var off := (h - (hits - 1) / 2.0) * spread
 			var d := fwd.rotated(Vector3.UP, off)
-			_shoot(origin + d * 0.6, d, dmg, pierce, range_m, Data.rarity_color(row.rarity))
+			if arrow_spread_deg > 0.0:
+				d = _spread_dir(d, arrow_spread_deg)
+			var muzzle: Vector3 = weapon_models[slot].launch_position()
+			var aim_point := origin + d * range_m
+			var ray := PhysicsRayQueryParameters3D.create(origin,aim_point,5)
+			var aim_hit := get_world_3d().direct_space_state.intersect_ray(ray)
+			if not aim_hit.is_empty():
+				aim_point = aim_hit.position
+			var launch_dir := muzzle.direction_to(aim_point)
+			if launch_dir.dot(d) < 0:
+				launch_dir = d
+			_shoot(muzzle, launch_dir, dmg, pierce, range_m, Data.rarity_color(row.rarity), row.weapon_id)
 			var sc := Game.f("split_chance")
 			if sc > 0.0 and randf() * 100.0 < sc:
 				var extra := 2 if Game.f("split3") > 0.0 else 1
@@ -274,25 +478,35 @@ func _attack(slot: int) -> void:
 	else:
 		range_m *= 1.0 + Game.st("area_pct") / 100.0
 		targets = _melee_targets(row, range_m, fwd)
-		for h in hits:
+		for h in (1 if staggered else hits):
 			for e in targets:
 				if is_instance_valid(e) and not e.dead:
-					deal(e, dmg, false)
-		if not targets.is_empty():
-			FX.flash(get_parent(), origin + fwd * minf(range_m, 2.5), 0.3, Data.rarity_color(row.rarity), 0.12)
+					if deal(e, dmg, false, _impact_weight(row.weapon_id)):
+						made_contact = true
+		var swing: StringName = MELEE_EFFECTS.get(row["class"], &"sword-slash")
+		var side := -1.0   # 武器都握在慣用手
+		var heading := Vector3(fwd.x,0,fwd.z).normalized()
+		var trail_center := origin - Vector3.UP * .62
+		var duration := clampf(cooldowns[slot],.14,.26)
+		var cone: float = SWEEP_DEGREES.get(row["class"],0.0)
+		FX.attack_trail(get_parent(),trail_center,heading,range_m,cone,THRUST_HALF_WIDTH,Color("#d7f8ff"),duration)
+		var strike := trail_center + heading * range_m * .82 + cam.global_basis.x * side * .12
+		FX.play(get_parent(), strike, swing, range_m * (.76 if cone == 0 else 1.12), duration, Color.WHITE, true)
 		# 劍氣縱橫：近戰與中距離武器射出劍氣
-		if Game.f("sword_qi_pct") > 0.0:
+		if beat == 0 and Game.f("sword_qi_pct") > 0.0:
 			var n := 1 + int(Game.f("sword_qi_count"))
 			for k in n:
 				var d2 := fwd.rotated(Vector3.UP, (k - (n - 1) / 2.0) * 0.2)
 				_shoot(origin + d2 * 0.6, d2, dmg * Game.f("sword_qi_pct") / 100.0, 99, 12.0, Color(0.6, 0.9, 1.0))
 	var primary = targets[0] if not targets.is_empty() else _nearest_in_front(15.0, fwd)
-	_on_attack_effects(primary, dmg, fwd)
+	if beat == 0:
+		_on_attack_effects(primary, dmg, fwd)
+	return made_contact
 
 
 func _melee_targets(row: Dictionary, range_m: float, fwd: Vector3) -> Array:
 	var cls: String = row["class"]
-	var cone: float = {"刀": 120.0, "棍": 360.0, "拳": 60.0, "鉤": 90.0, "巨劍": 140.0, "扇": 50.0, "鞭": 360.0}.get(cls, 0.0)
+	var cone: float = SWEEP_DEGREES.get(cls, 0.0)
 	var line := cone == 0.0      # 劍、槍：直線穿刺
 	var flat_fwd := Vector3(fwd.x, 0, fwd.z).normalized()
 	var out: Array = []
@@ -309,25 +523,32 @@ func _melee_targets(row: Dictionary, range_m: float, fwd: Vector3) -> Array:
 		if line:
 			var along := flat.dot(flat_fwd)
 			var lateral := (flat - flat_fwd * along).length()
-			if along > -0.3 and lateral <= 0.9 + e.hit_radius:
+			if along > -0.3 and lateral <= THRUST_HALF_WIDTH + e.hit_radius:
 				out.append(e)
 		elif cone >= 360.0 or flat.length() < 0.8 or rad_to_deg(flat_fwd.angle_to(flat.normalized())) <= cone / 2.0:
 			out.append(e)
 	return out
 
 
-func _shoot(pos: Vector3, dir: Vector3, dmg: float, pierce: int, rng: float, color: Color) -> void:
+func _shoot(pos: Vector3, dir: Vector3, dmg: float, pierce: int, rng: float, color: Color, visual_id := "") -> void:
 	var p := PROJ.new()
 	get_parent().add_child(p)
 	p.global_position = pos
 	p.direction = dir.normalized()
-	p.speed = 45.0
+	p.speed = 45.0 * arrow_speed_mult
 	p.damage = dmg
 	p.pierce = pierce
 	p.max_range = rng
 	p.radius = 0.35
-	p.on_hit = func(e, d): deal(e, d, false)
-	p.setup(color, 0.1)
+	p.on_hit = func(e, d): deal(e, d, false, _impact_weight(visual_id), e.global_position - dir)
+	if visual_id in ["W007","W303","W103","W203"]:
+		var missile := preload("res://scripts/archer_bow.gd").make_arrow()
+		var factor := .76 if visual_id=="W007" else (.48 if visual_id=="W303" else .24)
+		p.add_child(missile)
+		missile.basis = Basis.looking_at(p.direction).scaled(Vector3.ONE*factor)
+		missile.position = -p.direction * preload("res://scripts/archer_bow.gd").LENGTH * factor
+	else:
+		p.setup(color, 0.1)
 
 
 func _on_attack_effects(primary, base: float, fwd: Vector3) -> void:
@@ -338,7 +559,7 @@ func _on_attack_effects(primary, base: float, fwd: Vector3) -> void:
 	if primary == null or not is_instance_valid(primary) or primary.dead:
 		return
 	var extra_mult := 1.0 + Game.f("extra_hit_mult") + Game.f("extra_hit_bonus")
-	# 角色・追風劍意（南宮劍）
+	# 角色・追風殘影（南宮逸）
 	var chance := Game.f("extra_hit_chance")
 	if chance > 0.0 and randf() * 100.0 < chance:
 		_extra_hit(primary, base * extra_mult, fwd)
@@ -361,10 +582,11 @@ func _on_attack_effects(primary, base: float, fwd: Vector3) -> void:
 			var tgt = _random_enemy_near(15.0)
 			if tgt:
 				deal(tgt, base * 2.0 * (1.0 + Game.f("extra_hit_bonus")), false)
-				FX.flash(get_parent(), tgt.hit_center(), 0.25, Color(0.7, 0.9, 1.0), 0.15)
+				FX.play(get_parent(), tgt.hit_center(), &"thrust", 1.3, 0.18)
 		fs -= 100.0
 	# 雷霆劍訣：每第 5 次攻擊落雷
 	if Game.f("thunder_pct") > 0.0 and attack_count % 5 == 0:
+		FX.play(get_parent(), primary.hit_center() + Vector3.UP * 1.3, &"lightning-strike", 4.2, 0.38)
 		_aoe(primary.global_position, 2.0, base * Game.f("thunder_pct") / 100.0, Color(0.8, 0.8, 1.0))
 
 
@@ -372,22 +594,29 @@ func _extra_hit(e, dmg: float, fwd: Vector3) -> void:
 	if not is_instance_valid(e) or e.dead:
 		return
 	deal(e, dmg, false)
-	FX.flash(get_parent(), e.hit_center(), 0.2, Color(0.5, 1.0, 0.8), 0.1)
-	# 劍氣離體：追擊同時射出劍氣
+	FX.play(get_parent(), e.hit_center(), &"sword-slash", 1.2, 0.18, Color(0.65, 1.0, 0.85))
+	# 氣勁離體：追擊同時射出氣勁
 	if Game.f("extra_hit_qi") > 0.0:
 		_shoot(cam.global_position + fwd * 0.6, fwd, dmg * Game.f("extra_hit_qi"), 99, 10.0, Color(0.5, 1.0, 0.8))
 
 
 func _aoe(center: Vector3, r: float, dmg: float, color: Color) -> void:
-	FX.flash(get_parent(), center + Vector3(0, 0.5, 0), r * 0.5, color, 0.3)
+	FX.impact_wave(get_parent(),center,r,.35,color)
 	for e in _enemies_within(center, r):
 		deal(e, dmg, false)
 
 
 ## 對敵人造成一次傷害（所有加成、暴擊、命中特效都在這裡）
-func deal(e, base: float, _is_dot: bool) -> void:
+func _impact_weight(wid: String) -> float:
+	match wid:
+		"W101", "W204", "W301": return 1.8
+		"W003", "W006", "W103", "W203", "W303": return .65
+	return 1.0
+
+
+func deal(e, base: float, _is_dot: bool, weight := 1.0, source := Vector3.INF) -> bool:
 	if not is_instance_valid(e) or e.dead:
-		return
+		return false
 	var mult := 1.0 + Game.st("dmg_pct") / 100.0
 	var missing10 := (1.0 - hp / Game.max_hp()) * 10.0
 	mult += Game.f("low_hp_dmg_per10") * missing10 / 100.0
@@ -419,9 +648,16 @@ func deal(e, base: float, _is_dot: bool) -> void:
 		mult += 0.5
 	if demon_t > 0.0 and Game.f("demon_form") > 0.0:
 		mult *= 2.0
+	var du_hit := du_charged
+	if du_hit:
+		du_charged = false
+		mult *= 1.0 + Game.special("du", "b") / 100.0
+	if qiao_ready:
+		qiao_ready = false
+		mult *= 1.0 + Game.special("yangqiao", "b") / 100.0
 	# 暴擊
 	var crit_rate := float(Data.gacha.base_crit_rate_pct) + Game.st("crit_rate_pct")
-	var forced := array_t > 0.0 or dodge_crit_ready
+	var forced := array_t > 0.0 or dodge_crit_ready or du_hit
 	if Game.f("every3_crit") > 0.0 and attack_count % 3 == 0:
 		forced = true
 	if Game.f("low30_crit_ls") > 0.0 and hp < Game.max_hp() * 0.3:
@@ -430,9 +666,9 @@ func deal(e, base: float, _is_dot: bool) -> void:
 	if crit:
 		mult *= (float(Data.gacha.base_crit_dmg_pct) + Game.st("crit_dmg_pct")) / 100.0
 		dodge_crit_ready = false
-	var dealt: float = e.take_hit(base * mult, global_position, crit)
+	var dealt: float = e.take_hit(base * mult, global_position if source == Vector3.INF else source, crit, weight)
 	if dealt <= 0.0:
-		return
+		return false
 	# 命中特效
 	var ls := Game.st("lifesteal_pct")
 	if Game.f("low_hp_lifesteal_x2") > 0.0 and hp < Game.max_hp() * 0.5:
@@ -452,13 +688,22 @@ func deal(e, base: float, _is_dot: bool) -> void:
 			e.apply_vuln(Game.f("crit_vuln"), 3.0)
 		if Game.f("crit_heal") > 0.0:
 			heal(Game.max_hp() * 0.01, false)
+		if Game.special_on("yangwei"):   # 陽維脈・陽氣外發
+			for o in _enemies_within(e.global_position, Game.special("yangwei", "b")):
+				if o != e and not o.dead:
+					o.take_hit(dealt * Game.special("yangwei", "a") / 100.0, global_position, false)
+		if Game.special_on("yinwei"):    # 陰維脈・陰勁透骨
+			e.apply_vuln(Game.special("yinwei", "a"), Game.special("yinwei", "b"))
 		if Game.f("crit_splash") > 0.0:
 			for o in _enemies_within(e.global_position, 2.0):
 				if o != e:
 					o.take_hit(dealt * Game.f("crit_splash"), global_position, false)
+	return true
 
 
 func on_enemy_killed(e) -> void:
+	if Game.special_on("chong"):
+		chong_t = Game.special("chong", "b")
 	if Game.f("kill_heal") > 0.0:
 		heal(Game.max_hp() * Game.f("kill_heal") / 100.0, false)
 	if Game.f("kill_stack") > 0.0 and kill_stacks.size() < int(Game.f("kill_stack")):
@@ -490,9 +735,12 @@ func take_damage(amount: float, attacker = null, is_dot := false) -> void:
 			return
 		if guard_ready and Game.f("guard_every") > 0.0:
 			guard_ready = false
+			FX.play(get_parent(), cam.global_position - cam.global_basis.z, &"divine-shield", 0.9, 0.32)
 			FX.float_text(get_parent(), global_position + Vector3(0, 2, 0), "護體", Color(1, 0.85, 0.3))
 			return
 	var dr := Game.st("dmg_reduction_pct")
+	if dai_t > 0.0:   # 帶脈・束脈護體
+		dr += Game.special("dai", "a")
 	if Game.f("low50_dr") > 0.0 and hp < Game.max_hp() * 0.5:
 		dr += Game.f("low50_dr")
 	if taiji_active > 0.0:
@@ -505,6 +753,14 @@ func take_damage(amount: float, attacker = null, is_dot := false) -> void:
 		shield -= absorbed
 		dmg -= absorbed
 	hp -= dmg
+	if Game.special_on("dai") and dai_cd <= 0.0 and dmg > 0.0:
+		dai_t = Game.special("dai", "b")
+		dai_cd = 6.0
+	# 任脈・任脈歸元：生命低於 a% 時回復 b%
+	if Game.special_on("ren") and ren_cd <= 0.0 and hp > 0.0 and hp < Game.max_hp() * Game.special("ren", "a") / 100.0:
+		ren_cd = 60.0
+		heal(Game.max_hp() * Game.special("ren", "b") / 100.0)
+		Game.message.emit("任脈歸元！")
 	# 反彈（移花接木、先天罡氣・小成）
 	var refl := Game.f("reflect_pct") + Game.f("thorns")
 	if refl > 0.0 and attacker and is_instance_valid(attacker) and not attacker.dead and not is_dot:
@@ -547,13 +803,16 @@ func _try_survive() -> void:
 func heal(v: float, show := true) -> void:
 	if hp <= 0.0:
 		return
+	var gained := minf(v, Game.max_hp() - hp)
 	hp = minf(Game.max_hp(), hp + v)
-	if show:
+	if show and gained > 0.0:
+		FX.play(get_parent(), cam.global_position - cam.global_basis.z - cam.global_basis.y * 0.3, &"heal", 0.48, 0.35)
 		FX.float_text(get_parent(), global_position + Vector3(0, 2, 0), "+%d" % int(v), Color(0.4, 1, 0.4))
 	hp_changed.emit()
 
 
 func level_up_heal() -> void:
+	FX.play(get_parent(), cam.global_position - cam.global_basis.z * 1.5 - cam.global_basis.y * 0.36, &"blessing", 0.68, 0.65)
 	if Game.f("levelup_heal") > 0.0:
 		heal(Game.max_hp() * Game.f("levelup_heal"))
 
@@ -602,13 +861,3 @@ func _densest_point(r: float) -> Vector3:
 			best_n = n
 			best = e.global_position
 	return best
-
-
-func _swing_anim(slot: int) -> void:
-	var m = weapon_models[slot]
-	if m == null:
-		return
-	var base_rot: Vector3 = Vector3(10, 8 if slot == 0 else -8, 0)
-	var t: Tween = m.create_tween()
-	t.tween_property(m, "rotation_degrees", base_rot + Vector3(-50, 0, 0), 0.06)
-	t.tween_property(m, "rotation_degrees", base_rot, 0.12)

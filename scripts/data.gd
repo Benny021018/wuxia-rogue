@@ -7,6 +7,9 @@ var stat_values := {}       # stat_id -> per_point
 var stat_names := {}        # stat_id -> 中文名
 var gacha := {}             # key -> value
 var combat := {}            # key -> value
+var shop := {}              # key -> value（掉落、鐵匠、商人）
+var affixes := {}           # affix_id -> row（武器詞條）
+var affix_order: Array = []
 var characters := {}        # char_id -> row
 var char_order: Array = []
 var passives: Array = []
@@ -23,6 +26,14 @@ var enemies := {}           # enemy_id -> row
 var stages: Array = []      # index = stage-1
 var stage_report: Array = []
 var zones := {}             # "1".."20" -> layout
+var meridians := {}         # meridian_id -> row（奇經八脈）
+var meridian_order: Array = []
+var acupoints := {}         # point_id -> row
+var meridian_cfg := {}      # key -> value（衝穴）
+var realm_list: Array = []  # index＝境界（0 三流 … 8 自然境）
+var wheel_symbols := {}     # symbol_id -> row（天機輪符號）
+var wheel_reels: Array = [] # 每軸的輪帶（Array of PackedStringArray）
+var wheel_cfg := {}         # key -> value
 
 
 func _ready() -> void:
@@ -34,6 +45,10 @@ func _ready() -> void:
 		stat_names[r.stat_id] = r.name_zh
 	gacha = _kv("gacha_config")
 	combat = _kv("combat_config")
+	shop = _kv("shop_config")
+	for r in _csv("weapon_affixes"):
+		affixes[r.affix_id] = r
+		affix_order.append(r.affix_id)
 	for r in _csv("characters"):
 		characters[r.char_id] = r
 		char_order.append(r.char_id)
@@ -54,6 +69,20 @@ func _ready() -> void:
 	map_order.sort_custom(func(a, b): return int(maps[a].order) < int(maps[b].order))
 	for r in _csv("enemies"):
 		enemies[r.enemy_id] = r
+	for r in _csv("meridians"):
+		meridians[r.meridian_id] = r
+		meridian_order.append(r.meridian_id)
+	for r in _csv("acupoints"):
+		acupoints[r.point_id] = r
+	meridian_cfg = _kv("meridian_config")
+	realm_list = _csv("realms")
+	for r in _csv("wheel_symbols"):
+		wheel_symbols[r.symbol_id] = r
+	var reels := _csv("wheel_reels")
+	reels.sort_custom(func(a, b): return int(a.reel) < int(b.reel))
+	for r in reels:
+		wheel_reels.append(String(r.strip).split("|"))
+	wheel_cfg = _kv("wheel_config")
 	stages = _csv("stages")
 	stage_report = _csv("stage_report")
 	var f := FileAccess.open("res://data/zones.json", FileAccess.READ)
@@ -90,7 +119,50 @@ func _kv(name: String) -> Dictionary:
 func cfg(key: String) -> float:
 	if combat.has(key):
 		return float(combat[key])
+	if shop.has(key):
+		return float(shop[key])
 	return float(gacha.get(key, 0.0))
+
+
+func weights(key: String) -> Array:
+	## 讀「a|b|c」格式的權重
+	var out: Array = []
+	for part in String(shop.get(key, "")).split("|", false):
+		out.append(float(part))
+	return out
+
+
+func per_stage(key: String, stage: int) -> float:
+	## 讀「a|b|c」依區排列的值，超過的區用最後一個
+	var w := weights(key)
+	if w.is_empty():
+		return cfg(key)
+	return w[clampi(stage, 1, w.size()) - 1]
+
+
+func acupoint(mid: String, depth: int) -> Dictionary:
+	return acupoints.get("%s%d" % [mid, depth], {})
+
+
+func meridian_len(mid: String) -> int:
+	var n := 0
+	while acupoints.has("%s%d" % [mid, n + 1]):
+		n += 1
+	return n
+
+
+func stat_text(stat: String, v: float) -> String:
+	## 例：傷害+18%、每秒回血+1.2、幸運+0.12
+	var s := ("%.2f" % v).rstrip("0").rstrip(".")
+	var unit := "%" if stat.ends_with("_pct") else ""
+	return "%s+%s%s" % [stat_names.get(stat, stat), s, unit]
+
+
+func affix_text(a: Dictionary) -> String:
+	## 武器詞條的顯示文字，例：鋒利　傷害+8%
+	var row: Dictionary = affixes[a.id]
+	var s := ("%.2f" % float(a.v)).rstrip("0").rstrip(".")
+	return "%s　%s" % [row.name_zh, String(row.template).replace("{v}", s)]
 
 
 func stage_row(stage: int) -> Dictionary:
@@ -120,7 +192,7 @@ func enemy_threat(eid: String) -> float:
 
 
 func enemy_rewards(eid: String) -> Vector2:
-	## x = 修為, y = 銀兩
+	## x = 真氣, y = 銀兩
 	var e: Dictionary = enemies[eid]
 	var m: Dictionary = maps[e.map_id]
 	var base := enemy_threat(eid) * float(e.reward_mult)

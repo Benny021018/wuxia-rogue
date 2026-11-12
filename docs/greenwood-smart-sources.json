@@ -1,0 +1,95 @@
+{
+  "mode": "Smart Mesh P2.0",
+  "assets": [
+    {
+      "asset": "Gate",
+      "source": "https://studio.tripo3d.ai/workspace/generate/6b0510c5-7091-4c70-a984-8ec5424645fd",
+      "fbx_sha256": "40830479bad9fa530bdf9985fe053a843b9274748b09c9a81eeffe57d57b874d"
+    },
+    {
+      "asset": "H01",
+      "source": "https://studio.tripo3d.ai/workspace/generate/73039f74-48fc-470e-a6d0-dd7146e38dbb",
+      "fbx_sha256": "cb4c829f21dcb4012d1f432115db95a31e476aa25c43801b514f305aebfb8ebf"
+    },
+    {
+      "asset": "Tachi",
+      "source": "https://studio.tripo3d.ai/workspace/generate/0876dc0a-fc44-4152-8188-f8adb9b862a5",
+      "fbx_sha256": "153c21e33469e28a9f9eefa8720d9116e26e90f829bbe77c0ccf2dc1f75d6dfe"
+    },
+    {
+      "asset": "H02",
+      "source": "https://studio.tripo3d.ai/workspace/generate/62a89c6d-58b9-48d6-a924-39a0d39a8fff",
+      "fbx_sha256": "f32d61fc24b9fc53596fdbb3be987d29964913b5a45127176ae43e9ab91697c9"
+    },
+    {
+      "asset": "H03",
+      "source": "https://studio.tripo3d.ai/workspace/generate/26eda311-0319-404f-8854-901af648c00b",
+      "fbx_sha256": "dfcea2726f702d5dbdc9c4eca8bee21b842aa0882cbf61f22790341bdb3b7f15"
+    },
+    {
+      "asset": "H07",
+      "source": "https://studio.tripo3d.ai/workspace/generate/86edde46-f762-4119-8cbc-5eec54d3b550",
+      "fbx_sha256": "690fa934ad1736e42a05aa640447fdce5fe8bd73234c9af8265f3861cce5b91a"
+    },
+    {
+      "asset": "H08",
+      "source": "https://studio.tripo3d.ai/workspace/generate/68572989-f178-404c-b238-46df9020ada4",
+      "fbx_sha256": "c19b64d60217aca21159eb16961edeaffba26e42bf43eec59d260d0bc9bfc2d9"
+    },
+    {
+      "asset": "palisade",
+      "source": "https://studio.tripo3d.ai/workspace/generate/507b720b-1dd8-4260-ae24-fda4c13518c3",
+      "fbx_sha256": "f5f3468cc6d33a5775be4e3618f644d934aa0236416fc434ce0655deebc6ff89"
+    },
+    {
+      "asset": "platform",
+      "source": "https://studio.tripo3d.ai/workspace/generate/c3520c97-9092-43de-bdb1-6da60a8ca68a",
+      "fbx_sha256": "59c38d2f8701cc1ea0e2ff09ce1780337c92a1ba345b47cc46007766a08212b8"
+    },
+    {
+      "asset": "shrine",
+      "source": "https://studio.tripo3d.ai/workspace/generate/ea475660-7b67-46cf-bc02-70bb1313eb1d",
+      "fbx_sha256": "58b520441f8aee6e9576579c660b80d8ec67392adf3813a0f638ce396b8df29e"
+    },
+    {
+      "asset": "cart",
+      "source": "https://studio.tripo3d.ai/workspace/generate/a45ec815-e7c9-44a9-85f9-8fabd1e46e17",
+      "fbx_sha256": "fa535afbfb895b1f070fa202320f841ead113d4b99658670dbeeb9a47006b7a4"
+    },
+    {
+      "asset": "crate",
+      "source": "https://studio.tripo3d.ai/workspace/generate/93c89a18-28c8-4612-8f23-cab5097d9c01",
+      "fbx_sha256": "4de5959088fcfa0d68ae3a8453141305f0da2482be03155792c6e2e93b39ed49"
+    },
+    {
+      "asset": "ring",
+      "source": "https://studio.tripo3d.ai/workspace/generate/fd698d76-ab4d-4044-9db2-1c45ca9b72fd",
+      "fbx_sha256": "af76d8cf893cb56d5b56ad5197de8e5f950c7eec24ebabf22700d6b42065e474"
+    },
+    {
+      "asset": "gallery",
+      "source": "https://studio.tripo3d.ai/workspace/generate/58f96a0a-0ecc-4153-b2a2-2799cd9f896a",
+      "fbx_sha256": "a82019bdad29102f91d8717e940991360d5dcfd0da8a1cb86416312b099b1719"
+    },
+    {
+      "asset": "stairs",
+      "source": "https://studio.tripo3d.ai/workspace/generate/d769daec-1d03-470f-aae9-a830ad7d3cd5",
+      "fbx_sha256": "049b3dd039099c5fc04b777e51eefbae12dbde803b376a818ed63cdf438a5f60"
+    },
+    {
+      "asset": "throne",
+      "source": "https://studio.tripo3d.ai/workspace/generate/715ebd4a-ea64-4f14-971b-dab899e58457",
+      "fbx_sha256": "be74308cdc66c10400a86d3dcedf0b6c82387ae139af19eb488867c82db40203"
+    },
+    {
+      "asset": "brazier",
+      "source": "https://studio.tripo3d.ai/workspace/generate/539ef690-50f8-40e8-a837-88942ba264c3",
+      "fbx_sha256": "681deb778526c53efcc20f9ea93e6e42f53216229f3bb4728bac6527815abeab"
+    },
+    {
+      "asset": "cover",
+      "source": "https://studio.tripo3d.ai/workspace/generate/7f30183c-5359-4a78-8b73-b733c009b22c",
+      "fbx_sha256": "24e08fb53744b718a19666c72850048c74ff982f034e4dee807024444267ac5f"
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+Animated sheets rendered from [PixelFX](https://github.com/patch-gg/pixelfx/tree/044e12a45dc9cc312cec50ee606dfc98afe5adc2) with the actor disabled at 16 fps. The simulation and selected effects adapt [Sprite Fusion](https://www.spritefusion.com/pixel-art-vfx), copyright 2026 Hugo Duprez. MIT license included alongside the assets.

@@ -1,0 +1,9 @@
+symbol_id,name_zh,glyph,kind,sect_id,basis
+tianjian,天劍宗,劍,sect,tianjian,門派印記
+tianmo,天魔教,魔,sect,tianmo,門派印記
+tangmen,唐門,唐,sect,tangmen,門派印記
+shaolin,少林,禪,sect,shaolin,門派印記
+wudang,武當,太,sect,wudang,門派印記
+bagua,八卦,卦,wild,,百搭：替代任何門派印記；中線三個八卦＝八卦歸一
+wu,悟,悟,scatter,,任意位置；畫面上 3 個（每軸最多 1 個）＝頓悟
+cloud,雲,雲,blank,,空白

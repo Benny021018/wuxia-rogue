@@ -1,0 +1,9 @@
+meridian_id,name_zh,alias_zh,pose_zh,order,desc,special_id,special_name,special_desc,special_a,special_b,special_points,basis
+du,督脈,陽脈之海,馬步衝拳,1,總督一身陽氣，出手更重,mer_du,督脈貫頂,每出招 {a} 次，下一擊必定暴擊且傷害+{b}%,5,50,2.5,打通整條經脈（最後一穴）時啟動；special_points 為估算的輸出戰力點，給 tools/balance/sim.py 用
+ren,任脈,陰脈之海,抱元守一,2,總任一身陰血，生生不息,mer_ren,任脈歸元,生命低於 {a}% 時立即回復 {b}% 生命（冷卻 60 秒）,30,40,0,打通整條經脈（最後一穴）時啟動；special_points 為估算的輸出戰力點，給 tools/balance/sim.py 用
+chong,衝脈,十二經之海,弓步推掌,3,氣血奔湧，出招如潮,mer_chong,氣血奔湧,擊殺敵人後 {b} 秒內攻速+{a}%（再擊殺會刷新）,30,3,2.2,打通整條經脈（最後一穴）時啟動；special_points 為估算的輸出戰力點，給 tools/balance/sim.py 用
+dai,帶脈,約束諸經,仆步穿掌,4,束脈如帶，護住周身,mer_dai,束脈護體,受到傷害後 {b} 秒內減傷+{a}%（冷卻 6 秒）,30,2,0,打通整條經脈（最後一穴）時啟動；special_points 為估算的輸出戰力點，給 tools/balance/sim.py 用
+yangwei,陽維脈,維絡諸陽,側踹腿,5,陽氣外發，眼明手快，招式覆蓋更廣,mer_yangwei,陽氣外發,暴擊時對周圍 {b} 公尺內的其他敵人造成 {a}% 傷害,40,3,2.4,打通整條經脈（最後一穴）時啟動；special_points 為估算的輸出戰力點，給 tools/balance/sim.py 用
+yinwei,陰維脈,維絡諸陰,金雞獨立,6,陰勁內斂，一擊致命,mer_yinwei,陰勁透骨,暴擊使敵人內傷 {b} 秒，期間受到的傷害+{a}%,15,4,1.3,打通整條經脈（最後一穴）時啟動；special_points 為估算的輸出戰力點，給 tools/balance/sim.py 用
+yangqiao,陽蹻脈,主一身左右之陽,騰空飛躍,7,蹻捷輕健，來去如風,mer_yangqiao,蹻捷如風,衝刺冷卻-{a}%，衝刺後下一擊傷害+{b}%,40,60,1.0,打通整條經脈（最後一穴）時啟動；special_points 為估算的輸出戰力點，給 tools/balance/sim.py 用
+yinqiao,陰蹻脈,主一身左右之陰,靜坐調息,8,心靜神凝，福緣自來,mer_yinqiao,心靜神凝,破陣時額外獲得 {a}% 真氣；每區第一次刷新悟道碑免費,20,0,0,打通整條經脈（最後一穴）時啟動；special_points 為估算的輸出戰力點，給 tools/balance/sim.py 用

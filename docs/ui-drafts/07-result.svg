@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1600 900" width="1600" height="900">
+<title>07 結算</title>
+
+<defs>
+  <!-- 乾筆邊緣：字與筆觸的毛邊 -->
+  <filter id="rough" x="-10%" y="-20%" width="120%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="7" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="7" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <!-- 乾筆飛白：橫向斷絲 -->
+  <filter id="dry" x="-10%" y="-20%" width="120%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.006 0.22" numOctaves="2" seed="11" result="s"/>
+    <feColorMatrix in="s" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.6 1.75" result="m"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="4" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="6" result="d"/>
+    <feComposite in="d" in2="m" operator="in"/>
+  </filter>
+  <!-- 青光、血光 -->
+  <filter id="glowTeal" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur stdDeviation="10" result="b"/>
+    <feFlood flood-color="#16c6cc" flood-opacity=".85"/><feComposite in2="b" operator="in" result="g"/>
+    <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="glowRed" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur stdDeviation="9" result="b"/>
+    <feFlood flood-color="#ff4a17" flood-opacity=".8"/><feComposite in2="b" operator="in" result="g"/>
+    <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="soft"><feGaussianBlur stdDeviation="2"/></filter>
+  <!-- 紙紋／網點 -->
+  <filter id="grain" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="2"/>
+    <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .07 0"/>
+  </filter>
+  <pattern id="tone" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+    <circle cx="3.5" cy="3.5" r="1.2" fill="#000" opacity=".55"/>
+  </pattern>
+  <pattern id="hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
+    <rect width="10" height="3" fill="#fff" opacity=".06"/>
+  </pattern>
+  <!-- 電光青背光、血色暗角 -->
+  <radialGradient id="tealBloom" cx="50%" cy="45%" r="60%">
+    <stop offset="0" stop-color="#16c6cc" stop-opacity=".95"/>
+    <stop offset=".45" stop-color="#0b5f66" stop-opacity=".75"/>
+    <stop offset="1" stop-color="#0b0a0d" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="vignette" cx="50%" cy="50%" r="75%">
+    <stop offset=".55" stop-color="#000" stop-opacity="0"/>
+    <stop offset="1" stop-color="#000" stop-opacity=".85"/>
+  </radialGradient>
+  <linearGradient id="bloodFill" x1="0" x2="1">
+    <stop offset="0" stop-color="#6e0a10"/><stop offset=".7" stop-color="#b3121c"/><stop offset="1" stop-color="#ff4a17"/>
+  </linearGradient>
+  <linearGradient id="tealFill" x1="0" x2="1">
+    <stop offset="0" stop-color="#0b5f66"/><stop offset="1" stop-color="#16c6cc"/>
+  </linearGradient>
+  <linearGradient id="blade" x1="0" x2="1">
+    <stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".45" stop-color="#fff"/>
+    <stop offset=".55" stop-color="#d9f7f8"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+  </linearGradient>
+  <!-- 青色雙色調（把背景圖壓成墨＋青） -->
+  <filter id="duoTeal">
+    <feColorMatrix type="matrix" values=".25 .45 .1 0 0  .25 .45 .1 0 0  .25 .45 .1 0 0  0 0 0 1 0" result="g"/>
+    <feComponentTransfer in="g">
+      <feFuncR type="table" tableValues="0.02 0.05 0.35 0.9"/>
+      <feFuncG type="table" tableValues="0.02 0.25 0.7 0.98"/>
+      <feFuncB type="table" tableValues="0.03 0.28 0.72 0.98"/>
+    </feComponentTransfer>
+  </filter>
+  <filter id="duoInk">
+    <feColorMatrix type="matrix" values=".25 .45 .1 0 0  .25 .45 .1 0 0  .25 .45 .1 0 0  0 0 0 1 0" result="g"/>
+    <feComponentTransfer in="g">
+      <feFuncR type="table" tableValues="0.02 0.1 0.45"/>
+      <feFuncG type="table" tableValues="0.02 0.09 0.4"/>
+      <feFuncB type="table" tableValues="0.03 0.12 0.45"/>
+    </feComponentTransfer>
+  </filter>
+</defs>
+
+<rect width="1600" height="900" fill="#0b0a0d"/>
+<rect width="1600" height="900" fill="#0b0a0d"/>
+<ellipse cx="800" cy="250" rx="760" ry="300" fill="#b3121c" opacity=".22" filter="url(#soft)"/>
+<g fill="#b3121c" opacity="0.35"><polygon points="-398.7,305.1 -399.7,278.0 435.0,262.6"/><polygon points="294.4,1338.3 275.4,1329.3 649.7,566.2"/><polygon points="-394.5,365.1 -396.4,343.2 488.5,277.1"/><polygon points="230.7,1306.4 215.7,1298.2 635.6,550.0"/><polygon points="1733.0,-504.6 1751.9,-480.7 1069.0,38.0"/><polygon points="182.9,1279.2 162.5,1266.7 654.3,487.6"/><polygon points="630.0,-937.9 650.2,-940.6 760.3,-45.3"/><polygon points="1989.9,94.6 1992.5,115.9 1184.4,203.3"/><polygon points="-96.0,-548.2 -74.3,-572.0 548.0,19.3"/><polygon points="1333.8,1324.7 1305.9,1338.2 927.2,514.7"/><polygon points="-199.4,914.2 -208.2,900.7 576.1,396.6"/><polygon points="-3.1,1141.6 -12.9,1132.8 591.2,479.3"/><polygon points="1490.6,-731.4 1521.6,-708.8 985.4,-4.7"/><polygon points="1741.4,994.2 1727.8,1011.0 1009.0,418.3"/><polygon points="1057.4,1422.1 1029.3,1427.9 869.0,583.1"/><polygon points="1979.2,472.6 1974.2,497.4 1108.8,311.7"/><polygon points="-156.4,974.8 -166.1,961.8 550.8,436.2"/><polygon points="1769.7,956.9 1751.5,981.2 1075.7,456.4"/><polygon points="-36.6,-610.3 -19.8,-626.3 534.7,-28.1"/><polygon points="-7.8,1137.4 -21.1,1125.1 590.6,476.6"/><polygon points="1819.7,-382.7 1828.4,-368.3 1106.6,62.7"/><polygon points="1904.0,-220.4 1917.1,-188.3 1096.7,128.6"/><polygon points="-335.9,636.8 -346.8,603.4 464.8,358.7"/><polygon points="1211.2,-877.4 1227.4,-871.3 918.5,-67.7"/><polygon points="701.8,-946.0 720.7,-947.4 778.8,-36.2"/><polygon points="1439.1,-765.6 1462.1,-750.8 969.9,-13.2"/><polygon points="-394.4,365.8 -396.1,346.5 508.9,275.8"/><polygon points="1748.2,985.5 1733.9,1003.6 1018.9,423.2"/><polygon points="1745.1,-489.4 1767.6,-459.7 1068.5,46.6"/><polygon points="1819.6,882.9 1804.4,906.6 1036.3,400.6"/><polygon points="-24.0,1122.3 -35.6,1111.2 575.5,484.5"/><polygon points="1873.0,787.4 1863.9,805.1 1058.5,382.2"/><polygon points="-368.9,521.3 -376.7,485.5 472.3,320.8"/><polygon points="1027.4,-928.3 1058.1,-921.9 866.6,-72.2"/><polygon points="1895.5,739.9 1889.5,752.9 1052.6,364.8"/><polygon points="-394.8,138.4 -392.6,117.0 421.0,211.2"/><polygon points="1181.7,1387.7 1166.3,1392.7 907.0,576.2"/><polygon points="-144.3,-490.5 -135.4,-501.6 561.3,60.5"/><polygon points="-321.5,677.0 -333.1,645.2 460.6,373.8"/><polygon points="1630.9,-615.8 1649.8,-597.3 1067.5,-22.6"/><polygon points="-377.3,482.4 -381.0,462.6 526.6,301.6"/><polygon points="1378.0,-801.7 1403.6,-787.2 967.5,-46.1"/><polygon points="1986.7,71.8 1990.6,100.5 1097.5,209.0"/><polygon points="375.8,-872.5 410.2,-884.9 703.9,-16.4"/><polygon points="1921.3,-177.4 1929.4,-155.4 1057.7,154.7"/><polygon points="-399.2,205.3 -397.5,172.6 476.6,233.5"/><polygon points="671.1,1443.1 638.9,1439.1 767.0,521.2"/><polygon points="220.4,-800.7 239.8,-811.2 638.7,-48.9"/><polygon points="-399.3,208.2 -398.4,188.3 513.6,237.6"/><polygon points="1303.1,-839.5 1325.2,-829.0 927.2,-18.3"/><polygon points="-212.7,-393.7 -194.9,-420.9 572.8,101.2"/><polygon points="-356.8,569.0 -361.2,552.8 452.4,343.2"/><polygon points="1956.2,571.1 1946.6,603.9 1119.3,343.6"/><polygon points="-395.1,141.5 -392.4,115.1 505.3,220.0"/><polygon points="-343.6,613.4 -348.7,597.1 507.4,340.7"/><polygon points="-196.9,-418.0 -180.7,-441.5 551.0,78.8"/><polygon points="-105.7,-537.2 -83.8,-561.7 530.9,9.6"/><polygon points="1999.9,261.7 1999.4,287.3 1082.1,255.8"/><polygon points="1293.2,-844.0 1318.3,-832.3 933.8,-37.8"/><polygon points="-134.0,-503.5 -117.5,-523.4 578.6,67.4"/><polygon points="1825.8,-372.6 1833.1,-360.4 1027.0,114.1"/><polygon points="482.7,1407.3 466.9,1402.8 716.4,547.0"/><polygon points="-104.2,-538.9 -89.0,-556.0 511.5,-6.6"/><polygon points="260.4,1321.8 227.7,1304.8 620.5,593.3"/><polygon points="-350.2,-92.1 -340.2,-124.0 542.4,169.5"/><polygon points="1891.9,-247.8 1901.7,-225.8 1077.8,126.7"/><polygon points="1851.4,-328.4 1862.3,-308.1 1039.2,121.4"/><polygon points="1985.0,439.1 1979.3,471.8 1079.2,298.5"/><polygon points="6.0,-649.7 17.3,-659.6 559.6,-25.8"/><polygon points="1975.5,8.7 1979.7,30.5 1156.6,180.2"/><polygon points="1757.0,-474.0 1768.2,-458.9 1058.0,58.0"/><polygon points="1999.5,216.6 2000.0,253.7 1133.2,245.9"/><polygon points="-346.1,-105.8 -342.0,-118.5 449.2,139.0"/><polygon points="1928.3,-158.6 1937.3,-132.8 1073.9,154.3"/><polygon points="1651.8,1095.3 1631.1,1115.6 1045.6,499.7"/><polygon points="-190.1,-428.1 -170.3,-456.1 583.9,97.4"/><polygon points="1999.3,290.5 1998.7,305.9 1100.1,262.1"/><polygon points="1945.9,606.3 1940.1,624.4 1073.3,337.4"/><polygon points="1249.7,-862.6 1273.9,-852.4 910.1,-14.0"/><polygon points="-399.2,207.1 -398.5,190.3 411.9,233.4"/><polygon points="1815.1,890.0 1804.9,905.9 1081.5,430.6"/><polygon points="1734.1,-503.3 1752.4,-480.0 1018.3,78.3"/><polygon points="-139.8,-496.2 -119.8,-520.7 504.6,9.0"/><polygon points="15.3,-657.9 30.0,-670.3 561.8,-30.1"/><polygon points="405.9,-883.4 439.7,-894.6 710.0,-21.6"/><polygon points="1413.5,-781.3 1434.9,-768.3 950.2,3.4"/><polygon points="775.1,1449.7 759.7,1449.3 789.8,626.5"/><polygon points="1559.8,1178.8 1537.1,1196.9 982.6,478.8"/><polygon points="810.7,1450.0 788.9,1449.9 799.9,620.0"/><polygon points="1901.9,725.2 1892.7,746.1 1076.7,372.5"/><polygon points="-393.7,372.9 -396.3,344.3 429.0,283.7"/><polygon points="-3.5,-641.2 22.5,-664.1 553.1,-31.9"/><polygon points="1259.5,-858.5 1271.9,-853.3 904.1,2.7"/><polygon points="-387.9,79.8 -385.2,62.2 496.3,204.2"/><polygon points="-381.6,40.8 -376.7,14.9 446.6,183.4"/><polygon points="959.8,-939.3 978.0,-936.7 847.1,-81.1"/><polygon points="-380.2,466.9 -384.4,443.1 450.8,310.6"/><polygon points="518.6,-916.5 548.7,-923.4 731.2,-52.2"/><polygon points="1844.0,841.6 1830.1,865.6 1053.2,397.4"/><polygon points="363.2,1367.7 348.9,1362.0 700.2,500.7"/></g>
+<g fill="#b3121c"><circle cx="454.6" cy="195.4" r="2.2"/><circle cx="588.9" cy="-74.4" r="0.8"/><circle cx="548.6" cy="191.7" r="7.7"/><circle cx="559.6" cy="192.1" r="6.8"/><circle cx="464.5" cy="209.0" r="4.8"/><circle cx="387.5" cy="332.7" r="1.1"/><circle cx="646.8" cy="245.8" r="2.1"/><circle cx="497.7" cy="-7.4" r="0.8"/><circle cx="595.7" cy="199.7" r="10.1"/><circle cx="466.8" cy="99.1" r="1.3"/><circle cx="670.1" cy="272.2" r="3.3"/><circle cx="591.6" cy="249.0" r="8.0"/><circle cx="567.7" cy="191.6" r="7.7"/><circle cx="570.4" cy="213.5" r="12.9"/><circle cx="491.2" cy="299.1" r="3.4"/><circle cx="579.7" cy="188.4" r="5.7"/><circle cx="427.3" cy="160.5" r="1.5"/><circle cx="555.8" cy="248.6" r="9.1"/><circle cx="602.7" cy="323.6" r="2.5"/><circle cx="623.8" cy="277.5" r="4.0"/><circle cx="599.1" cy="187.4" r="9.2"/><circle cx="473.7" cy="163.7" r="2.4"/><circle cx="562.3" cy="210.1" r="10.9"/><circle cx="544.4" cy="319.9" r="3.0"/><circle cx="557.7" cy="192.8" r="14.1"/><circle cx="597.2" cy="186.4" r="3.1"/><circle cx="516.1" cy="191.3" r="7.7"/><circle cx="668.6" cy="182.0" r="2.9"/><circle cx="536.2" cy="229.3" r="4.9"/><circle cx="626.2" cy="265.0" r="2.6"/><circle cx="675.4" cy="33.2" r="1.0"/><circle cx="578.6" cy="163.6" r="3.1"/><circle cx="713.7" cy="132.8" r="1.6"/><circle cx="497.7" cy="115.2" r="2.3"/><circle cx="690.8" cy="276.7" r="1.2"/><circle cx="474.7" cy="192.5" r="2.7"/><circle cx="588.0" cy="256.3" r="5.6"/><circle cx="415.4" cy="325.5" r="1.0"/><circle cx="437.8" cy="166.9" r="3.1"/><circle cx="560.1" cy="197.2" r="7.0"/><circle cx="542.2" cy="249.0" r="3.3"/><circle cx="556.3" cy="104.2" r="3.1"/><circle cx="485.7" cy="249.2" r="4.1"/><circle cx="620.1" cy="181.6" r="5.1"/><circle cx="342.5" cy="23.1" r="0.8"/><circle cx="456.9" cy="505.9" r="0.8"/><circle cx="438.3" cy="131.1" r="1.1"/><circle cx="544.8" cy="202.2" r="11.4"/><circle cx="571.6" cy="86.8" r="2.3"/><circle cx="520.3" cy="200.8" r="6.6"/><circle cx="589.9" cy="212.3" r="10.6"/><circle cx="212.4" cy="282.3" r="0.8"/><circle cx="563.8" cy="225.1" r="11.5"/><circle cx="701.9" cy="234.8" r="1.7"/><circle cx="799.5" cy="49.6" r="0.8"/><circle cx="766.0" cy="76.7" r="0.8"/><circle cx="754.5" cy="242.3" r="0.8"/><circle cx="532.7" cy="172.8" r="8.7"/><circle cx="570.2" cy="174.0" r="7.4"/><circle cx="566.9" cy="226.8" r="9.6"/><circle cx="549.5" cy="295.7" r="5.0"/><circle cx="681.6" cy="191.0" r="2.0"/><circle cx="560.1" cy="210.0" r="14.9"/><circle cx="613.0" cy="114.5" r="1.4"/><circle cx="557.2" cy="187.2" r="7.1"/><circle cx="459.8" cy="185.4" r="2.1"/><circle cx="547.1" cy="210.4" r="7.2"/><circle cx="534.5" cy="155.0" r="4.2"/><circle cx="577.0" cy="262.6" r="8.5"/><circle cx="574.4" cy="149.5" r="3.2"/><circle cx="523.2" cy="340.2" r="1.7"/><circle cx="503.0" cy="201.6" r="6.9"/><circle cx="598.0" cy="265.2" r="5.0"/><circle cx="549.3" cy="233.9" r="11.0"/><circle cx="646.7" cy="129.6" r="2.7"/><circle cx="576.1" cy="238.8" r="9.3"/><circle cx="576.6" cy="116.7" r="4.2"/><circle cx="560.1" cy="163.2" r="8.3"/><circle cx="559.0" cy="214.1" r="7.4"/><circle cx="651.0" cy="214.0" r="2.1"/><circle cx="331.9" cy="220.5" r="0.8"/><circle cx="611.1" cy="303.4" r="4.1"/><circle cx="657.8" cy="258.1" r="2.2"/><circle cx="727.8" cy="171.3" r="1.5"/><circle cx="496.5" cy="375.4" r="1.1"/><circle cx="687.1" cy="370.8" r="0.8"/><circle cx="615.2" cy="88.7" r="2.6"/><circle cx="590.6" cy="101.1" r="1.9"/><circle cx="595.4" cy="360.4" r="1.4"/><circle cx="538.5" cy="378.2" r="0.8"/><circle cx="503.9" cy="248.4" r="3.8"/><circle cx="602.7" cy="219.6" r="7.0"/><circle cx="619.0" cy="233.4" r="4.6"/><circle cx="552.7" cy="334.2" r="1.8"/><circle cx="706.1" cy="93.8" r="0.8"/><circle cx="579.0" cy="280.4" r="3.8"/><circle cx="617.7" cy="152.9" r="4.5"/><circle cx="537.8" cy="230.9" r="7.4"/><circle cx="572.0" cy="245.2" r="10.5"/><circle cx="354.9" cy="230.4" r="0.8"/><circle cx="458.6" cy="77.1" r="1.6"/><circle cx="585.2" cy="389.2" r="0.9"/><circle cx="450.3" cy="219.7" r="1.9"/><circle cx="700.9" cy="165.3" r="2.4"/><circle cx="645.1" cy="104.2" r="1.7"/><circle cx="566.2" cy="209.1" r="10.5"/><circle cx="571.6" cy="207.0" r="9.7"/><circle cx="568.6" cy="235.8" r="6.0"/><circle cx="649.5" cy="230.6" r="1.9"/><circle cx="533.8" cy="297.3" r="3.9"/><circle cx="557.2" cy="253.9" r="4.8"/><circle cx="460.1" cy="168.0" r="3.6"/><circle cx="701.8" cy="238.1" r="2.5"/><circle cx="550.4" cy="177.7" r="5.7"/><circle cx="381.4" cy="50.4" r="0.8"/><circle cx="694.6" cy="317.9" r="1.0"/><circle cx="464.2" cy="222.9" r="3.2"/><circle cx="736.1" cy="186.1" r="0.8"/><circle cx="599.0" cy="107.5" r="1.7"/><circle cx="489.8" cy="274.0" r="3.7"/><circle cx="671.9" cy="180.4" r="1.4"/><circle cx="558.7" cy="179.6" r="4.8"/><circle cx="564.4" cy="222.7" r="13.8"/><circle cx="556.0" cy="244.5" r="11.3"/><circle cx="648.2" cy="279.5" r="2.1"/><circle cx="512.1" cy="149.0" r="3.3"/><circle cx="535.0" cy="254.9" r="2.7"/><circle cx="554.8" cy="211.3" r="15.3"/><circle cx="502.4" cy="196.4" r="6.8"/><circle cx="641.9" cy="123.4" r="1.3"/><circle cx="511.4" cy="146.2" r="5.0"/><circle cx="337.0" cy="68.3" r="0.8"/><circle cx="567.2" cy="114.8" r="1.6"/><circle cx="585.9" cy="247.6" r="9.3"/><circle cx="532.3" cy="196.5" r="7.1"/><circle cx="642.1" cy="258.8" r="4.4"/><circle cx="460.7" cy="302.0" r="1.7"/><circle cx="564.1" cy="160.1" r="4.5"/><circle cx="568.9" cy="331.9" r="1.4"/><circle cx="559.9" cy="208.8" r="16.0"/></g>
+<g fill="#b3121c"><circle cx="1110.7" cy="281.1" r="5.2"/><circle cx="1045.7" cy="358.7" r="1.8"/><circle cx="1110.9" cy="336.0" r="2.8"/><circle cx="1096.7" cy="344.2" r="2.2"/><circle cx="1144.6" cy="319.7" r="4.5"/><circle cx="1138.4" cy="358.6" r="1.2"/><circle cx="1142.5" cy="373.2" r="2.1"/><circle cx="1126.8" cy="280.2" r="4.7"/><circle cx="1135.0" cy="310.8" r="4.8"/><circle cx="1047.5" cy="188.5" r="0.8"/><circle cx="1181.3" cy="263.7" r="2.8"/><circle cx="1133.2" cy="421.8" r="0.8"/><circle cx="1117.0" cy="274.9" r="2.9"/><circle cx="1067.1" cy="246.2" r="1.0"/><circle cx="1095.6" cy="215.4" r="1.3"/><circle cx="1122.8" cy="302.6" r="7.1"/><circle cx="1004.1" cy="300.0" r="1.1"/><circle cx="1216.4" cy="220.8" r="0.8"/><circle cx="1147.7" cy="304.5" r="5.4"/><circle cx="1117.8" cy="327.4" r="2.7"/><circle cx="1097.5" cy="404.8" r="0.9"/><circle cx="1096.5" cy="370.6" r="2.1"/><circle cx="1149.7" cy="308.7" r="5.3"/><circle cx="1214.9" cy="370.2" r="0.8"/><circle cx="1112.0" cy="299.7" r="6.2"/><circle cx="1118.1" cy="311.9" r="3.4"/><circle cx="1129.5" cy="317.6" r="3.0"/><circle cx="1056.4" cy="240.0" r="1.9"/><circle cx="1077.6" cy="203.6" r="1.1"/><circle cx="1167.8" cy="302.6" r="2.6"/><circle cx="1019.4" cy="156.8" r="0.8"/><circle cx="1071.9" cy="270.0" r="3.7"/><circle cx="1127.0" cy="327.6" r="5.7"/><circle cx="1119.1" cy="298.7" r="5.2"/><circle cx="1163.1" cy="424.8" r="0.8"/><circle cx="1111.2" cy="317.8" r="5.3"/><circle cx="1113.2" cy="395.9" r="1.7"/><circle cx="1066.0" cy="233.9" r="1.7"/><circle cx="1101.3" cy="382.6" r="1.4"/><circle cx="1122.3" cy="301.0" r="10.2"/><circle cx="1220.7" cy="447.0" r="0.8"/><circle cx="1152.4" cy="264.9" r="2.2"/><circle cx="1069.7" cy="310.6" r="2.4"/><circle cx="1074.1" cy="316.4" r="4.0"/><circle cx="1216.7" cy="282.1" r="1.1"/><circle cx="1063.2" cy="334.5" r="1.0"/><circle cx="1099.8" cy="323.9" r="4.6"/><circle cx="1073.1" cy="351.8" r="1.5"/><circle cx="1108.0" cy="378.1" r="2.4"/><circle cx="1125.7" cy="309.8" r="7.3"/><circle cx="1097.4" cy="292.0" r="6.8"/><circle cx="1040.6" cy="251.3" r="0.8"/><circle cx="1101.3" cy="258.5" r="3.9"/><circle cx="1140.1" cy="266.4" r="2.7"/><circle cx="1135.5" cy="320.9" r="4.4"/><circle cx="1213.1" cy="345.4" r="0.9"/><circle cx="1057.1" cy="280.8" r="2.7"/><circle cx="1104.3" cy="268.2" r="2.8"/><circle cx="1091.3" cy="341.5" r="2.7"/><circle cx="1111.5" cy="324.1" r="5.1"/><circle cx="1130.4" cy="264.4" r="2.0"/><circle cx="1145.6" cy="325.9" r="3.8"/><circle cx="1037.4" cy="305.8" r="1.5"/><circle cx="1149.1" cy="304.9" r="3.0"/><circle cx="1118.0" cy="305.2" r="6.4"/><circle cx="1212.3" cy="406.4" r="0.8"/><circle cx="1143.8" cy="335.6" r="1.8"/><circle cx="1124.2" cy="199.3" r="1.0"/><circle cx="1206.2" cy="336.9" r="1.5"/><circle cx="1218.5" cy="147.7" r="0.8"/></g>
+<g transform="translate(1700 90) rotate(169.30)" ><path d="M0,0 Q915.9148432032314,-22 1831.8296864064628,0 Q915.9148432032314,-7.699999999999999 0,0 Z" fill="#fff"/><path d="M146.54637491251702,-2 Q915.9148432032314,-13.2 1685.2833114939458,-2" stroke="#d6fbff" stroke-width="1.5" fill="none"/></g>
+<g transform="rotate(-8 460 108)"><g filter="url(#rough)"><rect x="438.75" y="84.2" width="42.5" height="47.599999999999994" fill="#b3121c"/></g><rect x="442.75" y="88.2" width="34.5" height="39.599999999999994" fill="none" stroke="#f3ede4" stroke-width="1.5" opacity=".8"/><text x="460" y="120.24" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="34" font-weight="900" fill="#f3ede4" text-anchor="middle" >敗北</text></g>
+<g transform="rotate(-2 800 300)" ><g filter="url(#rough)">
+<text x="800" y="300" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="170" font-weight="900" text-anchor="middle" fill="none" stroke="#f3ede4" stroke-width="26" stroke-linejoin="round">道消身殞</text>
+<text x="800" y="300" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="170" font-weight="900" text-anchor="middle" fill="none" stroke="#0b0a0d" stroke-width="16" stroke-linejoin="round">道消身殞</text>
+<text x="800" y="300" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="170" font-weight="900" text-anchor="middle" fill="#b3121c">道消身殞</text>
+</g></g>
+<rect x="430" y="360" width="740" height="64" fill="#0b0a0d" stroke="#f3ede4" stroke-width="3"/>
+<rect x="436" y="366" width="728" height="52" fill="none" stroke="#f3ede4" stroke-width="1" opacity=".55"/>
+<text x="800.0" y="400.64" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="24" font-weight="700" fill="#f3ede4" text-anchor="middle" >殞落於 屍門鬼谷・第 13 區　古井</text>
+<path d="M160,470 H378 L388,480 V546 L378,556 H160 L150,546 V480 Z" fill="#fbf8f3" stroke="#0b0a0d" stroke-width="3.5"/>
+<path d="M145,479 V465 H159" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M393,479 V465 H379" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M145,547 V561 H159" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M393,547 V561 H379" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<rect x="164" y="457" width="59.8" height="30" fill="#0b0a0d"/>
+<text x="173" y="478.56" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="18.04" font-weight="900" fill="#16c6cc" text-anchor="start" >角色</text>
+<text x="269.0" y="523.92" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="22" font-weight="700" fill="#0b0a0d" text-anchor="middle" >南宮逸</text>
+<path d="M422,470 H640 L650,480 V546 L640,556 H422 L412,546 V480 Z" fill="#fbf8f3" stroke="#0b0a0d" stroke-width="3.5"/>
+<path d="M407,479 V465 H421" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M655,479 V465 H641" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M407,547 V561 H421" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M655,547 V561 H641" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<rect x="426" y="457" width="59.8" height="30" fill="#0b0a0d"/>
+<text x="435" y="478.56" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="18.04" font-weight="900" fill="#16c6cc" text-anchor="start" >境界</text>
+<text x="531.0" y="523.92" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="22" font-weight="700" fill="#0b0a0d" text-anchor="middle" >一流・第五重</text>
+<path d="M684,470 H902 L912,480 V546 L902,556 H684 L674,546 V480 Z" fill="#fbf8f3" stroke="#0b0a0d" stroke-width="3.5"/>
+<path d="M669,479 V465 H683" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M917,479 V465 H903" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M669,547 V561 H683" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M917,547 V561 H903" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<rect x="688" y="457" width="59.8" height="30" fill="#0b0a0d"/>
+<text x="697" y="478.56" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="18.04" font-weight="900" fill="#16c6cc" text-anchor="start" >擊殺</text>
+<text x="793.0" y="523.92" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="22" font-weight="700" fill="#0b0a0d" text-anchor="middle" >214</text>
+<path d="M946,470 H1164 L1174,480 V546 L1164,556 H946 L936,546 V480 Z" fill="#fbf8f3" stroke="#0b0a0d" stroke-width="3.5"/>
+<path d="M931,479 V465 H945" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M1179,479 V465 H1165" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M931,547 V561 H945" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M1179,547 V561 H1165" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<rect x="950" y="457" width="59.8" height="30" fill="#0b0a0d"/>
+<text x="959" y="478.56" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="18.04" font-weight="900" fill="#16c6cc" text-anchor="start" >參悟</text>
+<text x="1055.0" y="523.92" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="22" font-weight="700" fill="#0b0a0d" text-anchor="middle" >33 次</text>
+<path d="M1208,470 H1426 L1436,480 V546 L1426,556 H1208 L1198,546 V480 Z" fill="#fbf8f3" stroke="#0b0a0d" stroke-width="3.5"/>
+<path d="M1193,479 V465 H1207" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M1441,479 V465 H1427" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M1193,547 V561 H1207" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M1441,547 V561 H1427" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<rect x="1212" y="457" width="59.8" height="30" fill="#0b0a0d"/>
+<text x="1221" y="478.56" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="18.04" font-weight="900" fill="#16c6cc" text-anchor="start" >時間</text>
+<text x="1317.0" y="523.92" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="22" font-weight="700" fill="#0b0a0d" text-anchor="middle" >24 分 08 秒</text>
+<path d="M160,590 H480 L490,600 V666 L480,676 H160 L150,666 V600 Z" fill="#fbf8f3" stroke="#0b0a0d" stroke-width="3.5"/>
+<path d="M145,599 V585 H159" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M495,599 V585 H481" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M145,667 V681 H159" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M495,667 V681 H481" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<rect x="164" y="577" width="59.8" height="30" fill="#0b0a0d"/>
+<text x="173" y="598.56" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="18.04" font-weight="900" fill="#16c6cc" text-anchor="start" >武器</text>
+<text x="320.0" y="643.92" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="22" font-weight="700" fill="#0b0a0d" text-anchor="middle" >青鞘太刀+3、竹弓+1</text>
+<path d="M530,590 H950 L960,600 V666 L950,676 H530 L520,666 V600 Z" fill="#fbf8f3" stroke="#0b0a0d" stroke-width="3.5"/>
+<path d="M515,599 V585 H529" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M965,599 V585 H951" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M515,667 V681 H529" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M965,667 V681 H951" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<rect x="534" y="577" width="101.6" height="30" fill="#0b0a0d"/>
+<text x="543" y="598.56" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="18.04" font-weight="900" fill="#16c6cc" text-anchor="start" >精進武學</text>
+<text x="740.0" y="643.92" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="22" font-weight="700" fill="#0b0a0d" text-anchor="middle" >鷹爪功 Lv4、快刀訣 Lv3</text>
+<path d="M1000,590 H1440 L1450,600 V666 L1440,676 H1000 L990,666 V600 Z" fill="#fbf8f3" stroke="#0b0a0d" stroke-width="3.5"/>
+<path d="M985,599 V585 H999" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M1455,599 V585 H1441" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M985,667 V681 H999" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M1455,667 V681 H1441" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<rect x="1004" y="577" width="101.6" height="30" fill="#0b0a0d"/>
+<text x="1013" y="598.56" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="18.04" font-weight="900" fill="#16c6cc" text-anchor="start" >門派傳承</text>
+<text x="1220.0" y="643.92" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="22" font-weight="700" fill="#0b0a0d" text-anchor="middle" >天劍宗 第1階</text>
+<g filter="url(#glowRed)"><path d="M666,740 H950 L934,804 H650 Z" fill="#b3121c" stroke="#f3ede4" stroke-width="3" /></g>
+<path d="M638,756.0 V732 H680" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M962,788.0 V812 H920" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<text x="800.0" y="782.08" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="28" font-weight="900" fill="#f3ede4" text-anchor="middle" >回到主選單</text>
+<g transform="translate(1250 720)"><rect x="0" y="0" width="320" height="150" fill="#16131a" stroke="#16c6cc" stroke-width="2"/><ellipse cx="160" cy="70" rx="160" ry="60" fill="url(#tealBloom)" opacity=".7"/><g transform="rotate(-2 160 92)" filter="url(#glowTeal)"><g filter="url(#rough)">
+<text x="160" y="92" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="52" font-weight="900" text-anchor="middle" fill="none" stroke="#0b0a0d" stroke-width="7" stroke-linejoin="round">天魔伏誅</text>
+<text x="160" y="92" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="52" font-weight="900" text-anchor="middle" fill="#f3ede4">天魔伏誅</text>
+</g></g><text x="160" y="136" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="700" fill="#f3ede4" text-anchor="middle" >通關版：血紅換電光青＋白刃</text></g>
+<rect width="1600" height="900" filter="url(#grain)" pointer-events="none"/>
+</svg>

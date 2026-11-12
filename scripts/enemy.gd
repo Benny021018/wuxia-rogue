@@ -3,6 +3,13 @@ extends CharacterBody3D
 
 const PROJ := preload("res://scripts/projectile.gd")
 const HAZARD := preload("res://scripts/hazard.gd")
+const BANDIT_MODELS := {
+	"H01": preload("res://assets/models/greenwood/H01.glb"),
+	"H02": preload("res://assets/models/greenwood/H02.glb"),
+	"H03": preload("res://assets/models/greenwood/H03.glb"),
+	"H07": preload("res://assets/models/greenwood/H07.glb"),
+	"H08": preload("res://assets/models/greenwood/H08.glb"),
+}
 const GRAVITY := 18.0
 const MAP_COLORS := {
 	"greenwood": Color(0.55, 0.4, 0.28), "darkmoon": Color(0.16, 0.16, 0.2),
@@ -27,9 +34,19 @@ var summoner = null           # 召喚者（狼王判定狼群是否存活）
 var summons: Array = []
 
 var _visual: Node3D
-var _body_mat: StandardMaterial3D
+var _body_mat: BaseMaterial3D
 var _label: Label3D
+const Bow := preload("res://scripts/archer_bow.gd")
+var _bow: Bow
+var _draw := -1.0
+var _recoil: Tween
+var _flash := StandardMaterial3D.new()
+var _flash_meshes: Array[Node] = []
+var _hit_side := 1.0
+var _impact_pivot := Node3D.new()
+var _anim: AnimationPlayer
 var _atk_cd := 0.8
+var _swing_dir := Vector3.FORWARD
 var _windup := 0.0
 var _skill_cd := 3.0
 var _skill2_cd := 6.0
@@ -50,6 +67,9 @@ var _phase := 1
 var _flying := false
 var _revealed := true
 var _first_strike := true
+var _route := PackedVector2Array()
+var _route_target := Vector2.INF
+var _route_retry := 0.0
 var _armor := 0.0
 
 
@@ -89,7 +109,53 @@ func _ready() -> void:
 	col.position.y = 0.9 * size
 	add_child(col)
 	_visual = Node3D.new()
-	add_child(_visual)
+	add_child(_impact_pivot)
+	_impact_pivot.add_child(_visual)
+	if BANDIT_MODELS.has(eid):
+		var model: Node3D = BANDIT_MODELS[eid].instantiate()
+		_visual.add_child(model)
+		model.scale = Vector3.ONE * size
+		_anim = model.find_child("AnimationPlayer", true, false)
+		for clip in [&"Walk", &"Idle"]:
+			_anim.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
+		_anim.play(&"Idle")
+		if eid == "H02":
+			_bow = Bow.new()
+			_impact_pivot.add_child(_bow)
+			_bow.bind(model.find_children("*","Skeleton3D",true,false)[0])
+		# 每個敵人各自控制蓄力發光，避免整群共用同一材質。
+		var mesh: MeshInstance3D = model.find_children("*", "MeshInstance3D", true, false)[0]
+		_body_mat = mesh.get_active_material(0).duplicate()
+		mesh.set_surface_override_material(0, _body_mat)
+		if eid in ["H01","H07","H08"]:
+			var wrist := BoneAttachment3D.new()
+			model.find_children("*","Skeleton3D",true,false)[0].add_child(wrist)
+			wrist.bone_name = "RightHand"
+			var sword := preload("res://assets/models/weapons/Tachi.glb").instantiate()
+			wrist.add_child(sword)
+			sword.find_child("Saya",true,false).hide()
+			sword.rotation_degrees = Vector3(-20,0,0)
+			sword.scale = Vector3.ONE * (.72 if eid=="H01" else .9)
+	else:
+		_build_graybox()
+	_flash.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_flash.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_flash_meshes = _visual.find_children("*", "MeshInstance3D", true, false)
+	if rank != "minion":
+		_label = FX.label3d(row.name_zh, 64, Color(1, 0.85, 0.6) if rank == "elite" else Color(1, 0.4, 0.3))
+		_label.position.y = 2.2 * size + 0.3
+		add_child(_label)
+	if eid == "H06":      # 刺客：隱身
+		_revealed = false
+		_visual.visible = false
+	if _flying:
+		position.y = 3.0
+	_skill_cd = randf_range(1.5, 4.0)
+	if rank == "boss":
+		world.boss_spawned(self)
+
+
+func _build_graybox() -> void:
 	var base_col: Color = MAP_COLORS.get(row.map_id, Color.GRAY)
 	var tint := float(hash(eid) % 100) / 100.0 * 0.25 - 0.12
 	base_col = base_col.lightened(tint) if tint > 0.0 else base_col.darkened(-tint)
@@ -116,26 +182,10 @@ func _ready() -> void:
 	var eyes := FX.box(Vector3(0.4 * size, 0.08 * size, 0.08), Color(0.9, 0.95, 0.4) if map_is("corpse_sect") else Color(1, 0.2, 0.15), 3.0)
 	eyes.position = Vector3(0, (0.55 if _flying else 1.45) * size, -0.36 * size)
 	_visual.add_child(eyes)
-	if eid == "H03":      # 刀盾手：前方的盾
-		var sh := FX.box(Vector3(1.0, 1.3, 0.12), Color(0.55, 0.5, 0.4))
-		sh.position = Vector3(0, 0.9, -0.5)
-		_visual.add_child(sh)
 	if eid == "Z06":      # 鬼面屍王：背後的罩門
 		var core := FX.sphere(0.35, Color(0.3, 1.0, 0.4), 3.0)
 		core.position = Vector3(0, 1.6 * size * 0.5 + 0.6, 0.45 * size)
 		_visual.add_child(core)
-	if rank != "minion":
-		_label = FX.label3d(row.name_zh, 64, Color(1, 0.85, 0.6) if rank == "elite" else Color(1, 0.4, 0.3))
-		_label.position.y = 2.2 * size + 0.3
-		add_child(_label)
-	if eid == "H06":      # 刺客：隱身
-		_revealed = false
-		_visual.visible = false
-	if _flying:
-		position.y = 3.0
-	_skill_cd = randf_range(1.5, 4.0)
-	if rank == "boss":
-		world.boss_spawned(self)
 
 
 func map_is(m: String) -> bool:
@@ -149,8 +199,12 @@ func hit_center() -> Vector3:
 func _physics_process(delta: float) -> void:
 	if dead or player == null:
 		return
+	_route_retry -= delta
 	_tick_status(delta)
 	if _stun_t > 0.0:
+		if _bow:
+			_cancel_draw()
+			_bow.pose(-1, player.global_position + Vector3.UP)
 		_stun_t -= delta
 		velocity.x = 0
 		velocity.z = 0
@@ -160,10 +214,15 @@ func _physics_process(delta: float) -> void:
 	var to_p: Vector3 = player.global_position - global_position
 	var flat := Vector3(to_p.x, 0, to_p.z)
 	var dist := flat.length()
-	if _state == "":
+	if _state == "" and _windup <= 0:
 		if dist > 0.05:
 			rotation.y = atan2(-flat.x, -flat.z)
 	_behaviour(delta, flat, dist)
+	if _anim and _draw < 0.0 and _anim.current_animation not in [&"Slash", &"Shoot"]:
+		var moving := Vector2(velocity.x, velocity.z).length() > 0.15
+		var clip := &"Walk" if moving else &"Idle"
+		if _anim.current_animation != clip:
+			_anim.play(clip, 0.10)
 	_apply_gravity(delta)
 	move_and_slide()
 
@@ -182,18 +241,85 @@ func _speed() -> float:
 	return s
 
 
-func _chase(flat: Vector3, dist: float, keep := 0.0) -> void:
+func _clear_shot() -> bool:
+	var origin := global_position + Vector3.UP * (1.3 * size)
+	var query := PhysicsRayQueryParameters3D.create(origin,player.global_position + Vector3.UP,1)
+	query.hit_from_inside = true
+	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()
+
+
+func _ground_direction(goal: Vector2) -> Vector2:
+	var here := Vector2(global_position.x,global_position.z)
+	var direct := here.direction_to(goal)
+	if _flying or world.current < 0:
+		return direct
+	var nav = world.rooms[world.current].navigation
+	var radius := .4 * size + Data.cfg("ai_path_margin")
+	if not nav.bounds.has_point(here):
+		return direct
+	goal = goal.clamp(nav.bounds.position+Vector2.ONE*radius,nav.bounds.end-Vector2.ONE*radius)
+	if nav.clear(here,goal,radius):
+		_route.clear()
+		_route_retry = 0.0
+		return here.direction_to(goal)
+	if _route_retry <= 0 or goal.distance_to(_route_target) > Data.cfg("ai_repath_distance"):
+		_route = nav.route(here,goal,radius)
+		_route_target = goal
+		_route_retry = Data.cfg("ai_repath_seconds")
+	# 從最遠的可達格切角；不能跨過擋路的地圖物件。
+	for i in range(_route.size()-1,-1,-1):
+		if nav.clear(here,_route[i],radius):
+			if here.distance_squared_to(_route[i]) <= .04:
+				return Vector2.ZERO
+			return here.direction_to(_route[i])
+	return Vector2.ZERO
+
+
+func _chase(flat: Vector3, dist: float, keep := 0.0, blocked := false) -> void:
 	var dir := Vector3.ZERO
-	if keep > 0.0:
+	if blocked:
+		dir = flat.normalized()
+	elif keep > 0.0:
 		if dist < keep * 0.6:
 			dir = -flat.normalized()
 		elif dist > keep:
 			dir = flat.normalized()
 	elif dist > reach * 0.8:
 		dir = flat.normalized()
-	dir += _separation() * 0.8
+	if not dir.is_zero_approx():
+		var here := Vector2(global_position.x,global_position.z)
+		var distance := keep if dir.dot(flat) < 0 else dist
+		var goal := here + Vector2(dir.x,dir.z)*distance
+		if keep == 0 and dist < Data.cfg("ai_flank_range") and dist > reach:
+			goal += _flank_offset(dir)
+		var step := _ground_direction(goal)
+		dir = Vector3(step.x,0,step.y)
+	dir = (dir + _separation() * 0.8).limit_length()
 	velocity.x = dir.x * _speed()
 	velocity.z = dir.z * _speed()
+
+
+# 有同伴佔住正前方時，沿另一側接近；以相對站位選邊，避免每幀隨機換向。
+func _flank_offset(forward: Vector3) -> Vector2:
+	var side := Vector2(-forward.z,forward.x)
+	var ahead := Vector2(forward.x,forward.z)
+	var scan := Data.cfg("ai_flank_spacing")
+	var nearest := scan
+	var offset := Vector2.ZERO
+	for ally in world.enemies_near(global_position,scan):
+		if ally == self or ally.dead:
+			continue
+		var d: Vector3 = ally.global_position-global_position
+		var planar := Vector2(d.x,d.z)
+		var gap := planar.length()
+		if gap >= nearest or planar.dot(ahead) <= 0 or absf(planar.dot(side)) > hit_radius+ally.hit_radius:
+			continue
+		var flank := -signf(planar.dot(side))
+		if is_zero_approx(flank):
+			flank = 1 if get_instance_id() % 2 == 0 else -1
+		nearest = gap
+		offset = side * flank * minf(scan,reach+hit_radius)
+	return offset
 
 
 func _separation() -> Vector3:
@@ -212,17 +338,30 @@ func _separation() -> Vector3:
 func _melee(delta: float, dist: float, mult := 1.0) -> void:
 	_atk_cd -= delta
 	if _windup > 0.0:
+		velocity.x = 0
+		velocity.z = 0
 		_windup -= delta
 		if _windup <= 0.0:
 			_body_mat.emission_enabled = false
-			if dist <= reach + 0.8 + hit_radius:
+			var impact_reach := reach + 0.8 + hit_radius
+			FX.attack_trail(world,hit_center(),_swing_dir,impact_reach,180,0,Color("#ffa071"),.20)
+			if _anim:
+				FX.play(world,hit_center()+_swing_dir*impact_reach*.7,&"sword-slash",impact_reach*.8,.20)
+			var toward: Vector3 = player.global_position-global_position
+			toward.y = 0
+			if dist <= impact_reach and _swing_dir.dot(toward.normalized()) >= 0 and _clear_shot():
 				_hit_player(dmg * mult)
 		return
-	if _atk_cd <= 0.0 and dist <= reach + 0.5 + hit_radius:
+	if _atk_cd <= 0.0 and dist <= reach + 0.5 + hit_radius and _clear_shot():
+		_swing_dir = -global_basis.z
+		velocity.x = 0
+		velocity.z = 0
 		_windup = 0.35
 		_atk_cd = 1.3
 		_body_mat.emission_enabled = true
 		_body_mat.emission = Color(1, 0.3, 0.2)
+		if _anim:
+			_anim.play(&"Slash", 0.05)
 
 
 func _hit_player(amount: float) -> void:
@@ -241,11 +380,48 @@ func _hit_player(amount: float) -> void:
 	player.take_damage(amount, self)
 
 
-func _shoot(speed_mps: float, amount: float, color: Color, cloud := false) -> void:
+func _cancel_draw() -> void:
+	if _draw >= 0.0:
+		_draw = -1.0
+		_body_mat.emission_enabled = false
+		_anim.play(&"Idle", .10)
+
+func _archery(delta: float, flat: Vector3, dist: float) -> void:
+	var target: Vector3 = player.global_position + Vector3.UP
+	var blocked := not _clear_shot()
+	if (dist >= 22.0 or blocked) and _draw < Bow.RELEASE:
+		_cancel_draw()
+	if _draw < 0.0:
+		if blocked or dist >= 22.0 or _skill_cd > Bow.RELEASE:
+			_chase(flat, dist, 10.0, blocked)
+			_bow.pose(-1.0, target)
+			return
+		_draw = 0.0
+		_anim.play(&"Shoot")
+		_anim.pause()
+	velocity.x = 0
+	velocity.z = 0
+	var prev := _draw
+	_draw += delta
+	if prev < Bow.RELEASE and _draw >= Bow.RELEASE:
+		_anim.seek(Bow.RELEASE,true)
+		_bow.pose(Bow.RELEASE,target)
+		_shoot(24.0, dmg, Color(0.9,0.8,0.5), false, _bow.tip_position())
+		_skill_cd = 2.0
+	_anim.seek(_draw,true)
+	_bow.pose(_draw,target)
+	_body_mat.emission_enabled = _draw >= Bow.RELEASE - .3 and _draw < Bow.RELEASE
+	_body_mat.emission = Color(.85,.58,.18)
+	if _draw >= Bow.FINISH:
+		_cancel_draw()
+
+func _shoot(speed_mps: float, amount: float, color: Color, cloud := false, arrow_tip := Vector3.INF) -> void:
 	var p := PROJ.new()
 	world.add_child(p)
 	var from := global_position + Vector3(0, 1.3 * size, 0)
 	var target: Vector3 = player.global_position + Vector3(0, 1.0, 0)
+	if arrow_tip.is_finite():
+		from = arrow_tip
 	p.global_position = from
 	p.from_player = false
 	p.direction = (target - from).normalized()
@@ -259,7 +435,13 @@ func _shoot(speed_mps: float, amount: float, color: Color, cloud := false) -> vo
 		p.target_pos = Vector3(player.global_position.x, 0.2, player.global_position.z)
 		p.direction = (p.target_pos - from).normalized()
 		p.max_range = from.distance_to(p.target_pos)
-	p.setup(color, 0.15)
+	if arrow_tip.is_finite():
+		var arrow := Bow.make_arrow()
+		p.add_child(arrow)
+		arrow.basis = Basis.looking_at(p.direction,Vector3.UP)
+		arrow.position = -p.direction*Bow.LENGTH
+	else:
+		p.setup(color, 0.15)
 
 
 func _aoe_after(center: Vector3, r: float, delay: float, amount: float) -> void:
@@ -268,7 +450,7 @@ func _aoe_after(center: Vector3, r: float, delay: float, amount: float) -> void:
 	if dead or not is_instance_valid(player):
 		return
 	var d := Vector2(player.global_position.x - center.x, player.global_position.z - center.z).length()
-	FX.flash(world, center + Vector3(0, 0.3, 0), r * 0.6, Color(1, 0.4, 0.2), 0.3)
+	FX.impact_wave(world,center,r,.3,Color(1,.4,.2))
 	if d <= r:
 		player.take_damage(amount, self)
 
@@ -318,28 +500,27 @@ func _behaviour(delta: float, flat: Vector3, dist: float) -> void:
 			_chase(flat, dist)
 			_melee(delta, dist)
 		"H02":
-			_chase(flat, dist, 10.0)
-			if _skill_cd <= 0.0 and dist < 22.0:
-				_skill_cd = 2.0
-				_shoot(24.0, dmg, Color(0.9, 0.8, 0.5))
+			_archery(delta, flat, dist)
 		"H04":
-			_chase(flat, dist, 8.0)
-			if _skill_cd <= 0.0 and dist < 18.0:
+			var blocked := not _clear_shot()
+			_chase(flat, dist, 8.0, blocked)
+			if not blocked and _skill_cd <= 0.0 and dist < 18.0:
 				_skill_cd = 2.5
 				_shoot(14.0, dmg, Color(0.4, 0.9, 0.3))
 			if _skill2_cd <= 0.0:
 				_skill2_cd = 6.0
 				_raise_corpse()
 		"H05":
-			_chase(flat, dist, 8.0)
-			if _skill_cd <= 0.0 and dist < 16.0:
+			var blocked := not _clear_shot()
+			_chase(flat, dist, 8.0, blocked)
+			if not blocked and _skill_cd <= 0.0 and dist < 16.0:
 				_skill_cd = 4.0
 				_shoot(12.0, dmg * 0.6, Color(0.3, 0.8, 0.2), true)
 		"H06":
 			if not _revealed and dist < 3.0:
 				_revealed = true
 				_visual.visible = true
-				FX.flash(world, hit_center(), 0.5, Color(0.8, 0.8, 0.9), 0.15)
+				FX.play(world, hit_center(), &"poof", 1.4, 0.15, Color(0.8, 0.8, 0.9))
 			_chase(flat, dist)
 			if _revealed:
 				_melee(delta, dist)
@@ -385,9 +566,10 @@ func _b_hopper(delta: float, flat: Vector3, dist: float) -> void:
 			if is_on_floor() and velocity.y <= 0.0:
 				_state = ""
 				_skill_cd = 3.0
-				if dist < 2.0 + hit_radius:
+				var impact_radius := 2.0 + hit_radius
+				if dist < impact_radius:
 					_hit_player(dmg)
-				FX.flash(world, global_position, 1.0, Color(0.6, 0.6, 0.4), 0.2)
+				FX.impact_wave(world, global_position, impact_radius, 0.2, Color(0.6, 0.6, 0.4))
 
 
 func _b_boar(delta: float, flat: Vector3, dist: float) -> void:
@@ -476,9 +658,10 @@ func _b_tiger(delta: float, flat: Vector3, dist: float) -> void:
 			if is_on_floor() and velocity.y <= 0.0:
 				_state = ""
 				_skill_cd = 6.0
-				if dist < 2.5 + hit_radius:
+				var impact_radius := 2.5 + hit_radius
+				if dist < impact_radius:
 					_hit_player(dmg * 1.2)
-				FX.flash(world, global_position, 1.5, Color(1, 0.7, 0.3), 0.2)
+				FX.impact_wave(world, global_position, impact_radius, 0.2, Color(1, 0.7, 0.3))
 
 
 func _b_blade(delta: float, flat: Vector3, dist: float) -> void:
@@ -542,7 +725,7 @@ func _raise_corpse() -> void:
 	var pos: Vector3 = world.take_corpse_near(global_position, 12.0)
 	if pos == Vector3.INF:
 		pos = global_position + Vector3(randf_range(-2, 2), 0, randf_range(-2, 2))
-	FX.flash(world, pos + Vector3(0, 0.5, 0), 0.6, Color(0.4, 1, 0.4), 0.3)
+	FX.play(world, pos + Vector3(0, 0.5, 0), &"poof", 1.68, 0.3, Color(0.4, 1, 0.4))
 	var e = world.spawn_enemy("Z01", pos, false)
 	if e:
 		summons.append(e)
@@ -571,6 +754,8 @@ func _tick_status(delta: float) -> void:
 func apply_poison(total: float, stack: bool) -> void:
 	if total <= 0.0 or dead:
 		return
+	if _poison.is_empty():
+		FX.play(self, hit_center() + Vector3.UP * size, &"poisoned", 0.65 * size, 0.55)
 	if stack:
 		_poison.append([total / 3.0, 3.0])
 	elif _poison.is_empty():
@@ -591,6 +776,8 @@ func is_poisoned() -> bool:
 
 
 func apply_slow(pct: float, dur: float) -> void:
+	if _slow_t <= 0.0 and pct > 0.0 and dur > 0.0:
+		FX.play(self, global_position + Vector3.UP * 0.22, &"slowed", 1.2 * size, minf(dur, 0.6))
 	_slow = clampf(maxf(_slow, pct), 0.0, 80.0)
 	_slow_t = maxf(_slow_t, dur)
 
@@ -605,11 +792,44 @@ func apply_vuln(pct: float, dur: float) -> void:
 
 
 func stun(t: float) -> void:
+	if _stun_t <= 0.0 and t > 0.0:
+		FX.play(self, hit_center() + Vector3.UP * size, &"stunned", 0.8 * size, t)
 	_stun_t = maxf(_stun_t, t)
 
 
+## 只動顯示層：腳下碰撞與敵人正在播放的招式保持同步。
+func _react_to_hit(away: Vector3, weight: float, guard: bool) -> void:
+	if _recoil:
+		_recoil.kill()
+	var right := global_basis.x
+	if is_instance_valid(player):
+		right = player.cam.global_basis.x
+	right = (global_basis.inverse() * right).slide(Vector3.UP).normalized()
+	var side := (global_basis * right).dot(away)
+	_hit_side = signf(side) if absf(side) > .25 else -_hit_side
+	var force := clampf(weight, .65, 2.0) * (.65 if guard or rank == "boss" else 1.0)
+	var offset := right * _hit_side * force * .12 * size
+	var roll := Vector3.UP.cross(right) * _hit_side * force * .14
+	for mesh in _flash_meshes:
+		mesh.material_overlay = _flash
+	_flash.albedo_color = Color(1, .025, .035, .70)
+	_recoil = create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+	_recoil.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_recoil.tween_property(_impact_pivot, "position", offset, .04)
+	_recoil.parallel().tween_property(_impact_pivot, "rotation", roll, .04)
+	_recoil.tween_property(_impact_pivot, "position", -offset * .68, .075)
+	_recoil.parallel().tween_property(_impact_pivot, "rotation", -roll * .68, .075)
+	_recoil.parallel().tween_property(_flash, "albedo_color:a", .23, .075)
+	_recoil.tween_property(_impact_pivot, "position", Vector3.ZERO, .095)
+	_recoil.parallel().tween_property(_impact_pivot, "rotation", Vector3.ZERO, .095)
+	_recoil.parallel().tween_property(_flash, "albedo_color:a", 0.0, .095)
+	_recoil.tween_callback(func():
+		for mesh in _flash_meshes:
+			mesh.material_overlay = null)
+
+
 ## 被玩家擊中：回傳實際造成的傷害
-func take_hit(amount: float, from_pos: Vector3, crit: bool) -> float:
+func take_hit(amount: float, from_pos: Vector3, crit: bool, weight := 1.0) -> float:
 	if dead:
 		return 0.0
 	var dmg_in := amount * (1.0 + _vuln / 100.0)
@@ -620,8 +840,9 @@ func take_hit(amount: float, from_pos: Vector3, crit: bool) -> float:
 		"H03":
 			if front:
 				dmg_in *= 0.3
+				FX.play(world, hit_center() + facing * 0.48, &"shield-block", 0.65, 0.12, Color(1, 0.78, 0.32))
 				if randf() < 0.3:
-					FX.float_text(world, hit_center() + Vector3(0, 0.8, 0), "格擋", Color(0.8, 0.8, 0.8), 28)
+					FX.float_text(world, hit_center() + Vector3(0, 0.8, 0), "格", UIKit.TEAL, 36)
 		"Z04":
 			dmg_in = maxf(dmg_in * 0.25, dmg_in - _armor)
 		"Z06":
@@ -637,16 +858,24 @@ func take_hit(amount: float, from_pos: Vector3, crit: bool) -> float:
 				dmg_in *= 0.5
 	if rank == "elite" or rank == "boss":
 		dmg_in /= float(row.ehp_factor) if eid != "Z06" and eid != "Z04" else 1.0
-	return _apply_damage(dmg_in, crit, false)
+	var dealt := _apply_damage(dmg_in, crit, false)
+	if dealt > 0 and not dead:
+		_react_to_hit(-to_attacker, weight * (1.5 if crit else 1.0), eid == "H03" and front)
+	return dealt
 
 
 func _apply_damage(v: float, crit: bool, dot: bool) -> float:
 	if dead:
 		return 0.0
+	if not dot:
+		var contact := hit_center()
+		if is_instance_valid(player):
+			contact += contact.direction_to(player.cam.global_position) * hit_radius
+		FX.play(world, contact, &"crit-hit" if crit else &"hit-spark", (1.55 if crit else 0.76) * size, 0.24 if crit else 0.14)
 	hp -= v
-	var col := Color(1, 0.85, 0.3) if crit else (Color(0.5, 1, 0.4) if dot else Color.WHITE)
+	var col := UIKit.EMBER if crit else (Color(0.5, 1, 0.4) if dot else UIKit.BONE)
 	if not dot or randf() < 0.15:
-		FX.float_text(world, hit_center() + Vector3(0, 0.6 * size, 0), str(int(v)), col, 44 if crit else 32)
+		FX.float_text(world, hit_center() + Vector3(0, 0.6 * size, 0), str(int(v)), col, 56 if crit else 36)
 	if hp <= 0.0:
 		if eid == "Z06" and not _revived and not _last_hit_from_behind:
 			_revived = true
@@ -661,6 +890,7 @@ func die() -> void:
 	if dead:
 		return
 	dead = true
+	FX.play(world, hit_center(), &"poof", 1.4 * size, 0.36)
 	remove_from_group("enemies")
 	Game.add_kill(eid)
 	if is_instance_valid(player):

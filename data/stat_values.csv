@@ -11,7 +11,7 @@ lifesteal_pct,吸血,%,2.5,吸血同時提供生存與續戰
 move_speed_pct,移動速度,%,6,風箏/閃避價值高
 area_pct,範圍,%,12,割草遊戲中範圍≈命中數
 range_pct,射程,%,15,主要是安全距離
-gold_gain_pct,金幣獲得,%,12,經濟屬性：多抽約等同戰力
-xiuwei_gain_pct,修為獲得,%,15,角色精進更快
+gold_gain_pct,銀兩獲得,%,12,經濟屬性：多抽約等同戰力
+xiuwei_gain_pct,真氣獲得,%,15,衝穴更快
 pickup_range_pct,拾取範圍,%,40,便利性為主
 luck,幸運,值,0.1,幸運0.1 → 絕世權重 ×1.15（高幸運非線性，需模擬）
