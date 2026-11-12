@@ -20,6 +20,8 @@
 | 11-merchant.svg 商人 | `shop_ui.gd` `open_merchant` |
 | 12-meridian.svg 奇經八脈・衝穴（A 案：正背面人形） | 待定稿（K 鍵） |
 | 12b-meridian-scroll.svg 奇經八脈・衝穴（B 案：古卷打坐圖） | 待定稿 |
+| 12c-meridian-pose.svg 奇經八脈・衝穴（C 案：一脈一式剪影＋星圖） | 待定稿 |
+| 12d-meridian-poses.svg 八脈八式一覽 | C 案的招式表 |
 | 13-bow-aim.svg 弓・拉弓與瞄準 | 待實作（`hud.gd` 準星） |
 
 ## 語彙
