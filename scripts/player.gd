@@ -56,6 +56,7 @@ var bow_t := 0.0                   # 這一箭按住多久
 var bow_held := false
 var aim := 0.0                     # 瞄準程度 0~1（平滑過渡）
 var arrow_speed_mult := 1.0        # 滿弓箭速較快
+var arrow_spread_deg := 0.0        # 這一箭的散射半角；拉越滿越小
 const BASE_FOV := 80.0
 
 
@@ -194,6 +195,21 @@ func bow_draw() -> float:
 	return clampf((bow_t - load_s) / (iv * Data.cfg("bow_draw_frac")), 0.0, 1.0)
 
 
+func bow_spread_deg(draw := -1.0) -> float:
+	## 箭的散射半角（度）：拉越滿越小，瞄準時再縮小。HUD 的紅圈就畫這個範圍
+	if draw < 0.0:
+		draw = bow_draw()
+	var deg := lerpf(Data.cfg("bow_spread_max_deg"), Data.cfg("bow_spread_min_deg"), clampf(draw, 0.0, 1.0))
+	return deg * lerpf(1.0, Data.cfg("bow_aim_spread_mult"), aim)
+
+
+func _spread_dir(d: Vector3, half_deg: float) -> Vector3:
+	## 在半角 half_deg 的圓錐內均勻取一個方向
+	var r := tan(deg_to_rad(half_deg)) * sqrt(randf())
+	var th := randf() * TAU
+	return (d + (cam.global_basis.x * cos(th) + cam.global_basis.y * sin(th)) * r).normalized()
+
+
 func _bow_update(a: int, delta: float) -> void:
 	var view = weapon_models[a]
 	var pressed := input_enabled and Input.is_action_pressed("attack_1")
@@ -229,11 +245,14 @@ func _release_arrow(a: int, draw: float) -> void:
 	var mult := lerpf(lo, 1.0, clampf((draw - mn) / (1.0 - mn), 0.0, 1.0))
 	var dmg := Game.weapon_hit_dmg(w.id, int(w.lv)) * mult
 	var speed_mult := lerpf(1.0, Data.cfg("bow_full_speed"), draw)
+	var spread := bow_spread_deg(draw)
 	view.bow_release(recover, func(beat: int):
 		if is_instance_valid(view) and weapon_models[a] == view and hp > 0:
 			arrow_speed_mult = speed_mult
+			arrow_spread_deg = spread
 			var r := _weapon_impact(a, row, dmg, beat)
 			arrow_speed_mult = 1.0
+			arrow_spread_deg = 0.0
 			return r
 		return false)
 
@@ -414,6 +433,8 @@ func _weapon_impact(slot: int, row: Dictionary, dmg: float, beat: int) -> bool:
 			var h := beat if staggered else index
 			var off := (h - (hits - 1) / 2.0) * spread
 			var d := fwd.rotated(Vector3.UP, off)
+			if arrow_spread_deg > 0.0:
+				d = _spread_dir(d, arrow_spread_deg)
 			var muzzle: Vector3 = weapon_models[slot].launch_position()
 			var aim_point := origin + d * range_m
 			var ray := PhysicsRayQueryParameters3D.create(origin,aim_point,5)

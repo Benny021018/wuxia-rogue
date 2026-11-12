@@ -31,3 +31,6 @@ bow_min_dmg,0.35,弓：剛過最低拉弓時的傷害倍率；拉滿為1.0，中
 bow_full_speed,1.4,弓：滿弓時箭速倍率（未拉滿時線性到1.0）
 bow_aim_fov,48,弓：右鍵瞄準時的視角（一般為80）
 bow_aim_move_mult,0.6,弓：瞄準時移動速度倍率
+bow_spread_max_deg,5,弓：剛開始拉弓時箭的散射半角（度）；紅圈大小就是這個範圍
+bow_spread_min_deg,0.6,弓：滿弓時的散射半角（度），紅圈縮到最小
+bow_aim_spread_mult,0.5,弓：右鍵瞄準時散射乘上此值
