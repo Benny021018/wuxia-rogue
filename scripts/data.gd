@@ -23,6 +23,7 @@ var bonds: Array = []
 var maps := {}              # map_id -> row
 var map_order: Array = []
 var enemies := {}           # enemy_id -> row
+var ranged_ai := {}         # enemy_id -> 遠程 AI 參數（ranged_ai.csv）
 var stages: Array = []      # index = stage-1
 var stage_report: Array = []
 var zones := {}             # "1".."20" -> layout
@@ -69,6 +70,8 @@ func _ready() -> void:
 	map_order.sort_custom(func(a, b): return int(maps[a].order) < int(maps[b].order))
 	for r in _csv("enemies"):
 		enemies[r.enemy_id] = r
+	for r in _csv("ranged_ai"):
+		ranged_ai[r.enemy_id] = r
 	for r in _csv("meridians"):
 		meridians[r.meridian_id] = r
 		meridian_order.append(r.meridian_id)

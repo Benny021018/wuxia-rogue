@@ -68,7 +68,7 @@ scripts/
   main.gd                 畫面流程：選單 → 角色 → 遊戲 → 結算
   world.gd                依 zones.json 搭灰盒地圖；鎖陣、分波出怪、破陣、悟道碑、換圖
   player.gd               第一人稱移動、主副武器切換、受傷流程、所有武學／門派／境界的戰鬥效果
-  enemy.gd                20 種敵人的 AI 與首領技能
+  enemy.gd                20 種敵人的 AI 與首領技能；遠程敵人（弓手、煉屍門徒、毒師）依 ranged_ai.csv 走位與起手
   projectile.gd           投射物（距離判定，不用物理）
   hazard.gd               毒池、毒霧、火、斷崖等持續傷害區
   fx.gd                   材質、浮動傷害數字、預警圈

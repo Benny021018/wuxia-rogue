@@ -627,30 +627,67 @@ func _check_draw(enemy, world) -> void:
 		if child.get_script() == preload("res://scripts/projectile.gd"):
 			shots.append(child)
 	world.child_entered_tree.connect(capture)
-	enemy._skill_cd = -5.0
+	var ai: Dictionary = enemy.ai
+	_check(ai.windup_s >= 1.0 and ai.lock_s > 0.2 and ai.lock_s < ai.windup_s, "弓手起手至少 1 秒，最後一段才鎖定")
+	_check(ai.cd_min_s >= 2.0 and ai.attack_chance < 1.0, "弓手出手間隔拉長，不會每次輪到就射")
+	ai.attack_chance = 1.0
+	enemy._aim_cd = 0.0
+	enemy._behaviour(.02, Vector3.FORWARD * 2, 2)
+	_check(enemy._rstate == "move" and enemy._draw < 0, "玩家貼身時不起手，先後撤")
+	enemy._aim_cd = 0.0
+	enemy._behaviour(.02, flat, 12)
+	_check(enemy._rstate == "aim" and shots.is_empty(), "舒適距離內起手拉弓")
 	enemy._behaviour(.35, flat, 12)
-	_check(shots.is_empty() and enemy._bow.arrow.visible, "進入射程時先搭箭")
-	enemy._behaviour(.02, flat, 24)
-	_check(enemy._draw < 0 and not enemy._bow.arrow.visible, "離開射程會收弓")
-	enemy._behaviour(.5, flat, 12)
+	_check(shots.is_empty() and enemy._bow.arrow.visible, "拉弓中先搭箭")
+	enemy._behaviour(ai.windup_s - ai.lock_s - .45, flat, 12)
+	_check(shots.is_empty() and not enemy._lock.is_finite(), "鎖定前不出手")
+	enemy._behaviour(.02, Vector3.FORWARD * 2, 2)
+	_check(enemy._rstate == "move" and enemy._draw < 0 and shots.is_empty(), "鎖定前被逼近會收弓後撤")
+	enemy._stun_t = 0.0
+	enemy._aim_cd = 0.0
+	enemy._behaviour(.02, flat, 12)
+	enemy._behaviour(.3, flat, 12)
 	enemy._stun_t = .05
 	enemy._physics_process(.05)
-	_check(enemy._draw < 0 and shots.is_empty(), "暈眩中斷引弓")
-	enemy._behaviour(.25, flat, 12)
+	_check(enemy._rstate == "move" and enemy._draw < 0 and shots.is_empty(), "暈眩中斷引弓")
+	enemy._stun_t = 0.0
+	enemy._aim_cd = 0.0
+	enemy._behaviour(.02, flat, 12)
 	var start_gap: float = enemy._bow.palm(0).distance_to(enemy._bow.palm(1))
-	enemy._behaviour(.88, flat, 12)
+	enemy._behaviour(ai.windup_s - ai.lock_s + .05, flat, 12)
 	var full_gap: float = enemy._bow.palm(0).distance_to(enemy._bow.palm(1))
-	_check(shots.is_empty() and full_gap > start_gap + .28, "滿弓時雙手拉開，箭仍在弦上")
-	var tip: Vector3 = enemy._bow.tip_position()
-	enemy._behaviour(.04, flat, 12)
-	_check(shots.size() == 1 and not enemy._bow.arrow.visible, "放弦只發射一支箭")
-	if shots.size() == 1:
-		_check(tip.distance_to(shots[0].global_position) < .035, "飛箭與弦上箭頭對齊")
-	enemy._behaviour(.65, flat, 12)
-	_check(enemy._draw < 0 and shots.size() == 1, "收勢不會重複發射")
+	_check(shots.is_empty() and enemy._lock.is_finite() and full_gap > start_gap + .2, "鎖定時弓已拉開、方向固定，箭仍在弦上")
+	enemy._behaviour(.02, Vector3.FORWARD * 2, 2)
+	_check(enemy._rstate == "aim", "鎖定後即使被逼近也照樣放箭（給玩家閃避的窗口）")
+	enemy._behaviour(ai.lock_s, flat, 12)
+	_check(shots.size() == 1 and enemy._rstate == "recover", "放弦只發射一支箭")
+	enemy._behaviour(ai.recover_s + .02, flat, 12)
+	_check(enemy._rstate == "move" and enemy._draw < 0 and shots.size() == 1, "收勢不會重複發射")
+	_check(enemy._aim_cd >= ai.cd_min_s - .01, "收勢後至少等 %.1f 秒才再起手" % ai.cd_min_s)
+	# 走位：太近後撤、太遠靠近、舒適距離橫移
+	enemy._reposition(.02, Vector3.FORWARD * 3, 3, false)
+	_check(enemy.velocity.dot(Vector3.FORWARD) < 0, "玩家靠近時拉開距離")
+	enemy._reposition(.02, Vector3.FORWARD * 26, 26, false)
+	_check(enemy.velocity.dot(Vector3.FORWARD) > 0, "超出射程時靠近")
+	enemy._reposition(.02, Vector3.FORWARD * ai.pref_m, ai.pref_m, false)
+	var v: Vector3 = enemy.velocity
+	_check(absf(v.x) > absf(v.z), "在舒適距離繞著玩家橫移")
 	world.child_entered_tree.disconnect(capture)
 	for shot in shots:
 		shot.queue_free()
+	# 同時拉弓的上限
+	var squad: Array = []
+	for i in 3:
+		var e = world.spawn_enemy("H02", Vector3(-10 + i, 0, 2), false)
+		e.ai.attack_chance = 1.0
+		squad.append(e)
+	squad[0]._rstate = "aim"
+	squad[1]._rstate = "aim"
+	squad[2]._aim_cd = 0.0
+	squad[2]._behaviour(.02, flat, 12)
+	_check(squad[2]._rstate == "move", "已有 %d 名遠程在拉弓時，其他人先走位" % int(Data.cfg("ai_ranged_max_aiming")))
+	for e in squad:
+		e.queue_free()
 
 
 func _check_cover_tactics(world, player) -> void:
@@ -661,9 +698,10 @@ func _check_cover_tactics(world, player) -> void:
 	world.current = 0
 	player.global_position = Vector3(33,.1,0)
 	var archer = world.spawn_enemy("H02",Vector3(26,0,0),false)
-	archer._skill_cd = 0
+	archer._aim_cd = 0
+	archer.ai.attack_chance = 1.0
 	await _frames(3)
-	_check(not archer._clear_shot() and archer._draw < 0 and archer.velocity.slide(Vector3.UP).length() > .1, "隔著路障先換位，不原地拉弓")
+	_check(not archer._clear_shot() and archer._rstate == "move" and archer.velocity.slide(Vector3.UP).length() > .1, "隔著路障先換位，不原地拉弓")
 	var bolt = preload("res://scripts/projectile.gd").new()
 	world.add_child(bolt)
 	bolt.global_position = Vector3(26,1,0)

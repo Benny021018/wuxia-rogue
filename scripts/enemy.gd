@@ -71,6 +71,16 @@ var _route := PackedVector2Array()
 var _route_target := Vector2.INF
 var _route_retry := 0.0
 var _armor := 0.0
+# 遠程 AI（ranged_ai.csv）：走位 → 起手（可讀的蓄力）→ 鎖定 → 出手 → 收勢
+var ai := {}                        # 數值副本，測試可個別調整
+var _rstate := ""                   # "move", "aim", "recover"
+var _rt := 0.0
+var _aim_cd := 0.0
+var _strafe := 1.0
+var _strafe_t := 0.0
+var _lock := Vector3.INF
+var _last_pos := Vector3.ZERO
+var _stuck_t := 0.0
 
 
 func setup(id: String, stg: int, w, pos: Vector3) -> void:
@@ -94,6 +104,15 @@ func setup(id: String, stg: int, w, pos: Vector3) -> void:
 		_armor = 15.0 * pow(Data.cfg("enemy_hp_growth"), stg - 1)
 	hit_radius = 0.45 * size
 	position = pos
+	if Data.ranged_ai.has(id):
+		var r: Dictionary = Data.ranged_ai[id]
+		for k in r:
+			if k != "enemy_id" and k != "note":
+				ai[k] = float(r[k])
+		_rstate = "move"
+		_aim_cd = ai.first_delay_s + randf() * 0.8
+		_strafe = 1.0 if randf() < 0.5 else -1.0
+		_strafe_t = randf_range(0.5, 1.0) * ai.strafe_s
 
 
 func _ready() -> void:
@@ -202,8 +221,9 @@ func _physics_process(delta: float) -> void:
 	_route_retry -= delta
 	_tick_status(delta)
 	if _stun_t > 0.0:
+		if _rstate == "aim" or _rstate == "recover":
+			_ranged_cancel(0.6)
 		if _bow:
-			_cancel_draw()
 			_bow.pose(-1, player.global_position + Vector3.UP)
 		_stun_t -= delta
 		velocity.x = 0
@@ -214,7 +234,7 @@ func _physics_process(delta: float) -> void:
 	var to_p: Vector3 = player.global_position - global_position
 	var flat := Vector3(to_p.x, 0, to_p.z)
 	var dist := flat.length()
-	if _state == "" and _windup <= 0:
+	if _state == "" and _windup <= 0 and not _lock.is_finite():
 		if dist > 0.05:
 			rotation.y = atan2(-flat.x, -flat.z)
 	_behaviour(delta, flat, dist)
@@ -386,40 +406,157 @@ func _cancel_draw() -> void:
 		_body_mat.emission_enabled = false
 		_anim.play(&"Idle", .10)
 
-func _archery(delta: float, flat: Vector3, dist: float) -> void:
+# ------------------------------------------------------------------ 遠程 AI
+func _ranged_cancel(retry: float) -> void:
+	_cancel_draw()
+	_body_mat.emission_enabled = false
+	_lock = Vector3.INF
+	_rstate = "move"
+	_aim_cd = maxf(_aim_cd, retry)
+
+
+func _aiming_count() -> int:
+	var n := 0
+	for e in get_tree().get_nodes_in_group("enemies"):
+		if e != self and not e.dead and e._rstate == "aim":
+			n += 1
+	return n
+
+
+func _ranged(delta: float, flat: Vector3, dist: float) -> void:
 	var target: Vector3 = player.global_position + Vector3.UP
 	var blocked := not _clear_shot()
-	if (dist >= 22.0 or blocked) and _draw < Bow.RELEASE:
-		_cancel_draw()
-	if _draw < 0.0:
-		if blocked or dist >= 22.0 or _skill_cd > Bow.RELEASE:
-			_chase(flat, dist, 10.0, blocked)
-			_bow.pose(-1.0, target)
+	match _rstate:
+		"aim":
+			velocity.x = 0
+			velocity.z = 0
+			_rt += delta
+			var locked: bool = _rt >= ai.windup_s - ai.lock_s
+			# 鎖定前：被逼近、斷了視線或超出射程就收手後撤；鎖定後一定出手（玩家看到紅光就該閃）。
+			if not locked and (blocked or dist > ai.max_m or dist < ai.panic_m):
+				_ranged_cancel(0.5)
+				return
+			if locked and not _lock.is_finite():
+				_lock = player.global_position
+			var aim_at: Vector3 = _lock + Vector3.UP if locked else target
+			var f := aim_at - global_position
+			if Vector2(f.x, f.z).length() > 0.05:
+				rotation.y = atan2(-f.x, -f.z)
+			var k: float = clampf(_rt / ai.windup_s, 0.0, 1.0)
+			_body_mat.emission_enabled = true
+			_body_mat.emission = Color(1.0, 0.12, 0.08) if locked else Color(.85, .58, .18) * (0.35 + 0.65 * k)
+			if _bow:
+				_draw = k * Bow.RELEASE
+				_anim.seek(_draw, true)
+				_bow.pose(_draw, aim_at)
+			if _rt >= ai.windup_s:
+				_ranged_fire(dist)
+				_rstate = "recover"
+				_rt = 0.0
+				_body_mat.emission_enabled = false
 			return
-		_draw = 0.0
-		_anim.play(&"Shoot")
-		_anim.pause()
-	velocity.x = 0
-	velocity.z = 0
-	var prev := _draw
-	_draw += delta
-	if prev < Bow.RELEASE and _draw >= Bow.RELEASE:
-		_anim.seek(Bow.RELEASE,true)
-		_bow.pose(Bow.RELEASE,target)
-		_shoot(24.0, dmg, Color(0.9,0.8,0.5), false, _bow.tip_position())
-		_skill_cd = 2.0
-	_anim.seek(_draw,true)
-	_bow.pose(_draw,target)
-	_body_mat.emission_enabled = _draw >= Bow.RELEASE - .3 and _draw < Bow.RELEASE
-	_body_mat.emission = Color(.85,.58,.18)
-	if _draw >= Bow.FINISH:
-		_cancel_draw()
+		"recover":
+			velocity.x = 0
+			velocity.z = 0
+			_rt += delta
+			if _bow:
+				_draw = Bow.RELEASE + (_rt / ai.recover_s) * (Bow.FINISH - Bow.RELEASE)
+				_anim.seek(minf(_draw, Bow.FINISH), true)
+				_bow.pose(_draw, _lock + Vector3.UP)
+			if _rt >= ai.recover_s:
+				_cancel_draw()
+				_lock = Vector3.INF
+				_rstate = "move"
+				_aim_cd = randf_range(ai.cd_min_s, ai.cd_max_s)
+			return
+	# 走位
+	_aim_cd -= delta
+	if _bow:
+		_bow.pose(-1.0, target)
+	_reposition(delta, flat, dist, blocked)
+	var cornered: bool = _stuck_t > 0.5 and dist < ai.min_m
+	if _aim_cd <= 0.0:
+		var in_band: bool = dist <= ai.max_m and (dist >= ai.panic_m or cornered)
+		if blocked or not in_band:
+			_aim_cd = 0.25
+		elif _aiming_count() >= int(Data.cfg("ai_ranged_max_aiming")) or randf() > ai.attack_chance:
+			_aim_cd = randf_range(Data.cfg("ai_ranged_retry_min"), Data.cfg("ai_ranged_retry_max"))
+		else:
+			_rstate = "aim"
+			_rt = 0.0
+			_lock = Vector3.INF
+			velocity.x = 0
+			velocity.z = 0
+			if _bow:
+				_draw = 0.0
+				_anim.play(&"Shoot")
+				_anim.pause()
 
-func _shoot(speed_mps: float, amount: float, color: Color, cloud := false, arrow_tip := Vector3.INF) -> void:
+
+# 依距離決定走位：太近後撤（退不動就橫移）、太遠或被擋住就靠近、在舒適距離內繞著玩家橫移。
+func _reposition(delta: float, flat: Vector3, dist: float, blocked: bool) -> void:
+	var toward := flat.normalized() if dist > 0.01 else Vector3.FORWARD
+	var side := Vector3(-toward.z, 0, toward.x) * _strafe
+	_strafe_t -= delta
+	if _strafe_t <= 0.0:
+		_strafe = -_strafe
+		_strafe_t = randf_range(0.7, 1.3) * ai.strafe_s
+	var moved := Vector2(global_position.x - _last_pos.x, global_position.z - _last_pos.z).length()
+	_last_pos = global_position
+	var want := Vector3.ZERO
+	var mult := 1.0
+	if blocked:
+		_chase(flat, dist, ai.pref_m, true)
+		return
+	if dist < ai.min_m:
+		want = -toward + side * (0.6 if _stuck_t > 0.4 else 0.25)
+		mult = ai.retreat_mult
+	elif dist > ai.max_m:
+		want = toward
+	elif dist > ai.pref_m + 2.0:
+		want = toward * 0.7 + side * 0.5
+	else:
+		var drift := clampf((dist - ai.pref_m) / 2.0, -1.0, 1.0)
+		want = side * 0.8 + toward * drift * 0.4
+		mult = 0.7
+	if want.is_zero_approx():
+		velocity.x = 0
+		velocity.z = 0
+		return
+	want = want.normalized()
+	var here := Vector2(global_position.x, global_position.z)
+	var step := _ground_direction(here + Vector2(want.x, want.z) * 3.0)
+	var dir := Vector3(step.x, 0, step.y)
+	if dir.is_zero_approx() or (moved < _speed() * delta * 0.2 and velocity.length() > 0.1):
+		_stuck_t += delta
+		if _stuck_t > 0.4:
+			_strafe = -_strafe
+			_strafe_t = ai.strafe_s
+	else:
+		_stuck_t = maxf(0.0, _stuck_t - delta)
+	dir = (dir + _separation() * 0.8).limit_length()
+	velocity.x = dir.x * _speed() * mult
+	velocity.z = dir.z * _speed() * mult
+
+
+func _ranged_fire(dist: float) -> void:
+	var at: Vector3 = _lock if _lock.is_finite() else player.global_position
+	match eid:
+		"H02":
+			_bow.pose(Bow.RELEASE, at + Vector3.UP)
+			_shoot(24.0, dmg, Color(0.9,0.8,0.5), false, _bow.tip_position(), at)
+		"H04":
+			_shoot(14.0, dmg, Color(0.4, 0.9, 0.3), false, Vector3.INF, at)
+		"H05":
+			_shoot(12.0, dmg * 0.6, Color(0.3, 0.8, 0.2), true, Vector3.INF, at)
+
+
+func _shoot(speed_mps: float, amount: float, color: Color, cloud := false, arrow_tip := Vector3.INF, at := Vector3.INF) -> void:
 	var p := PROJ.new()
 	world.add_child(p)
 	var from := global_position + Vector3(0, 1.3 * size, 0)
-	var target: Vector3 = player.global_position + Vector3(0, 1.0, 0)
+	var ground: Vector3 = at if at.is_finite() else player.global_position
+	var target: Vector3 = ground + Vector3(0, 1.0, 0)
 	if arrow_tip.is_finite():
 		from = arrow_tip
 	p.global_position = from
@@ -432,7 +569,7 @@ func _shoot(speed_mps: float, amount: float, color: Color, cloud := false, arrow
 	p.source = self
 	if cloud:
 		p.poison_cloud = true
-		p.target_pos = Vector3(player.global_position.x, 0.2, player.global_position.z)
+		p.target_pos = Vector3(ground.x, 0.2, ground.z)
 		p.direction = (p.target_pos - from).normalized()
 		p.max_range = from.distance_to(p.target_pos)
 	if arrow_tip.is_finite():
@@ -500,22 +637,14 @@ func _behaviour(delta: float, flat: Vector3, dist: float) -> void:
 			_chase(flat, dist)
 			_melee(delta, dist)
 		"H02":
-			_archery(delta, flat, dist)
+			_ranged(delta, flat, dist)
 		"H04":
-			var blocked := not _clear_shot()
-			_chase(flat, dist, 8.0, blocked)
-			if not blocked and _skill_cd <= 0.0 and dist < 18.0:
-				_skill_cd = 2.5
-				_shoot(14.0, dmg, Color(0.4, 0.9, 0.3))
+			_ranged(delta, flat, dist)
 			if _skill2_cd <= 0.0:
 				_skill2_cd = 6.0
 				_raise_corpse()
 		"H05":
-			var blocked := not _clear_shot()
-			_chase(flat, dist, 8.0, blocked)
-			if not blocked and _skill_cd <= 0.0 and dist < 16.0:
-				_skill_cd = 4.0
-				_shoot(12.0, dmg * 0.6, Color(0.3, 0.8, 0.2), true)
+			_ranged(delta, flat, dist)
 		"H06":
 			if not _revealed and dist < 3.0:
 				_revealed = true
