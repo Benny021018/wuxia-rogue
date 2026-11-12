@@ -26,7 +26,7 @@ func _ready() -> void:
 	var player = main.player
 	player.invuln_t = 1.0e9
 	Game.gold = 236
-	Game.free_draws = 1
+	Game.shrine_charges = 1
 	Game.weapons[1] = {"id": "W007", "lv": 1}
 	Game.weapons[0].lv = 3
 	for pair in [["M007", 2], ["M006", 1], ["M002", 3]]:

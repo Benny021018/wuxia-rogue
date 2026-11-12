@@ -45,6 +45,8 @@ func _run_character(cid: String) -> void:
 	if cid == Data.char_order[0]:
 		await _check_weapon_views(player)
 		await _check_loot_and_shops(world, player)
+		_check_meridians_and_shrine()
+		await _check_bow(player)
 		await _check_cover_tactics(world, player)
 		await _check_hit_reactions(world)
 		var gate = world.rooms[0].gate_out
@@ -144,7 +146,12 @@ func _run_character(cid: String) -> void:
 	for mid in Data.martial:
 		Game.martial[mid] = 5
 		Game.martial_order.append(mid)
-	Game.add_xiuwei(1.0e7)
+	Game.zhenqi = 1.0e9
+	for mid in Data.meridian_order:
+		var guard := 0
+		while not Game.next_point(mid).is_empty() and guard < 60:
+			guard += 1
+			Game.try_break(mid)
 	Game.recompute()
 	world.build_map(0)
 	await _frames(3)
@@ -239,6 +246,92 @@ func _run_character(cid: String) -> void:
 	print("SMOKE_OK ", cid)
 	main._to_menu()
 	await _frames(3)
+
+
+func _check_meridians_and_shrine() -> void:
+	var keep := [Game.zhenqi, Game.acu_open.duplicate(), Game.acu_fails.duplicate(), Game.level, Game.gold, Game.shrine_charges, Game.refreshes_this_stage, Game.free_draws]
+	# 真氣與衝穴
+	Game.acu_open = {}
+	Game.acu_fails = {}
+	Game.level = 1
+	Game.zhenqi = 0.0
+	Game.recompute()
+	_check(Data.meridian_order.size() == 8 and Data.meridian_len("du") == 4, "奇經八脈各四個穴位")
+	_check(Game.try_break("du") == -1, "真氣不夠時不能衝穴")
+	var pid: String = Game.next_point("du").point_id
+	var c0 := Game.break_chance(pid)
+	Game.acu_fails[pid] = 2
+	_check(is_equal_approx(Game.break_chance(pid), minf(1.0, c0 + 2.0 * float(Data.meridian_cfg.chance_step))), "同一穴位衝擊越多次成功率越高")
+	Game.acu_fails = {}
+	var dmg0 := Game.st("dmg_pct")
+	Game.zhenqi = 1.0e9
+	var tries := 0
+	while Game.acu_level("du") < 1 and tries < 20:
+		tries += 1
+		Game.try_break("du")
+	_check(Game.acu_level("du") == 1 and Game.st("dmg_pct") > dmg0 and Game.level == 2, "打通長強：傷害提升、境界進一重")
+	for mid in Data.meridian_order:
+		var guard := 0
+		while not Game.next_point(mid).is_empty() and guard < 60:
+			guard += 1
+			Game.try_break(mid)
+	_check(Game.acu_total() == 32 and Game.ren_du_open() and Game.realm_name(Game.level) == "化境", "奇經八脈全通、打通任督二脈、境界化境")
+	# 悟道碑：每區免費參悟、刷新花銀兩
+	Game.shrine_charges = 0
+	Game.free_draws = 0
+	Game.on_zone_cleared()
+	var n := Game.draws_left()
+	_check(n >= 1 and Game.take_draw() and Game.draws_left() == n - 1, "破陣後悟道碑可免費參悟")
+	Game.gold = 1000.0
+	var r0 := Game.refresh_cost()
+	_check(Game.pay_refresh() and Game.refresh_cost() > r0 and Game.gold <= 1000.0, "刷新候選花銀兩，同區越刷越貴")
+	Game.zhenqi = keep[0]
+	Game.acu_open = keep[1]
+	Game.acu_fails = keep[2]
+	Game.level = keep[3]
+	Game.gold = keep[4]
+	Game.shrine_charges = keep[5]
+	Game.refreshes_this_stage = keep[6]
+	Game.free_draws = keep[7]
+	Game.recompute()
+
+
+func _check_bow(player) -> void:
+	var keep: Array = Game.weapons.duplicate(true)
+	var keep_slot := Game.active_weapon
+	Game.weapons = [Game.make_weapon("W007", 0), null]
+	Game.active_weapon = 0
+	Game.recompute()
+	player.refresh_weapon_models()
+	player.cooldowns = [0.0, 0.0]
+	await _frames(2)
+	_check(player.is_bow(), "弓走拉弓流程")
+	var shots: int = player.attack_count
+	Input.action_press("aim")
+	Input.action_press("attack_1")
+	await _frames(50)
+	_check(player.bow_held and player.bow_draw() > 0.5, "按住左鍵拉弓")
+	_check(player.cam.fov < 60.0, "右鍵瞄準視角放大")
+	_check(player.attack_count == shots, "拉弓中還沒射出")
+	Input.action_release("attack_1")
+	await _frames(2)
+	_check(player.attack_count == shots + 1 and not player.bow_held, "放開左鍵射出")
+	Input.action_release("aim")
+	await _frames(20)
+	_check(player.cam.fov > 79.0, "放開右鍵視角恢復")
+	# 拉不夠就放開：不射
+	player.cooldowns = [0.0, 0.0]
+	await _frames(30)
+	Input.action_press("attack_1")
+	await _frames(3)
+	Input.action_release("attack_1")
+	await _frames(2)
+	_check(player.attack_count == shots + 1, "拉弓不足就放開不會射出")
+	await _frames(20)
+	Game.weapons = keep
+	Game.active_weapon = keep_slot
+	Game.recompute()
+	player.refresh_weapon_models()
 
 
 func _check_loot_and_shops(world, player) -> void:

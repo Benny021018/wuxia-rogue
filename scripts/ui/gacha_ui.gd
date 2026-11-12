@@ -1,5 +1,5 @@
 extends Control
-## 悟道碑・參悟：花銀兩三選一（武器或武學），可再悟（重抽）
+## 悟道碑・參悟：每區免費三選一（武器或武學），可花銀兩刷新候選
 ## 版面對照 docs/ui-drafts/04-shrine.svg
 
 signal closed
@@ -42,10 +42,10 @@ func _ready() -> void:
 	_at(cards_root, 0, 0, 1600, 900)
 	draw_btn = UIKit.button("參悟", _on_draw, 22, 200, 50)
 	_at(draw_btn, 470, 836, 200, 50)
-	reroll_btn = UIKit.button("再悟", _on_reroll, 22, 200, 50)
+	reroll_btn = UIKit.button("刷新", _on_reroll, 22, 200, 50)
 	_at(reroll_btn, 700, 836, 200, 50)
 	_at(UIKit.button("離開悟道碑", _on_close, 20, 200, 50), 930, 836, 200, 50)
-	_at(UIKit.label("已習得的武學再次出現會升級；同門派武學越多，越容易參悟到該門派", 13, UIKit.GREY, HORIZONTAL_ALIGNMENT_RIGHT), 1000, 876, 580, 22, 1, 1)
+	_at(UIKit.label("參悟免費，每次破陣可參悟一次；不滿意候選可花銀兩刷新", 13, UIKit.GREY, HORIZONTAL_ALIGNMENT_RIGHT), 1000, 876, 580, 22, 1, 1)
 
 
 func _at(c: Control, x: float, y: float, w: float, h: float, ax := 0.5, ay := 0.5) -> Control:
@@ -62,15 +62,15 @@ func _refresh() -> void:
 	for c in cards_root.get_children():
 		cards_root.remove_child(c)
 		c.queue_free()
-	var cost := Game.draw_cost()
-	cost_label.text = "參悟費用 %d 銀兩　｜　持有 %d 銀兩%s" % [cost, int(Game.gold), ("　｜　免費參悟 ×%d" % Game.free_draws) if Game.free_draws > 0 else ""]
+	cost_label.text = "可參悟 %d 次　｜　持有 %d 銀兩" % [Game.draws_left(), int(Game.gold)]
 	pity_bar.value = Game.since_legendary
 	pity_label.text = "%d / %d 未遇絕世　幸運 %.2f" % [Game.since_legendary, int(Data.gacha.hard_pity), Game.st("luck")]
-	draw_btn.disabled = not current.is_empty() or not Game.can_afford(cost)
-	reroll_btn.disabled = current.is_empty() or Game.gold < Game.reroll_cost()
-	reroll_btn.text = "再悟（%d）" % Game.reroll_cost()
+	draw_btn.disabled = not current.is_empty() or Game.draws_left() <= 0
+	reroll_btn.disabled = current.is_empty() or Game.gold < Game.refresh_cost()
+	reroll_btn.text = "刷新（%d 兩）" % Game.refresh_cost()
 	if current.is_empty():
-		var hint := UIKit.box_text("narration", "按下「參悟」，從天機中領悟三選一。", 26)
+		var msg := "按下「參悟」，從天機中領悟三選一。" if Game.draws_left() > 0 else "本區的參悟已用完，破下一陣再來。"
+		var hint := UIKit.box_text("narration", msg, 26)
 		UIKit.place(hint, 0, 0, 450, 470, 700, 90)
 		cards_root.add_child(hint)
 		(func():
@@ -173,20 +173,16 @@ func _card(c: Dictionary, cx: float) -> void:
 
 
 func _on_draw() -> void:
-	if not Game.pay(Game.draw_cost()):
+	if not Game.take_draw():
 		return
 	current = Game.roll_choices()
 	_refresh()
 
 
 func _on_reroll() -> void:
-	var c := Game.reroll_cost()
-	if Game.gold < c:
+	if not Game.pay_refresh():
 		return
-	Game.gold -= c
-	Game.gold_changed.emit()
 	current = Game.roll_choices()
-	Game.draws_this_stage -= 1      # 再悟不推高下一次參悟的價格
 	_refresh()
 
 

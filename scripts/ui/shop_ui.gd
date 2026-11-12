@@ -141,8 +141,8 @@ func _smith_slot(slot: int, x: float) -> void:
 	_put(UIKit.label("淬煉 +%d" % lv if lv < Game.MAX_LV else "器靈覺醒", 18, UIKit.EMBER), x + 330, y + 166, 160, 26)
 	# 強化
 	var up_cost := Game.upgrade_cost(slot)
-	var d0 := roundi(float(row.dmg) * (1.0 + 0.15 * (lv - 1)))
-	var info := "淬煉 +%d → +%d\n每段傷害 %d → %d" % [lv, lv + 1, d0, roundi(float(row.dmg) * (1.0 + 0.15 * lv))] if up_cost >= 0 else "已達器靈覺醒\n每段傷害 %d" % d0
+	var d0 := roundi(Game.weapon_hit_dmg(w.id, lv))
+	var info := "淬煉 +%d → +%d\n每段傷害 %d → %d" % [lv, lv + 1, d0, roundi(Game.weapon_hit_dmg(w.id, lv + 1))] if up_cost >= 0 else "已達器靈覺醒\n每段傷害 %d" % d0
 	var box := UIKit.box_text("system", info, 18, "強化", HORIZONTAL_ALIGNMENT_LEFT)
 	box.set_padding(12, 20)
 	_put(box, x + 30, y + 224, cw - 60, 92)

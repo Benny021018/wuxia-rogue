@@ -467,7 +467,7 @@ func _clear_zone() -> void:
 	state = "cleared"
 	var r: Dictionary = rooms[current]
 	_set_gate(r.gate_out, false)
-	Game.draws_this_stage = 0
+	Game.on_zone_cleared()
 	if r.stage < Data.stages.size():
 		shrine_node = Node3D.new()
 		add_child(shrine_node)

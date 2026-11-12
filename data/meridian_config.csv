@@ -1,0 +1,8 @@
+key,value,note
+chance_step,0.20,同一穴位每衝擊失敗一次，下次成功率+此值（累積到100%為止）
+cost_a,28,衝穴一次耗費真氣：round(cost_a×(已通穴數+1)^cost_exp + cost_b)
+cost_exp,0.9,真氣耗費成長指數
+cost_b,0,真氣耗費常數；前期便宜、後期與舊版修為曲線相當
+fail_refund,0,衝穴失敗退還的真氣比例（0＝全部耗去，換到下次更高成功率）
+ren_du_stat,dmg_pct|max_hp_pct,打通任督二脈（任脈、督脈都全通）的額外加成屬性
+ren_du_points,2|2,打通任督二脈額外加成的戰力點

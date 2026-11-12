@@ -123,7 +123,7 @@ func show_help(from_pause := false) -> void:
 		"破陣後悟道碑浮現，花銀兩參悟三選一：武器決定攻擊方式，武學強化自身。\n" +
 		"武器分主武器與副武器，同時只用一把，可隨時切換。\n" +
 		"重複參悟同一門武學會升級，Lv3 小成、Lv5 圓滿各有特殊效果。\n" +
-		"同門派武學達 2／4／5 門啟動門派傳承。擊敗敵人累積修為，突破一流、絕頂、化境。", 21, "", HORIZONTAL_ALIGNMENT_LEFT), 210, 400, 1180, 250)
+		"同門派武學達 2／4／5 門啟動門派傳承。擊敗敵人吸納真氣，按 K 衝擊奇經八脈的穴位，打通越多境界越高。", 21, "", HORIZONTAL_ALIGNMENT_LEFT), 210, 400, 1180, 250)
 	var back := UIKit.button("返回", show_pause if from_pause else show_main, 22, 200, 50)
 	_at(back, 700, 700, 200, 50)
 	_focus_first(back)

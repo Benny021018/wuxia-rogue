@@ -5,7 +5,8 @@ const FEATURED_WEAPONS := ["W001","W007","W301"]
 
 signal stats_changed
 signal gold_changed
-signal xiuwei_changed
+signal zhenqi_changed
+signal acupoint_tried(point_id: String, ok: bool)
 signal leveled_up(level: int)
 signal realm_broken(level: int, realm_name: String, effect: String)
 signal martial_breakthrough(mid: String, lv: int, desc: String)
@@ -17,7 +18,11 @@ const MAX_LV := 5
 
 var char_id := "nangong"
 var level := 1
-var xiuwei := 0.0
+var zhenqi := 0.0                      # 真氣：殺敵吸納，用來衝穴
+var acu_open := {}                     # meridian_id -> 已依序打通的穴數
+var acu_fails := {}                    # point_id -> 衝擊失敗次數（越多次成功率越高）
+var shrine_charges := 0                # 本區悟道碑剩下的免費參悟
+var refreshes_this_stage := 0
 var gold := 0.0
 var weapons: Array = [null, null]      # 0＝主武器、1＝副武器，每格 {id, lv, affixes, reforges}
 var active_weapon := 0                 # 目前手上的武器格；同時只用一把
@@ -52,7 +57,11 @@ func _process(delta: float) -> void:
 func new_run(cid: String, start_wid := "") -> void:
 	char_id = cid
 	level = 1
-	xiuwei = 0.0
+	zhenqi = 0.0
+	acu_open = {}
+	acu_fails = {}
+	shrine_charges = 0
+	refreshes_this_stage = 0
 	gold = 0.0
 	martial = {}
 	martial_order = []
@@ -103,6 +112,20 @@ func recompute() -> void:
 				["tang", 10]: _flag("vs_poison_dmg", 20)
 				["tang", 20]: _flag("poison_spread", 1)
 				["tang", 30]: _flag("extra_choice", 1)
+	# 經脈：打通的穴位、整條全通的加成、打通任督二脈
+	for mid in acu_open:
+		var n := acu_level(mid)
+		for d in range(1, n + 1):
+			var a: Dictionary = Data.acupoint(mid, d)
+			s[a.stat_id] += float(a.value)
+		if n >= Data.meridian_len(mid):
+			var m: Dictionary = Data.meridians[mid]
+			s[m.bonus_stat] += float(m.bonus_value)
+	if ren_du_open():
+		var sts := String(Data.meridian_cfg.ren_du_stat).split("|")
+		var pts := String(Data.meridian_cfg.ren_du_points).split("|")
+		for i in sts.size():
+			s[sts[i]] += float(pts[i]) * float(Data.stat_values[sts[i]])
 	# 手上那把武器的詞條（收起的武器不生效）
 	var held = current_weapon()
 	if held != null:
@@ -200,7 +223,7 @@ func _apply_breakthrough(mid: String, tier: int, s: Dictionary) -> void:
 		["M108", 5]: _flag("block_chance", 20)
 		["M109", 5]: _flag("near_cap20", 1)
 		["M110", 3]: _flag("reroll_discount", 0.5)
-		["M110", 5]: _flag("cost_growth_override", 0.08)
+		["M110", 5]: _flag("cost_growth_override", 0.25)
 		["M111", 3]: s.move_speed_pct += 13
 		["M112", 3]: _flag("vs_slowed_dmg", 25)
 		["M201", 3]: _flag("sword_qi_count", 1)
@@ -296,6 +319,11 @@ static func starter_weapons() -> Array:
 
 
 # ------------------------------------------------------------------ 武器詞條與掉落
+func weapon_hit_dmg(wid: String, lv: int) -> float:
+	## 武器單段傷害（含淬煉，每級 +weapon_levelup_pct%）
+	return float(Data.weapons[wid].dmg) * (1.0 + float(Data.gacha.weapon_levelup_pct) / 100.0 * (lv - 1))
+
+
 func make_weapon(wid: String, affix_n: int) -> Dictionary:
 	return {"id": wid, "lv": 1, "affixes": roll_affixes(wid, affix_n), "reforges": 0}
 
@@ -356,18 +384,9 @@ func roll_weapon_drop(rank: String) -> Dictionary:
 	var chance := Data.cfg("drop_chance_" + rank) * (1.0 + st("luck") * Data.cfg("drop_luck_scale"))
 	if rng.randf() >= chance:
 		return {}
-	var rw := base_rarity_weights()
-	var per_rarity := {}
-	for wid in FEATURED_WEAPONS:
-		var r: String = Data.weapons[wid].rarity
-		per_rarity[r] = int(per_rarity.get(r, 0)) + 1
-	var ids: Array = []
-	var weights: Array = []
-	for wid in FEATURED_WEAPONS:
-		var r: String = Data.weapons[wid].rarity
-		ids.append(wid)
-		weights.append(float(rw[Data.rarity_order.find(r)]) / float(per_rarity[r]))
-	return make_weapon(_pick_weighted(ids, weights), affix_count(rank))
+	# 武器不分品質：三把起手武器等機率
+	var wid: String = FEATURED_WEAPONS[rng.randi() % FEATURED_WEAPONS.size()]
+	return make_weapon(wid, affix_count(rank))
 
 
 func pick_up(item: Dictionary):
@@ -448,6 +467,15 @@ func restock_merchant() -> void:
 		var mid: String = _pick_weighted(p[0], p[1])
 		seen[mid] = true
 		merchant_stock.append({"id": mid, "rarity": rar, "sold": false})
+	# 幸運把某些稀有度的權重壓到 0 時，補上其他還能學的武學
+	for rar in Data.rarity_order:
+		while merchant_stock.size() < int(Data.cfg("merchant_slots")):
+			var p := _pool(rar, "M", seen)
+			if p[0].is_empty():
+				break
+			var mid: String = _pick_weighted(p[0], p[1])
+			seen[mid] = true
+			merchant_stock.append({"id": mid, "rarity": rar, "sold": false})
 
 
 func merchant_refresh_cost() -> int:
@@ -487,35 +515,90 @@ func buy_martial(i: int) -> bool:
 	return true
 
 
-# ------------------------------------------------------------------ 修為與境界
+# ------------------------------------------------------------------ 真氣、衝穴與境界
 func realm_name(lv: int) -> String:
-	return String(Data.levels[lv - 1].display_zh)
-
-
-func xiuwei_for_next() -> float:
-	if level >= Data.levels.size():
-		return 0.0
-	return float(Data.levels[level - 1].xiuwei_to_next)
-
-
-func xiuwei_into_level() -> float:
-	return xiuwei - float(Data.levels[level - 1].xiuwei_total)
+	return String(Data.levels[mini(lv, Data.levels.size()) - 1].display_zh)
 
 
 func add_kill(eid: String) -> void:
 	kills += 1
 	var r := Data.enemy_rewards(eid)
 	gold += r.y * (1.0 + st("gold_gain_pct") / 100.0)
-	add_xiuwei(r.x * (1.0 + st("xiuwei_gain_pct") / 100.0))
+	add_zhenqi(r.x * (1.0 + st("xiuwei_gain_pct") / 100.0))
 	gold_changed.emit()
 
 
-func add_xiuwei(v: float) -> void:
-	xiuwei += v
-	var leveled := false
-	while level < Data.levels.size() and xiuwei >= float(Data.levels[level].xiuwei_total):
+func add_zhenqi(v: float) -> void:
+	zhenqi += v
+	zhenqi_changed.emit()
+
+
+func acu_level(mid: String) -> int:
+	return int(acu_open.get(mid, 0))
+
+
+func acu_total() -> int:
+	var n := 0
+	for mid in acu_open:
+		n += int(acu_open[mid])
+	return n
+
+
+func next_point(mid: String) -> Dictionary:
+	## 這條經脈下一個要衝的穴位；全通時回傳空字典
+	return Data.acupoint(mid, acu_level(mid) + 1)
+
+
+func ren_du_open() -> bool:
+	return acu_level("ren") >= Data.meridian_len("ren") and acu_level("du") >= Data.meridian_len("du")
+
+
+func break_cost() -> int:
+	## 衝穴一次的真氣；隨已打通的穴位數成長
+	var c: Dictionary = Data.meridian_cfg
+	return int(round(float(c.cost_a) * pow(acu_total() + 1, float(c.cost_exp)) + float(c.cost_b)))
+
+
+func break_chance(pid: String) -> float:
+	var row: Dictionary = Data.acupoints[pid]
+	return minf(1.0, float(row.base_chance) + float(Data.meridian_cfg.chance_step) * int(acu_fails.get(pid, 0)))
+
+
+func try_break(mid: String) -> int:
+	## 衝擊這條經脈的下一個穴位：1＝打通、0＝失敗（下次成功率更高）、-1＝不能衝
+	var p := next_point(mid)
+	if p.is_empty():
+		return -1
+	var c := break_cost()
+	if zhenqi < c:
+		return -1
+	zhenqi -= c
+	var pid: String = p.point_id
+	var ok := rng.randf() < break_chance(pid)
+	if ok:
+		var had_ren_du := ren_du_open()
+		acu_open[mid] = acu_level(mid) + 1
+		acu_fails.erase(pid)
+		_set_level(1 + acu_total())
+		var m: Dictionary = Data.meridians[mid]
+		if acu_level(mid) >= Data.meridian_len(mid):
+			message.emit("%s全通：%s" % [m.name_zh, Data.stat_text(m.bonus_stat, float(m.bonus_value))])
+		if ren_du_open() and not had_ren_du:
+			message.emit("打通任督二脈！")
+	else:
+		acu_fails[pid] = int(acu_fails.get(pid, 0)) + 1
+		zhenqi += c * float(Data.meridian_cfg.fail_refund)
+	acupoint_tried.emit(pid, ok)
+	zhenqi_changed.emit()
+	recompute()
+	return 1 if ok else 0
+
+
+func _set_level(new_level: int) -> void:
+	## 境界由打通的穴位數決定：等級＝1＋穴位數，Lv10／20／30 突破一流／絕頂／化境
+	new_level = mini(new_level, Data.levels.size())
+	while level < new_level:
 		level += 1
-		leveled = true
 		leveled_up.emit(level)
 		if level in [10, 20, 30]:
 			var eff := ""
@@ -525,41 +608,52 @@ func add_xiuwei(v: float) -> void:
 			if f("realm_free_draw") > 0:
 				free_draws += 1
 			realm_broken.emit(level, String(Data.levels[level - 1].realm_zh), eff)
-	if leveled:
-		recompute()
-	xiuwei_changed.emit()
 
 
 # ------------------------------------------------------------------ 參悟（抽獎）
-func draw_cost() -> int:
-	var k: float = Data.gacha.cost_growth_k
+func on_zone_cleared() -> void:
+	## 破陣：悟道碑給本區的免費參悟次數
+	shrine_charges += int(Data.per_stage("shrine_free_per_stage", stage))   # 沒用完的留到下一座悟道碑
+	refreshes_this_stage = 0
+	draws_this_stage = 0
+
+
+func draws_left() -> int:
+	return shrine_charges + free_draws
+
+
+func take_draw() -> bool:
+	## 參悟不花錢：先用本區的次數，再用武學給的額外次數
+	if shrine_charges > 0:
+		shrine_charges -= 1
+		return true
+	if free_draws > 0:
+		free_draws -= 1
+		return true
+	return false
+
+
+func refresh_cost() -> int:
+	## 刷新候選的價格；同一區每多刷新一次變貴
+	var g := Data.cfg("refresh_cost_growth")
 	if f("cost_growth_override") > 0:
-		k = f("cost_growth_override")
-	var base := float(Data.gacha.base_cost) * pow(1.0 + Data.cfg("draw_cost_stage_growth"), stage - 1)
-	return int(round(base * pow(1.0 + k, draws_this_stage)))
-
-
-func reroll_cost() -> int:
-	var c := draw_cost() * float(Data.gacha.reroll_cost_ratio)
+		g = f("cost_growth_override")
+	var c := Data.cfg("refresh_cost_base") * price_mult() * pow(1.0 + g, refreshes_this_stage)
 	if f("reroll_discount") > 0:
 		c *= 1.0 - f("reroll_discount")
 	return int(round(c))
 
 
-func can_afford(c: int) -> bool:
-	return free_draws > 0 or gold >= c
-
-
-func pay(c: int) -> bool:
-	if free_draws > 0:
-		free_draws -= 1
-		return true
+func pay_refresh() -> bool:
+	var c := refresh_cost()
 	if f("free_draw_chance") > 0 and rng.randf() < f("free_draw_chance"):
-		message.emit("生財之道：本次參悟免費！")
+		message.emit("生財之道：本次刷新免費！")
+		refreshes_this_stage += 1
 		return true
 	if gold < c:
 		return false
 	gold -= c
+	refreshes_this_stage += 1
 	gold_changed.emit()
 	return true
 
@@ -766,7 +860,7 @@ func describe(c: Dictionary) -> Dictionary:
 func _setup_input() -> void:
 	var keys := {
 		"move_forward": [KEY_W], "move_back": [KEY_S], "move_left": [KEY_A], "move_right": [KEY_D],
-		"jump": [KEY_SPACE], "dash": [KEY_SHIFT], "interact": [KEY_E], "inventory": [KEY_TAB],
+		"jump": [KEY_SPACE], "dash": [KEY_SHIFT], "interact": [KEY_E], "inventory": [KEY_TAB], "meridian": [KEY_K],
 		"pause": [KEY_ESCAPE],
 	}
 	for a in keys:
@@ -776,8 +870,8 @@ func _setup_input() -> void:
 				var ev := InputEventKey.new()
 				ev.physical_keycode = k
 				InputMap.action_add_event(a, ev)
-	# 左鍵出招；Q、滾輪切換主副武器；1、2 直接拿主武器、副武器
-	var buttons := {"attack_1": [MOUSE_BUTTON_LEFT], "switch_weapon": [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]}
+	# 左鍵出招（弓：按住拉弓、放開射出）；右鍵瞄準；Q、滾輪切換主副武器；1、2 直接拿主武器、副武器
+	var buttons := {"attack_1": [MOUSE_BUTTON_LEFT], "aim": [MOUSE_BUTTON_RIGHT], "switch_weapon": [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]}
 	for a in buttons:
 		if not InputMap.has_action(a):
 			InputMap.add_action(a)

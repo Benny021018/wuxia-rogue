@@ -248,6 +248,76 @@ func _ranged_sequence(t: Tween, seconds: float, hits: int, impact: Callable) -> 
 			_key(t,Vector3.ZERO,Vector3.ZERO,cycle*.14)
 	t.tween_callback(_rest_ammo)
 
+# ------------------------------------------------------------------ 弓：按住拉弓、放開射出
+const BOW_LOAD_R := Vector3(-9,7,-14)
+const BOW_LOAD_P := Vector3(-.08,-.015,-.035)
+const BOW_DRAW_R := Vector3(-4,-5,12)
+const BOW_DRAW_P := Vector3(-.16,.07,-.13)
+const BOW_AIM_P := Vector3(-.22,.10,-.06)   # 瞄準時弓往畫面中央收
+var bow_drawing := false
+var bow_draw := 0.0
+var bow_aim := 0.0
+
+func bow_begin(load_s: float) -> void:
+	## 按下左鍵：搭箭
+	if timeline:
+		timeline.kill()
+	art.visible = true
+	_rest_ammo()
+	bow_drawing = true
+	bow_draw = 0.0
+	var t := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+	timeline = t
+	t.set_trans(Tween.TRANS_SINE)
+	_key(t,BOW_LOAD_R,BOW_LOAD_P + BOW_AIM_P*bow_aim,load_s)
+	t.parallel().tween_method(_load_pose,0.0,1.0,load_s)
+
+func bow_loaded() -> bool:
+	return bow_drawing and not (timeline and timeline.is_running())
+
+func bow_hold(draw: float, aim: float) -> void:
+	## 按住左鍵：draw 0~1 拉弦；aim 0~1 瞄準時往中央收
+	bow_aim = aim
+	if not bow_loaded():
+		return
+	bow_draw = clampf(draw,0,1)
+	var e := 1.0-pow(1.0-bow_draw,2)
+	_pose(BOW_LOAD_R.lerp(BOW_DRAW_R,e),BOW_LOAD_P.lerp(BOW_DRAW_P,e) + BOW_AIM_P*aim)
+	_draw_pose(e)
+
+func bow_release(recover_s: float, impact: Callable) -> void:
+	## 放開左鍵：放箭、收弓
+	bow_drawing = false
+	if timeline:
+		timeline.kill()
+	var t := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+	timeline = t
+	t.set_trans(Tween.TRANS_SINE)
+	var e := 1.0-pow(1.0-bow_draw,2)
+	t.tween_callback(_fire.bind(impact,0))
+	_key(t,Vector3(2,-3,17),Vector3(-.145,.075,-.08),recover_s*.25)
+	t.parallel().tween_method(_bend,e,0.0,recover_s*.15)
+	t.parallel().tween_method(_withdraw,0.0,.25,recover_s*.25)
+	_key(t,Vector3.ZERO,Vector3.ZERO,recover_s*.75)
+	t.parallel().tween_method(_withdraw,.25,1.0,recover_s*.55)
+	t.tween_callback(_rest_ammo)
+	bow_draw = 0.0
+
+func bow_cancel() -> void:
+	## 拉不夠就放開，或換武器：卸下箭、回到待機
+	bow_drawing = false
+	bow_draw = 0.0
+	if timeline:
+		timeline.kill()
+	var t := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+	timeline = t
+	_key(t,Vector3.ZERO,Vector3.ZERO,.18)
+	t.parallel().tween_method(_bend,_current_bend(),0.0,.12)
+	t.tween_callback(_rest_ammo)
+
+func _current_bend() -> float:
+	return flex_mesh.get_blend_shape_value(0) if flex_mesh and flex_mesh.get_blend_shape_count() > 0 else 0.0
+
 func _reset_crossbow(progress: float) -> void:
 	_bend(progress)
 	_hand_at(_tail(progress),false)

@@ -13,7 +13,10 @@ upgrade_cost_base,20,鐵匠強化（淬煉+1）基礎價
 upgrade_cost_growth,0.35,每多一級淬煉，強化價格乘上(1+此值)；四個休息區剛好能把一把武器淬到覺醒
 reforge_cost_base,15,鐵匠重鑄詞條基礎價
 reforge_cost_growth,0.25,同一把武器每重鑄一次，價格乘上(1+此值)
-merchant_slots,4,商人每次上架的武學數
+merchant_slots,6,商人每次上架的武學數（參悟改免費後，商人是銀兩換武學的主要管道）
 merchant_refresh_cost,8,商人刷新上架的價格（再乘區域成長）
 inherit_lv_loss,0,換武器時新武器沿用舊武器的淬煉等級減此值（0＝完整傳承，淬煉跟著人走）
 shrine_weapon_upgrade,0,1＝悟道碑抽到已持有武器時淬煉+1；0＝悟道碑只出新武器，淬煉交給鐵匠
+shrine_free_per_stage,1|1|2|1,每區破陣悟道碑免費參悟次數，依區排列，最後一個值用到結束（第3區給2次補前期）
+refresh_cost_base,4,悟道碑刷新候選的基礎價（再乘區域成長）
+refresh_cost_growth,0.5,同一區每多刷新一次，價格乘上(1+此值)

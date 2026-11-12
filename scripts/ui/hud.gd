@@ -1,5 +1,5 @@
 extends Control
-## 戰鬥 HUD：生命、修為與境界、銀兩、主副武器、武學、區域資訊、首領血條、橫幅與訊息
+## 戰鬥 HUD：生命、真氣與境界、銀兩、主副武器、武學、區域資訊、首領血條、橫幅與訊息
 ## 版面對照 docs/ui-drafts/03-hud.svg
 
 var player
@@ -228,17 +228,23 @@ func _process(_delta: float) -> void:
 	hp_bar.value = player.hp
 	hp_bar.overlay = player.shield
 	hp_bar.text = "%d / %d" % [int(player.hp), int(mh)]
-	var need := Game.xiuwei_for_next()
+	var need := float(Game.break_cost())
 	xw_bar.max_value = maxf(1.0, need)
-	xw_bar.value = Game.xiuwei_into_level() if need > 0.0 else 1.0
+	xw_bar.value = minf(Game.zhenqi, need)
 	name_text.text = Data.characters[Game.char_id].name_zh
 	if realm_text.text != Game.realm_name(Game.level):
 		realm_text.text = Game.realm_name(Game.level)
 		realm_chip.reset_size()
 	gold_text.text = "銀兩 %d" % int(Game.gold)
-	free_chip.visible = Game.free_draws > 0
-	if free_chip.visible:
-		free_text.text = "免費參悟 ×%d" % Game.free_draws
+	var chips: Array = []
+	if Game.zhenqi >= need:
+		chips.append("可衝穴（K）")
+	if Game.free_draws > 0:
+		chips.append("額外參悟 ×%d" % Game.free_draws)
+	free_chip.visible = not chips.is_empty()
+	if free_chip.visible and free_text.text != "　".join(chips):
+		free_text.text = "　".join(chips)
+		free_chip.reset_size()
 	_refresh_weapons()
 	_refresh_martial()
 	if boss and is_instance_valid(boss) and not boss.dead:

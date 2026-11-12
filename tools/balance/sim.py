@@ -65,6 +65,11 @@ class Data:
         self.stat_points = {r["stat_id"]: float(r["per_point"]) for r in _read("stat_values")}
         aff = _read("weapon_affixes")
         self.affixes = {r["affix_id"]: r for r in aff} if aff else {}
+        mer, acu, mc = _read("meridians", rev), _read("acupoints", rev), _read("meridian_config", rev)
+        self.meridians = {r["meridian_id"]: r for r in mer} if mer and not rev else {}
+        self.acupoints = acu if acu and not rev else []
+        self.mc = _kv(mc) if mc and not rev else {}
+        self.xiuwei = {s: float(r["xiuwei"]) for s, r in self.report.items()}
         self.minions = {s: int(r["minions"]) for s, r in self.report.items()}
         self.elites = {s: len([e for e in r["elites"].split("|") if e]) for s, r in self.report.items()}
         self.bosses = {s: 1 if r["boss"] else 0 for s, r in self.report.items()}
@@ -115,6 +120,10 @@ class Run:
         self.stage = 1
         self.log = defaultdict(float)      # 花費去向、掉落數等
         self.stock = []
+        self.free_shrine = self.new and "shrine_free_per_stage" in d.shop
+        self.opened = defaultdict(int)     # 經脈 → 已通穴數（依序）
+        self.fails = defaultdict(int)      # 穴位 → 衝擊失敗次數
+        self.zhenqi = 0.0
 
     # ---- 戰力
     def weapon_value(self, w):
@@ -129,18 +138,82 @@ class Run:
     def martial_dps(self):
         return 10 * self.d.c("offense_share") * sum(self.d.martial_points(m, lv) for m, lv in self.martial.items())
 
+    # ---- 經脈
+    def acu(self, mid, depth):
+        for r in self.d.acupoints:
+            if r["meridian_id"] == mid and int(r["depth"]) == depth:
+                return r
+        return None
+
+    def _offense_pts(self, stat, pts):
+        return float(pts) * float(self.d.mc.get("sim_acu_scale", 1.0)) if stat in OFFENSE_STATS else 0.0
+
+    def meridian_dps(self):
+        if not self.d.acupoints:
+            return 0.0
+        pts = 0.0
+        for mid, n in self.opened.items():
+            for dep in range(1, n + 1):
+                r = self.acu(mid, dep)
+                pts += self._offense_pts(r["stat_id"], r["points"])
+            if n >= 4:
+                m = self.d.meridians[mid]
+                pts += self._offense_pts(m["bonus_stat"], m["bonus_points"])
+        if self.opened.get("ren", 0) >= 4 and self.opened.get("du", 0) >= 4:
+            for st, pt in zip(self.d.mc["ren_du_stat"].split("|"), self.d.mc["ren_du_points"].split("|")):
+                pts += self._offense_pts(st, pt)
+        return 10 * pts
+
+    def total_open(self):
+        return sum(self.opened.values())
+
+    def attempt_cost(self):
+        n = self.total_open()
+        return round(float(self.d.mc["cost_a"]) * (n + 1) ** float(self.d.mc["cost_exp"]) + float(self.d.mc["cost_b"]))
+
+    def chance(self, r):
+        return min(1.0, float(r["base_chance"]) + float(self.d.mc["chance_step"]) * self.fails[r["point_id"]])
+
+    def spend_zhenqi(self):
+        while True:
+            c = self.attempt_cost()
+            if self.zhenqi < c:
+                return
+            best, bv = None, -1.0
+            for mid in self.d.meridians:
+                dep = self.opened[mid] + 1
+                r = self.acu(mid, dep)
+                if r is None:
+                    continue
+                v = self._offense_pts(r["stat_id"], r["points"]) + 0.01
+                if dep == 4:
+                    m = self.d.meridians[mid]
+                    v += self._offense_pts(m["bonus_stat"], m["bonus_points"])
+                v *= self.chance(r)
+                if v > bv:
+                    best, bv = (mid, r), v
+            if best is None:
+                return
+            self.zhenqi -= c
+            self.log["acu_attempts"] += 1
+            mid, r = best
+            if self.rng.random() < self.chance(r):
+                self.opened[mid] += 1
+            else:
+                self.fails[r["point_id"]] += 1
+
     def dps(self):
         if self.new:
             w = max(self.weapon_value(x) for x in self.weapons)   # 手上拿最好的那把
         else:
             w = sum(self.weapon_value(x) for x in self.weapons)   # 舊規則：雙持同時出招
-        return w + self.martial_dps()
+        return w + self.martial_dps() + (self.meridian_dps() if self.new else 0.0)
 
     def parts(self):
         wv = max(self.weapon_value(x) for x in self.weapons) if self.new else sum(self.weapon_value(x) for x in self.weapons)
         best = max(self.weapons, key=lambda x: self.weapon_value(x))
         aff = 10 * sum(self.d.affix_points(a) for a in (best["aff"] if best else []) if self.d.affixes[a[0]]["stat_id"] in OFFENSE_STATS) if self.new else 0
-        return {"weapon": wv - aff, "affix": aff, "martial": self.martial_dps()}
+        return {"weapon": wv - aff, "affix": aff, "martial": self.martial_dps(), "meridian": self.meridian_dps() if self.new else 0.0}
 
     def gold_mult(self):
         held = max(self.weapons, key=lambda x: self.weapon_value(x))
@@ -330,14 +403,42 @@ class Run:
             self.stock.append(x)
 
     # ---- 一區結算後的花錢策略：每次選「每兩銀子換到最多有效DPS」的選項
+    def refresh_cost(self, n):
+        return self.d.s("refresh_cost_base") * (1 + self.d.s("refresh_cost_growth")) ** n * self.price_mult()
+
+    def free_draws(self):
+        n_ref = 0
+        seq = [int(x) for x in str(self.d.shop.get("shrine_free_per_stage", "1")).split("|")]
+        for _ in range(seq[min(self.stage, len(seq)) - 1]):
+            cands = self.roll()
+            while True:
+                cur = max([self.gain(x) for x in cands] or [0])
+                c = self.refresh_cost(n_ref)
+                if self.gold < c:
+                    break
+                est = statistics.mean(max([self.gain(x) for x in self.roll(pity=False)] or [0]) for _ in range(4))
+                if (est - cur) / c < self.d.s("sim_refresh_threshold", 1.0):
+                    break
+                self.gold -= c
+                self.log["spend_refresh"] += c
+                self.log["n_refresh"] += 1
+                n_ref += 1
+                cands = self.roll()
+            self.log["n_draw"] += 1
+            best = max(cands, key=self.gain) if cands else None
+            if best and self.gain(best) > 0:
+                self.apply(best)
+
     def shop(self, rest_stop):
         n_draws = 0
+        if self.free_shrine:
+            self.free_draws()
         if rest_stop and self.new:
             self.restock()
         while True:
             options = []
             c = self.draw_cost(n_draws)
-            if self.gold >= c:
+            if self.gold >= c and not self.free_shrine:
                 est = statistics.mean(max([self.gain(x) for x in self.roll(pity=False)] or [0]) for _ in range(4))
                 options.append((est / c, "draw", c, None))
             if rest_stop and self.new:
@@ -393,11 +494,15 @@ class Run:
             if self.new:
                 for item in self.drops(s):
                     self.consider_drop(item)
+            if self.free_shrine and self.d.acupoints:
+                self.zhenqi += self.d.xiuwei[s]
+                self.spend_zhenqi()
             self.gold += self.d.gold[s] * self.gold_mult()
             self.log["gold_in"] += self.d.gold[s] * self.gold_mult()
             out.append({"stage": s, "dps": dps_in, **self.parts()})
             self.shop(rest_stop=self.new and s in rest)
         self.log["gold_end"] = self.gold
+        self.log["acu_open"] = self.total_open()
         return out
 
 
@@ -410,7 +515,7 @@ def simulate(d, rules, runs, seed=7, start=None):
         r = Run(d, rules, rng, start_wid=start or FEATURED[i % len(FEATURED)])
         for row in r.play():
             curves[row["stage"]].append(row["dps"])
-            for k in ("weapon", "affix", "martial"):
+            for k in ("weapon", "affix", "martial", "meridian"):
                 parts[row["stage"]][k].append(row[k])
         logs.append(r.log)
     return curves, logs, parts
@@ -434,6 +539,8 @@ def report(args):
         elif k.startswith("rarity."):
             _, rar, col = k.split(".")
             new_d.rarity[rar][col] = v
+        elif k in new_d.mc or k.startswith("sim_acu"):
+            new_d.mc[k] = v
         elif k in new_d.gacha:
             new_d.gacha[k] = v
         else:
@@ -452,7 +559,8 @@ def report(args):
                      "ratio": round(p50 / ref, 3), "clear_p50_s": round(clear50, 1), "clear_slow_p10_s": round(clear_slow, 1),
                      "share_weapon": round(statistics.mean(parts[s]["weapon"]) / statistics.mean(new[s]), 3),
                      "share_affix": round(statistics.mean(parts[s]["affix"]) / statistics.mean(new[s]), 3),
-                     "share_martial": round(statistics.mean(parts[s]["martial"]) / statistics.mean(new[s]), 3)})
+                     "share_martial": round(statistics.mean(parts[s]["martial"]) / statistics.mean(new[s]), 3),
+                     "share_meridian": round(statistics.mean(parts[s]["meridian"]) / statistics.mean(new[s]), 3)})
         print(f"{s:>2} {t:>5.0f} {ref:>6.0f} {p10:>6.0f} {p50:>6.0f} {p90:>6.0f} {p50/ref:>5.2f} {clear50:>7.1f} {clear_slow:>6.1f}")
     tot = defaultdict(float)
     for lg in logs:
@@ -460,10 +568,11 @@ def report(args):
             tot[k] += v / len(logs)
     spend = sum(v for k, v in tot.items() if k.startswith("spend_"))
     print("\n每局平均：銀兩收入 %.0f，花費 %.0f" % (tot["gold_in"], spend))
-    for k in ("draw", "upgrade", "reforge", "merchant"):
+    for k in ("draw", "refresh", "upgrade", "reforge", "merchant"):
         print("  %-8s %5.0f 銀兩 (%4.1f%%)  %5.1f 次" % (k, tot["spend_" + k], 100 * tot["spend_" + k] / max(spend, 1), tot["n_" + k]))
     print("  掉落 %.1f 把，換上手 %.1f 把；終局剩餘 %.0f" % (tot["drops"], tot["drops_taken"], tot["gold_end"]))
-    print("  輸出占比(第10/20區)：", {k: (rows[9]["share_" + k], rows[19]["share_" + k]) for k in ("weapon", "affix", "martial")})
+    print("  輸出占比(第10/20區)：", {k: (rows[9]["share_" + k], rows[19]["share_" + k]) for k in ("weapon", "affix", "martial", "meridian")})
+    print("  衝穴 %.1f 次，打通 %.1f 穴" % (tot["acu_attempts"], tot["acu_open"]))
     if args.csv:
         with open(args.csv, "w", encoding="utf-8", newline="") as f:
             w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))

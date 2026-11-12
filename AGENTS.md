@@ -17,7 +17,7 @@
    - 從 Dictionary 或無型別變數取值時，不要用 `:=` 推斷型別，改用 `var x: float = ...` 或無型別 `var x = ...`。
    - 指向其他節點的變數若會呼叫自訂方法，宣告成無型別（`var world`），不要宣告成 `Node`。
    - Control 全螢幕用 `set_anchors_and_offsets_preset()`，不要用 `set_anchors_preset()`。
-   - 介面文字一律繁體中文，用語參考 `data/terminology.csv`（修為、參悟、鎖陣、破陣…）。
+   - 介面文字一律繁體中文，用語參考 `data/terminology.csv`（真氣、衝穴、參悟、鎖陣、破陣…）。
 5. 每次修改後執行冒煙測試，必須輸出 `SMOKE_DONE errors=0`：
    ```
    godot --headless --path . --import

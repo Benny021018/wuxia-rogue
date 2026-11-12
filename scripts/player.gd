@@ -51,6 +51,12 @@ var arhat_nodes: Array = []
 var regen_acc := 0.0
 var still_t := 0.0
 var input_enabled := true
+# 弓：按住左鍵拉弓、放開射出；右鍵瞄準
+var bow_t := 0.0                   # 這一箭按住多久
+var bow_held := false
+var aim := 0.0                     # 瞄準程度 0~1（平滑過渡）
+var arrow_speed_mult := 1.0        # 滿弓箭速較快
+const BASE_FOV := 80.0
 
 
 func _ready() -> void:
@@ -105,8 +111,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not input_enabled:
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		yaw -= event.relative.x * MOUSE_SENS
-		pitch = clampf(pitch - event.relative.y * MOUSE_SENS, -1.45, 1.45)
+		var sens := MOUSE_SENS * cam.fov / BASE_FOV   # 瞄準放大時滑鼠跟著變細
+		yaw -= event.relative.x * sens
+		pitch = clampf(pitch - event.relative.y * sens, -1.45, 1.45)
 		rotation.y = yaw
 		cam.rotation.x = pitch
 	elif event.is_action_pressed("interact"):
@@ -133,7 +140,7 @@ func _physics_process(delta: float) -> void:
 			invuln_t = maxf(invuln_t, 0.2)
 		if Input.is_action_just_pressed("jump") and is_on_floor():
 			velocity.y = JUMP_V
-	var spd := Game.move_speed() * (3.2 if dash_t > 0.0 else 1.0)
+	var spd := Game.move_speed() * (3.2 if dash_t > 0.0 else 1.0) * lerpf(1.0, Data.cfg("bow_aim_move_mult"), aim)
 	if dash_t > 0.0 and dir == Vector3.ZERO:
 		dir = -transform.basis.z
 	velocity.x = move_toward(velocity.x, dir.x * spd, 60.0 * delta)
@@ -152,9 +159,83 @@ func _physics_process(delta: float) -> void:
 	if switch_request != -9 and not _busy(weapon_models[Game.active_weapon]):
 		_do_switch(switch_request)
 	var a := Game.active_weapon
+	var bow := is_bow()
+	var want_aim := bow and input_enabled and Input.is_action_pressed("aim") and swap_t <= 0.0
+	aim = move_toward(aim, 1.0 if want_aim else 0.0, delta / 0.15)
+	cam.fov = lerpf(BASE_FOV, Data.cfg("bow_aim_fov"), aim)
+	if bow:
+		_bow_update(a, delta)
+		return
 	queued_press[a] = input_enabled and Game.weapons[a]!=null and (queued_press[a] or Input.is_action_just_pressed("attack_1"))
 	if input_enabled and Game.weapons[a]!=null and cooldowns[a]<=0 and swap_t<=0 and switch_request == -9 and (queued_press[a] or Input.is_action_pressed("attack_1")):
 		_attack(a)
+
+
+func is_bow() -> bool:
+	var w = Game.current_weapon()
+	return w != null and String(Data.weapons[w.id]["class"]) == "弓" and weapon_models[Game.active_weapon] != null and weapon_models[Game.active_weapon].has_method("bow_begin")
+
+
+func _bow_interval(a: int) -> float:
+	var atk_speed := Game.st("atk_speed_pct")
+	if taiji_active > 0.0:
+		atk_speed += 50.0
+	if demon_speed:
+		atk_speed += 100.0
+	return float(Data.weapons[Game.weapons[a].id].interval_s) / (1.0 + atk_speed / 100.0)
+
+
+func bow_draw() -> float:
+	## 目前拉弓程度 0~1（HUD 準星用）
+	if not bow_held or not is_bow():
+		return 0.0
+	var iv := _bow_interval(Game.active_weapon)
+	var load_s := iv * Data.cfg("bow_load_frac")
+	return clampf((bow_t - load_s) / (iv * Data.cfg("bow_draw_frac")), 0.0, 1.0)
+
+
+func _bow_update(a: int, delta: float) -> void:
+	var view = weapon_models[a]
+	var pressed := input_enabled and Input.is_action_pressed("attack_1")
+	if not bow_held:
+		if pressed and cooldowns[a] <= 0.0 and swap_t <= 0.0 and switch_request == -9:
+			bow_held = true
+			bow_t = 0.0
+			view.bow_begin(_bow_interval(a) * Data.cfg("bow_load_frac"))
+		return
+	bow_t += delta
+	var draw := bow_draw()
+	view.bow_hold(draw, aim)
+	if pressed and switch_request == -9:
+		return
+	# 放開（或要換武器）：拉夠了就射，不夠就收弓
+	bow_held = false
+	if draw < Data.cfg("bow_min_draw") or switch_request != -9 or not input_enabled:
+		view.bow_cancel()
+		return
+	_release_arrow(a, draw)
+
+
+func _release_arrow(a: int, draw: float) -> void:
+	var view = weapon_models[a]
+	var w = Game.weapons[a]
+	var row: Dictionary = Data.weapons[w.id]
+	var iv := _bow_interval(a)
+	var recover := iv * Data.cfg("bow_recover_frac")
+	cooldowns[a] = recover
+	attack_count += 1
+	var lo := Data.cfg("bow_min_dmg")
+	var mn := Data.cfg("bow_min_draw")
+	var mult := lerpf(lo, 1.0, clampf((draw - mn) / (1.0 - mn), 0.0, 1.0))
+	var dmg := Game.weapon_hit_dmg(w.id, int(w.lv)) * mult
+	var speed_mult := lerpf(1.0, Data.cfg("bow_full_speed"), draw)
+	view.bow_release(recover, func(beat: int):
+		if is_instance_valid(view) and weapon_models[a] == view and hp > 0:
+			arrow_speed_mult = speed_mult
+			var r := _weapon_impact(a, row, dmg, beat)
+			arrow_speed_mult = 1.0
+			return r
+		return false)
 
 
 func request_switch(slot := -1) -> void:
@@ -166,7 +247,7 @@ func request_switch(slot := -1) -> void:
 
 
 func _busy(view) -> bool:
-	return view != null and (view.tachi_returning or (view.timeline != null and view.timeline.is_running()))
+	return view != null and (view.tachi_returning or view.bow_drawing or (view.timeline != null and view.timeline.is_running()))
 
 
 func _do_switch(target: int) -> void:
@@ -286,7 +367,7 @@ func ref_hit() -> float:
 	var w = Game.current_weapon()
 	if w == null:
 		return 20.0
-	return float(Data.weapons[w.id].dmg) * (1.0 + 0.15 * (int(w.lv) - 1))
+	return Game.weapon_hit_dmg(w.id, int(w.lv))
 
 
 func _attack(slot: int) -> void:
@@ -308,7 +389,7 @@ func _attack(slot: int) -> void:
 	if Game.f("instant_repeat") > 0.0 and randf() < Game.f("instant_repeat"):
 		cooldowns[slot] = 0.05
 	attack_count += 1
-	var dmg := float(row.dmg) * (1.0 + 0.15 * (int(w.lv) - 1))
+	var dmg := Game.weapon_hit_dmg(w.id, int(w.lv))
 	view.attack(cooldowns[slot],int(row.hits),func(beat:int):
 		if is_instance_valid(view) and weapon_models[slot] == view and hp > 0:
 			return _weapon_impact(slot,row,dmg,beat)
@@ -408,7 +489,7 @@ func _shoot(pos: Vector3, dir: Vector3, dmg: float, pierce: int, rng: float, col
 	get_parent().add_child(p)
 	p.global_position = pos
 	p.direction = dir.normalized()
-	p.speed = 45.0
+	p.speed = 45.0 * arrow_speed_mult
 	p.damage = dmg
 	p.pierce = pierce
 	p.max_range = rng
