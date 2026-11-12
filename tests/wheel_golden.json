@@ -1,0 +1,6095 @@
+{
+"note": "tools/shrine_math/wheel.py 產生；停輪位置（0 起算，中線）→ 結果",
+"cases": [
+{
+"stops": [
+0,
+0,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+0,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+0,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+0,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+0,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+0,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+0,
+16
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+0,
+0,
+17
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+0,
+1,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+1,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+1,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+1,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+1,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+1,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+2,
+6
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+0,
+2,
+8
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+0,
+2,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+2,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+2,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+2,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+2,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+2,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+3,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+3,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+3,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+3,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+3,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+3,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+3,
+16
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+0,
+3,
+19
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+0,
+4,
+1
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+0,
+4,
+7
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+0,
+4,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+4,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+4,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+4,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+4,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+4,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+8,
+1
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+0,
+8,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+0,
+9,
+9
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+0,
+10,
+17
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+0,
+12,
+17
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+0,
+14,
+2
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+0,
+15,
+1
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+0,
+15,
+7
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+0,
+15,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+0,
+15,
+18
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+0,
+18,
+7
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+0,
+19,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+19,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+19,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+19,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+19,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+0,
+19,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+0,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+0,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+0,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+0,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+0,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+0,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+0,
+17
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+1,
+1,
+5
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+1,
+1,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+1,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+1,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+1,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+1,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+1,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+2,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+2,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+2,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+2,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+2,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+2,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+2,
+17
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+1,
+3,
+0
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+1,
+3,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+3,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+3,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+3,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+3,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+3,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+4,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+4,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+4,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+4,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+4,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+4,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+1,
+6,
+0
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+1,
+6,
+2
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+1,
+6,
+19
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+1,
+7,
+1
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+1,
+7,
+6
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+1,
+9,
+6
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 1
+},
+{
+"stops": [
+1,
+9,
+18
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 1
+},
+{
+"stops": [
+1,
+11,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+1,
+13,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+1,
+15,
+6
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 1
+},
+{
+"stops": [
+1,
+16,
+6
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+1,
+17,
+1
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 1
+},
+{
+"stops": [
+1,
+17,
+4
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 1
+},
+{
+"stops": [
+1,
+18,
+3
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+1,
+19,
+6
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 2
+},
+{
+"stops": [
+1,
+19,
+10
+],
+"outcome": "resonance",
+"sect": "tangmen",
+"scatters": 3
+},
+{
+"stops": [
+1,
+19,
+11
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 3
+},
+{
+"stops": [
+1,
+19,
+12
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 3
+},
+{
+"stops": [
+1,
+19,
+13
+],
+"outcome": "resonance",
+"sect": "tangmen",
+"scatters": 3
+},
+{
+"stops": [
+1,
+19,
+14
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 3
+},
+{
+"stops": [
+1,
+19,
+15
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 3
+},
+{
+"stops": [
+2,
+0,
+1
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+2,
+0,
+7
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+2,
+1,
+8
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+2,
+1,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+2,
+3,
+7
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+2,
+3,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+2,
+4,
+3
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+2,
+4,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+2,
+5,
+5
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+2,
+5,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+2,
+6,
+3
+],
+"outcome": "sense",
+"sect": "tianjian",
+"scatters": 0
+},
+{
+"stops": [
+2,
+6,
+9
+],
+"outcome": "sense",
+"sect": "tianjian",
+"scatters": 0
+},
+{
+"stops": [
+2,
+6,
+16
+],
+"outcome": "resonance",
+"sect": "tianjian",
+"scatters": 0
+},
+{
+"stops": [
+2,
+7,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+2,
+8,
+3
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+2,
+8,
+7
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+2,
+8,
+19
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+2,
+9,
+16
+],
+"outcome": "resonance",
+"sect": "tianjian",
+"scatters": 0
+},
+{
+"stops": [
+2,
+10,
+7
+],
+"outcome": "sense",
+"sect": "tianjian",
+"scatters": 0
+},
+{
+"stops": [
+2,
+11,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+2,
+15,
+0
+],
+"outcome": "resonance",
+"sect": "tianjian",
+"scatters": 0
+},
+{
+"stops": [
+2,
+15,
+9
+],
+"outcome": "sense",
+"sect": "tianjian",
+"scatters": 0
+},
+{
+"stops": [
+2,
+17,
+1
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+2,
+17,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+2,
+17,
+18
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+2,
+18,
+1
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+2,
+18,
+2
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+2,
+19,
+4
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+2,
+19,
+7
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+3,
+0,
+2
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+3,
+1,
+9
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+3,
+2,
+5
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+3,
+2,
+8
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+3,
+2,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+3,
+4,
+11
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 2
+},
+{
+"stops": [
+3,
+5,
+5
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+3,
+7,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+3,
+10,
+19
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+3,
+11,
+18
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 0
+},
+{
+"stops": [
+3,
+11,
+19
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 0
+},
+{
+"stops": [
+3,
+13,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+3,
+15,
+1
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 0
+},
+{
+"stops": [
+3,
+15,
+12
+],
+"outcome": "resonance",
+"sect": "wudang",
+"scatters": 1
+},
+{
+"stops": [
+3,
+15,
+14
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 1
+},
+{
+"stops": [
+3,
+16,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+3,
+18,
+9
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+3,
+19,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+4,
+0,
+2
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+4,
+0,
+4
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+4,
+1,
+6
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+4,
+1,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+4,
+1,
+16
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+4,
+2,
+5
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+4,
+5,
+4
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+4,
+5,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+4,
+7,
+6
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+4,
+7,
+7
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+4,
+7,
+8
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+4,
+8,
+4
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+4,
+8,
+16
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+4,
+9,
+19
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 0
+},
+{
+"stops": [
+4,
+11,
+3
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+4,
+13,
+3
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+4,
+13,
+6
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+4,
+13,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+4,
+16,
+8
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+4,
+16,
+16
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+4,
+17,
+0
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 0
+},
+{
+"stops": [
+4,
+19,
+7
+],
+"outcome": "resonance",
+"sect": "tangmen",
+"scatters": 1
+},
+{
+"stops": [
+5,
+0,
+9
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+5,
+0,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+5,
+2,
+3
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+5,
+4,
+0
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 1
+},
+{
+"stops": [
+5,
+4,
+11
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 2
+},
+{
+"stops": [
+5,
+6,
+9
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+5,
+7,
+2
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+5,
+7,
+4
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+5,
+7,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+5,
+8,
+1
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 0
+},
+{
+"stops": [
+5,
+8,
+9
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 0
+},
+{
+"stops": [
+5,
+8,
+11
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 1
+},
+{
+"stops": [
+5,
+10,
+4
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+5,
+10,
+17
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+5,
+11,
+7
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 0
+},
+{
+"stops": [
+5,
+13,
+3
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+5,
+16,
+0
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+5,
+19,
+0
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+6,
+0,
+8
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+6,
+0,
+9
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+6,
+0,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+6,
+0,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+6,
+1,
+15
+],
+"outcome": "resonance",
+"sect": "shaolin",
+"scatters": 2
+},
+{
+"stops": [
+6,
+2,
+8
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+6,
+2,
+19
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+6,
+7,
+2
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 0
+},
+{
+"stops": [
+6,
+7,
+12
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 1
+},
+{
+"stops": [
+6,
+7,
+14
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 1
+},
+{
+"stops": [
+6,
+7,
+16
+],
+"outcome": "resonance",
+"sect": "shaolin",
+"scatters": 0
+},
+{
+"stops": [
+6,
+9,
+4
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 0
+},
+{
+"stops": [
+6,
+9,
+16
+],
+"outcome": "resonance",
+"sect": "shaolin",
+"scatters": 0
+},
+{
+"stops": [
+6,
+10,
+6
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+6,
+10,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+6,
+11,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+6,
+12,
+8
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+6,
+12,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+6,
+14,
+5
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+6,
+15,
+5
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 0
+},
+{
+"stops": [
+6,
+15,
+9
+],
+"outcome": "resonance",
+"sect": "shaolin",
+"scatters": 0
+},
+{
+"stops": [
+6,
+15,
+13
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 1
+},
+{
+"stops": [
+6,
+16,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+7,
+0,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+7,
+0,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+7,
+0,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+7,
+0,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+7,
+0,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+7,
+0,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+7,
+1,
+10
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 3
+},
+{
+"stops": [
+7,
+1,
+11
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 3
+},
+{
+"stops": [
+7,
+1,
+12
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 3
+},
+{
+"stops": [
+7,
+1,
+13
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 3
+},
+{
+"stops": [
+7,
+1,
+14
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 3
+},
+{
+"stops": [
+7,
+1,
+15
+],
+"outcome": "resonance",
+"sect": "shaolin",
+"scatters": 3
+},
+{
+"stops": [
+7,
+2,
+10
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 3
+},
+{
+"stops": [
+7,
+2,
+11
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 3
+},
+{
+"stops": [
+7,
+2,
+12
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 3
+},
+{
+"stops": [
+7,
+2,
+13
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 3
+},
+{
+"stops": [
+7,
+2,
+14
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 3
+},
+{
+"stops": [
+7,
+2,
+15
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 3
+},
+{
+"stops": [
+7,
+2,
+18
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 2
+},
+{
+"stops": [
+7,
+3,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+7,
+3,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+7,
+3,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+7,
+3,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+7,
+3,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+7,
+3,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+7,
+4,
+4
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 2
+},
+{
+"stops": [
+7,
+4,
+10
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 3
+},
+{
+"stops": [
+7,
+4,
+11
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 3
+},
+{
+"stops": [
+7,
+4,
+12
+],
+"outcome": "resonance",
+"sect": "wudang",
+"scatters": 3
+},
+{
+"stops": [
+7,
+4,
+13
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 3
+},
+{
+"stops": [
+7,
+4,
+14
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 3
+},
+{
+"stops": [
+7,
+4,
+15
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 3
+},
+{
+"stops": [
+7,
+5,
+13
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 2
+},
+{
+"stops": [
+7,
+6,
+7
+],
+"outcome": "sense",
+"sect": "tianjian",
+"scatters": 1
+},
+{
+"stops": [
+7,
+6,
+16
+],
+"outcome": "resonance",
+"sect": "tianjian",
+"scatters": 1
+},
+{
+"stops": [
+7,
+7,
+4
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 1
+},
+{
+"stops": [
+7,
+8,
+9
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 1
+},
+{
+"stops": [
+7,
+9,
+1
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+7,
+9,
+16
+],
+"outcome": "bagua",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+7,
+12,
+1
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 1
+},
+{
+"stops": [
+7,
+12,
+12
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 2
+},
+{
+"stops": [
+7,
+15,
+8
+],
+"outcome": "resonance",
+"sect": "tianmo",
+"scatters": 1
+},
+{
+"stops": [
+7,
+15,
+16
+],
+"outcome": "bagua",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+7,
+16,
+8
+],
+"outcome": "sense",
+"sect": "tianjian",
+"scatters": 1
+},
+{
+"stops": [
+7,
+17,
+3
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 1
+},
+{
+"stops": [
+7,
+18,
+1
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 1
+},
+{
+"stops": [
+7,
+18,
+10
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 2
+},
+{
+"stops": [
+7,
+19,
+10
+],
+"outcome": "resonance",
+"sect": "tangmen",
+"scatters": 3
+},
+{
+"stops": [
+7,
+19,
+11
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 3
+},
+{
+"stops": [
+7,
+19,
+12
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 3
+},
+{
+"stops": [
+7,
+19,
+13
+],
+"outcome": "resonance",
+"sect": "tangmen",
+"scatters": 3
+},
+{
+"stops": [
+7,
+19,
+14
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 3
+},
+{
+"stops": [
+7,
+19,
+15
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 3
+},
+{
+"stops": [
+8,
+0,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+0,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+0,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+0,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+0,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+0,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+1,
+3
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+8,
+1,
+5
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+8,
+1,
+8
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+8,
+1,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+1,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+1,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+1,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+1,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+1,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+1,
+19
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+8,
+2,
+8
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+8,
+2,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+2,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+2,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+2,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+2,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+2,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+3,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+3,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+3,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+3,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+3,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+3,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+4,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+4,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+4,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+4,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+4,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+4,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+6,
+19
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+8,
+7,
+16
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+8,
+7,
+19
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+8,
+8,
+6
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+8,
+10,
+8
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+8,
+11,
+2
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+8,
+11,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+8,
+11,
+19
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+8,
+12,
+4
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+8,
+13,
+5
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+8,
+13,
+9
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+8,
+14,
+0
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+8,
+14,
+16
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+8,
+15,
+2
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+8,
+16,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+8,
+17,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+8,
+18,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+8,
+19,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+19,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+19,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+19,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+19,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+8,
+19,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+0,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+0,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+0,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+0,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+0,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+0,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+0,
+19
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+9,
+1,
+0
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 2
+},
+{
+"stops": [
+9,
+1,
+10
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 3
+},
+{
+"stops": [
+9,
+1,
+11
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 3
+},
+{
+"stops": [
+9,
+1,
+12
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 3
+},
+{
+"stops": [
+9,
+1,
+13
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 3
+},
+{
+"stops": [
+9,
+1,
+14
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 3
+},
+{
+"stops": [
+9,
+1,
+15
+],
+"outcome": "resonance",
+"sect": "shaolin",
+"scatters": 3
+},
+{
+"stops": [
+9,
+2,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+2,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+2,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+2,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+2,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+2,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+3,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+3,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+3,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+3,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+3,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+3,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+4,
+1
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+9,
+4,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+4,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+4,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+4,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+4,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+4,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+5,
+16
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+9,
+6,
+7
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+9,
+7,
+3
+],
+"outcome": "resonance",
+"sect": "shaolin",
+"scatters": 1
+},
+{
+"stops": [
+9,
+8,
+8
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+9,
+9,
+8
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 1
+},
+{
+"stops": [
+9,
+12,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+9,
+13,
+1
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+9,
+13,
+2
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+9,
+14,
+2
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+9,
+14,
+8
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+9,
+14,
+16
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+9,
+16,
+6
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+9,
+18,
+6
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 1
+},
+{
+"stops": [
+9,
+18,
+11
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 2
+},
+{
+"stops": [
+9,
+19,
+2
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+9,
+19,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+19,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+19,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+19,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+19,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+9,
+19,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+10,
+0,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+10,
+1,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+10,
+2,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+10,
+2,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+10,
+3,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+10,
+4,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+10,
+6,
+4
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+10,
+6,
+5
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+10,
+7,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+10,
+7,
+19
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+10,
+8,
+9
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+10,
+8,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+10,
+10,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+10,
+10,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+10,
+11,
+8
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+10,
+12,
+2
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 0
+},
+{
+"stops": [
+10,
+12,
+3
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 0
+},
+{
+"stops": [
+10,
+14,
+5
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+10,
+19,
+1
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 1
+},
+{
+"stops": [
+10,
+19,
+16
+],
+"outcome": "resonance",
+"sect": "tangmen",
+"scatters": 1
+},
+{
+"stops": [
+11,
+0,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+11,
+2,
+7
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+11,
+3,
+17
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+11,
+4,
+17
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+11,
+4,
+19
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+11,
+5,
+0
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+11,
+5,
+19
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+11,
+6,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+11,
+7,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+11,
+8,
+18
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+11,
+9,
+7
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+11,
+12,
+7
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+11,
+14,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+11,
+15,
+3
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+11,
+16,
+5
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+11,
+17,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+11,
+19,
+2
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+12,
+1,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+12,
+2,
+18
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 1
+},
+{
+"stops": [
+12,
+6,
+0
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+12,
+6,
+6
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+12,
+7,
+9
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+12,
+8,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+12,
+10,
+3
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+12,
+10,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+12,
+10,
+16
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+12,
+11,
+1
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+12,
+11,
+3
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+12,
+12,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+12,
+12,
+18
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+12,
+13,
+16
+],
+"outcome": "resonance",
+"sect": "tianmo",
+"scatters": 0
+},
+{
+"stops": [
+12,
+14,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+12,
+14,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+12,
+14,
+17
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+12,
+15,
+5
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 0
+},
+{
+"stops": [
+12,
+15,
+6
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 0
+},
+{
+"stops": [
+12,
+16,
+5
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+12,
+16,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+13,
+2,
+7
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+13,
+2,
+8
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+13,
+3,
+3
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+13,
+3,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+13,
+3,
+17
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+13,
+4,
+17
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+13,
+5,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+13,
+6,
+11
+],
+"outcome": "sense",
+"sect": "tianjian",
+"scatters": 1
+},
+{
+"stops": [
+13,
+10,
+2
+],
+"outcome": "sense",
+"sect": "tianjian",
+"scatters": 0
+},
+{
+"stops": [
+13,
+10,
+9
+],
+"outcome": "sense",
+"sect": "tianjian",
+"scatters": 0
+},
+{
+"stops": [
+13,
+11,
+5
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+13,
+11,
+7
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+13,
+11,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+13,
+13,
+0
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+13,
+14,
+19
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+13,
+15,
+14
+],
+"outcome": "sense",
+"sect": "tianjian",
+"scatters": 1
+},
+{
+"stops": [
+13,
+15,
+18
+],
+"outcome": "resonance",
+"sect": "tianjian",
+"scatters": 0
+},
+{
+"stops": [
+13,
+16,
+4
+],
+"outcome": "sense",
+"sect": "tianjian",
+"scatters": 0
+},
+{
+"stops": [
+13,
+16,
+10
+],
+"outcome": "sense",
+"sect": "tianjian",
+"scatters": 1
+},
+{
+"stops": [
+14,
+0,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+14,
+1,
+3
+],
+"outcome": "resonance",
+"sect": "shaolin",
+"scatters": 1
+},
+{
+"stops": [
+14,
+2,
+2
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+14,
+5,
+5
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+14,
+7,
+3
+],
+"outcome": "resonance",
+"sect": "shaolin",
+"scatters": 0
+},
+{
+"stops": [
+14,
+7,
+5
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 0
+},
+{
+"stops": [
+14,
+9,
+12
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 1
+},
+{
+"stops": [
+14,
+10,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+14,
+11,
+1
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+14,
+12,
+9
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+14,
+12,
+17
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+14,
+13,
+9
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+14,
+14,
+0
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+14,
+14,
+3
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+14,
+15,
+12
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 1
+},
+{
+"stops": [
+14,
+17,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+14,
+18,
+14
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 1
+},
+{
+"stops": [
+14,
+18,
+16
+],
+"outcome": "resonance",
+"sect": "shaolin",
+"scatters": 0
+},
+{
+"stops": [
+14,
+19,
+8
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+15,
+0,
+2
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+15,
+0,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+15,
+1,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+15,
+1,
+17
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+15,
+2,
+5
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+15,
+3,
+17
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+15,
+4,
+15
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 2
+},
+{
+"stops": [
+15,
+6,
+9
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+15,
+7,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+15,
+8,
+3
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 0
+},
+{
+"stops": [
+15,
+8,
+16
+],
+"outcome": "resonance",
+"sect": "wudang",
+"scatters": 0
+},
+{
+"stops": [
+15,
+10,
+1
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+15,
+10,
+2
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+15,
+10,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+15,
+11,
+0
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 0
+},
+{
+"stops": [
+15,
+12,
+0
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+15,
+13,
+1
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+15,
+15,
+9
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 0
+},
+{
+"stops": [
+15,
+17,
+7
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+15,
+17,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+15,
+19,
+3
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+15,
+19,
+19
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+16,
+0,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+16,
+2,
+6
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 1
+},
+{
+"stops": [
+16,
+2,
+15
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 2
+},
+{
+"stops": [
+16,
+3,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+16,
+4,
+19
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+16,
+6,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+16,
+7,
+3
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+16,
+7,
+17
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+16,
+8,
+3
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+16,
+9,
+2
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 0
+},
+{
+"stops": [
+16,
+9,
+14
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 1
+},
+{
+"stops": [
+16,
+9,
+19
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 0
+},
+{
+"stops": [
+16,
+12,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+16,
+14,
+1
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+16,
+14,
+8
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+16,
+14,
+17
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+16,
+16,
+17
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+16,
+16,
+18
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+16,
+17,
+2
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+16,
+19,
+1
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+17,
+1,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+17,
+4,
+0
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+17,
+4,
+9
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+17,
+4,
+16
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+17,
+4,
+17
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+17,
+5,
+3
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+17,
+6,
+2
+],
+"outcome": "sense",
+"sect": "tianjian",
+"scatters": 0
+},
+{
+"stops": [
+17,
+6,
+9
+],
+"outcome": "sense",
+"sect": "tianjian",
+"scatters": 0
+},
+{
+"stops": [
+17,
+6,
+14
+],
+"outcome": "sense",
+"sect": "tianjian",
+"scatters": 1
+},
+{
+"stops": [
+17,
+6,
+16
+],
+"outcome": "resonance",
+"sect": "tianjian",
+"scatters": 0
+},
+{
+"stops": [
+17,
+8,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+17,
+10,
+7
+],
+"outcome": "sense",
+"sect": "tianjian",
+"scatters": 0
+},
+{
+"stops": [
+17,
+11,
+19
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+17,
+12,
+16
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+17,
+13,
+8
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+17,
+13,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+17,
+15,
+2
+],
+"outcome": "sense",
+"sect": "tianjian",
+"scatters": 0
+},
+{
+"stops": [
+17,
+15,
+16
+],
+"outcome": "resonance",
+"sect": "tianjian",
+"scatters": 0
+},
+{
+"stops": [
+17,
+16,
+18
+],
+"outcome": "resonance",
+"sect": "tianjian",
+"scatters": 0
+},
+{
+"stops": [
+17,
+17,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+17,
+17,
+16
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+18,
+1,
+9
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+18,
+1,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 2
+},
+{
+"stops": [
+18,
+4,
+17
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+18,
+6,
+1
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+18,
+6,
+2
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+18,
+6,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+18,
+8,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+18,
+9,
+16
+],
+"outcome": "resonance",
+"sect": "tianmo",
+"scatters": 0
+},
+{
+"stops": [
+18,
+10,
+4
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+18,
+11,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+18,
+14,
+4
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+18,
+18,
+6
+],
+"outcome": "none",
+"sect": "",
+"scatters": 0
+},
+{
+"stops": [
+18,
+18,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+19,
+0,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+19,
+0,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+19,
+0,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+19,
+0,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+19,
+0,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+19,
+0,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+19,
+1,
+10
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 3
+},
+{
+"stops": [
+19,
+1,
+11
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 3
+},
+{
+"stops": [
+19,
+1,
+12
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 3
+},
+{
+"stops": [
+19,
+1,
+13
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 3
+},
+{
+"stops": [
+19,
+1,
+14
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 3
+},
+{
+"stops": [
+19,
+1,
+15
+],
+"outcome": "resonance",
+"sect": "shaolin",
+"scatters": 3
+},
+{
+"stops": [
+19,
+2,
+10
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 3
+},
+{
+"stops": [
+19,
+2,
+11
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 3
+},
+{
+"stops": [
+19,
+2,
+12
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 3
+},
+{
+"stops": [
+19,
+2,
+13
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 3
+},
+{
+"stops": [
+19,
+2,
+14
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 3
+},
+{
+"stops": [
+19,
+2,
+15
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 3
+},
+{
+"stops": [
+19,
+3,
+10
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+19,
+3,
+11
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+19,
+3,
+12
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+19,
+3,
+13
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+19,
+3,
+14
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+19,
+3,
+15
+],
+"outcome": "none",
+"sect": "",
+"scatters": 3
+},
+{
+"stops": [
+19,
+4,
+1
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 2
+},
+{
+"stops": [
+19,
+4,
+9
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 2
+},
+{
+"stops": [
+19,
+4,
+10
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 3
+},
+{
+"stops": [
+19,
+4,
+11
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 3
+},
+{
+"stops": [
+19,
+4,
+12
+],
+"outcome": "resonance",
+"sect": "wudang",
+"scatters": 3
+},
+{
+"stops": [
+19,
+4,
+13
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 3
+},
+{
+"stops": [
+19,
+4,
+14
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 3
+},
+{
+"stops": [
+19,
+4,
+15
+],
+"outcome": "sense",
+"sect": "wudang",
+"scatters": 3
+},
+{
+"stops": [
+19,
+5,
+7
+],
+"outcome": "sense",
+"sect": "tianmo",
+"scatters": 1
+},
+{
+"stops": [
+19,
+6,
+15
+],
+"outcome": "sense",
+"sect": "tianjian",
+"scatters": 2
+},
+{
+"stops": [
+19,
+9,
+2
+],
+"outcome": "resonance",
+"sect": "wudang",
+"scatters": 1
+},
+{
+"stops": [
+19,
+9,
+16
+],
+"outcome": "bagua",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+19,
+11,
+6
+],
+"outcome": "resonance",
+"sect": "wudang",
+"scatters": 1
+},
+{
+"stops": [
+19,
+11,
+16
+],
+"outcome": "resonance",
+"sect": "wudang",
+"scatters": 1
+},
+{
+"stops": [
+19,
+12,
+2
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 1
+},
+{
+"stops": [
+19,
+12,
+4
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 1
+},
+{
+"stops": [
+19,
+12,
+19
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 1
+},
+{
+"stops": [
+19,
+14,
+17
+],
+"outcome": "none",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+19,
+15,
+16
+],
+"outcome": "bagua",
+"sect": "",
+"scatters": 1
+},
+{
+"stops": [
+19,
+15,
+18
+],
+"outcome": "resonance",
+"sect": "tianjian",
+"scatters": 1
+},
+{
+"stops": [
+19,
+16,
+6
+],
+"outcome": "sense",
+"sect": "tianjian",
+"scatters": 1
+},
+{
+"stops": [
+19,
+18,
+4
+],
+"outcome": "sense",
+"sect": "shaolin",
+"scatters": 1
+},
+{
+"stops": [
+19,
+19,
+10
+],
+"outcome": "resonance",
+"sect": "tangmen",
+"scatters": 3
+},
+{
+"stops": [
+19,
+19,
+11
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 3
+},
+{
+"stops": [
+19,
+19,
+12
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 3
+},
+{
+"stops": [
+19,
+19,
+13
+],
+"outcome": "resonance",
+"sect": "tangmen",
+"scatters": 3
+},
+{
+"stops": [
+19,
+19,
+14
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 3
+},
+{
+"stops": [
+19,
+19,
+15
+],
+"outcome": "sense",
+"sect": "tangmen",
+"scatters": 3
+}
+]
+}

@@ -1,6 +1,6 @@
 # 天魔劫：武俠 Roguelike（灰盒原型）
 
-韓漫武俠風格的 3D 第一人稱地圖探索 Roguelike。十年前天魔神教血洗中原，如今天魔復活；主角一路闖過綠林山寨、暗月樓、屍門鬼谷，殺上天魔神教總壇。4 張地圖 × 5 個區域，進入區域即「鎖陣」，殺光敵人「破陣」，在悟道碑免費參悟三選一；殺敵吸納真氣，衝擊奇經八脈的 61 個穴位；每全通一條經脈就突破一個境界（三流到自然境，共九境）。
+韓漫武俠風格的 3D 第一人稱地圖探索 Roguelike。十年前天魔神教血洗中原，如今天魔復活；主角一路闖過綠林山寨、暗月樓、屍門鬼谷，殺上天魔神教總壇。4 張地圖 × 5 個區域，進入區域即「鎖陣」，殺光敵人「破陣」，在悟道碑轉動「天機輪」免費參悟三選一（中線決定門派、三個悟觸發頓悟，機率全部窮舉驗證並在遊戲中公示）；殺敵吸納真氣，衝擊奇經八脈的 61 個穴位；每全通一條經脈就突破一個境界（三流到自然境，共九境）。
 
 ## 開啟方式
 
@@ -113,3 +113,12 @@ python3 tools/balance/sim.py --set drop_chance_minion=0.02      # 試算單一�
 ## 協作
 
 AI 協作規則寫在 `AGENTS.md`（Codex 會自動讀取；Claude 經由 `CLAUDE.md` 讀取）。GitHub Actions 會在每次 push 或 PR 時自動跑冒煙測試（`.github/workflows/smoke-test.yml`）。
+
+## 天機輪機率模型
+
+悟道碑的參悟改成三軸「天機輪」，數學規格、窮舉理論值、蒙地卡羅驗證與 Python／GDScript 黃金測試見 `docs/shrine-math/report.md`，重跑：
+```
+python3 tools/shrine_math/wheel.py      # 窮舉 8000 種停輪＋50 萬次模擬，輸出 results.json、report.md、tests/wheel_golden.json
+python3 tools/shrine_math/make_reels.py # 依 wheel_config.csv 的種子重排輪帶
+```
+冒煙測試會比對 609 組黃金停輪，並以遊戲 RNG 轉 2 萬次做 z 檢定。

@@ -23,6 +23,7 @@
 | 12c-meridian-pose.svg 奇經八脈・衝穴（定案：一脈一式剪影＋穴位星圖） | `meridian_ui.gd`、`meridian_chart.gd` |
 | 12d-meridian-poses.svg 八脈八式一覽 | C 案的招式表 |
 | 13-bow-aim.svg 弓・拉弓與瞄準 | `hud.gd` 紅圈準星 |
+| 14-tianji-wheel.svg 悟道碑・天機輪（三軸石輪＋機率公示） | `gacha_ui.gd`、`wheel_reel.gd` |
 
 ## 語彙
 

@@ -49,10 +49,32 @@ func _ready() -> void:
 	await _shot("03b-hud-clear-banner", 2)
 	main.mode = "gacha"
 	get_tree().paused = true
+	Game.shrine_charges = 2
 	main.gacha.open()
 	await _shot("04a-shrine-empty")
+	# 天機輪：找一組「門派共鳴＋頓悟」的停輪位置來截圖
+	var stops: Array = []
+	for a in Data.wheel_reels[0].size():
+		for b in Data.wheel_reels[1].size():
+			for c in Data.wheel_reels[2].size():
+				var wr := Game.wheel_eval([a, b, c])
+				if wr.outcome == "resonance" and int(wr.scatters) >= 3 and stops.is_empty():
+					stops = [a, b, c]
+	if stops.is_empty():
+		stops = [0, 0, 0]
+	main.gacha.log_lines = ["門派感應・少林", "平"]
+	Game.take_draw()
+	main.gacha.auto_advance = false
+	main.gacha._spin(stops)
+	main.gacha.spin_tween.kill()
+	for i in main.gacha.reels.size():
+		main.gacha.reels[i].pos = float(stops[i]) + 0.45 + i * 0.2   # 轉動中的畫面
+	await _shot("14a-tianji-spinning", 2)
+	main.gacha._skip()
+	await _shot("14-tianji-wheel", 4)
+	main.gacha.auto_advance = true
 	main.gacha.current = [{"kind": "W", "id": "W001", "rarity": "common"}, {"kind": "W", "id": "W301", "rarity": "legendary"}, {"kind": "M", "id": "M007", "rarity": "common"}]
-	main.gacha._refresh()
+	main.gacha._set_state("cards")
 	await _shot("04-shrine")
 	main.gacha.visible = false
 	Game.weapons = [{"id": "W001", "lv": 3, "affixes": [{"id": "A01", "v": 9.0}, {"id": "A03", "v": 12.0}], "reforges": 0}, Game.make_weapon("W007", 0)]

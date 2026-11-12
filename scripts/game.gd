@@ -24,6 +24,8 @@ var zhenqi := 0.0                      # 真氣：殺敵吸納，用來衝穴
 var acu_open := {}                     # meridian_id -> 已依序打通的穴數
 var acu_fails := {}                    # point_id -> 衝擊失敗次數（越多次成功率越高）
 var shrine_charges := 0                # 本區悟道碑剩下的免費參悟
+var wheel_free := 0                    # 天機輪・頓悟送的免費參悟（先用）
+var wheel_last := {}                   # 上一次轉輪的結果 {stops, outcome, sect, scatters}
 var refreshes_this_stage := 0
 var gold := 0.0
 var weapons: Array = [null, null]      # 0＝主武器、1＝副武器，每格 {id, lv, affixes, reforges}
@@ -65,6 +67,8 @@ func new_run(cid: String, start_wid := "") -> void:
 	acu_open = {}
 	acu_fails = {}
 	shrine_charges = 0
+	wheel_free = 0
+	wheel_last = {}
 	refreshes_this_stage = 0
 	gold = 0.0
 	martial = {}
@@ -670,11 +674,14 @@ func on_zone_cleared() -> void:
 
 
 func draws_left() -> int:
-	return shrine_charges + free_draws
+	return wheel_free + shrine_charges + free_draws
 
 
 func take_draw() -> bool:
-	## 參悟不花錢：先用本區的次數，再用武學給的額外次數
+	## 參悟不花錢：先用頓悟送的，再用本區的次數，最後用武學給的額外次數
+	if wheel_free > 0:
+		wheel_free -= 1
+		return true
 	if shrine_charges > 0:
 		shrine_charges -= 1
 		return true
@@ -709,6 +716,109 @@ func pay_refresh() -> bool:
 	refreshes_this_stage += 1
 	gold_changed.emit()
 	return true
+
+
+# ------------------------------------------------------------------ 天機輪
+## 規則與數學模型見 tools/shrine_math/wheel.py（同一份 CSV；冒煙測試逐盤面比對兩邊的判定）
+func wheel_spin() -> Array:
+	## 轉一次：每軸均勻抽一個停輪位置（中線）
+	var stops: Array = []
+	for strip in Data.wheel_reels:
+		stops.append(rng.randi_range(0, strip.size() - 1))
+	return stops
+
+
+func wheel_window(stops: Array) -> Array:
+	## 畫面：每軸 [上, 中, 下]
+	var out: Array = []
+	for i in stops.size():
+		var strip: PackedStringArray = Data.wheel_reels[i]
+		var n := strip.size()
+		var s := int(stops[i])
+		out.append([strip[(s - 1 + n) % n], strip[s], strip[(s + 1) % n]])
+	return out
+
+
+func wheel_eval(stops: Array) -> Dictionary:
+	## outcome：none／sense（門派感應）／resonance（門派共鳴）／bagua（八卦歸一）；scatters＝畫面上的悟
+	var win := wheel_window(stops)
+	var mid: Array = []
+	var scat := 0
+	for col in win:
+		mid.append(col[1])
+		for sym in col:
+			if sym == "wu":
+				scat += 1
+	var res := {"stops": stops, "outcome": "none", "sect": "", "scatters": scat}
+	if mid.all(func(x): return x == "bagua"):
+		res.outcome = "bagua"
+		return res
+	var sect := _first_sect(mid)
+	if sect != "" and mid.all(func(x): return x == sect or x == "bagua"):
+		res.outcome = "resonance"
+		res.sect = sect
+		return res
+	var two := mid.slice(0, 2)
+	var sect2 := _first_sect(two)
+	if sect2 != "" and two.all(func(x): return x == sect2 or x == "bagua"):
+		res.outcome = "sense"
+		res.sect = sect2
+	return res
+
+
+func _first_sect(syms: Array) -> String:
+	for x in syms:
+		if String(Data.wheel_symbols[x].kind) == "sect":
+			return String(Data.wheel_symbols[x].sect_id)
+	return ""
+
+
+func wheel_roll(stops: Array) -> Array:
+	## 依轉輪結果產生候選；頓悟時加免費參悟
+	var r := wheel_eval(stops)
+	wheel_last = r
+	var free_n := int(Data.wheel_cfg.free_spins)
+	if int(r.scatters) >= 3:
+		wheel_free += free_n
+		message.emit("頓悟！免費參悟 +%d" % free_n)
+	match String(r.outcome):
+		"sense":
+			return roll_choices({"sect": r.sect, "sect_slots": int(Data.wheel_cfg.sense_sect_slots)})
+		"resonance":
+			return roll_choices({"sect": r.sect, "sect_slots": 99, "bump": int(Data.wheel_cfg.resonance_bump)})
+		"bagua":
+			return roll_choices({"legendary": true, "bump": int(Data.wheel_cfg.bagua_bump)})
+	return roll_choices()
+
+
+var _wheel_odds := {}
+
+
+func wheel_odds() -> Dictionary:
+	## 機率公示：窮舉全部停輪組合算出每轉的精確機率（和 tools/shrine_math/wheel.py 同一套判定）
+	if not _wheel_odds.is_empty():
+		return _wheel_odds
+	var c := {"none": 0, "sense": 0, "resonance": 0, "bagua": 0, "trigger": 0, "total": 0}
+	var L: Array = []
+	for strip in Data.wheel_reels:
+		L.append(strip.size())
+	for a in L[0]:
+		for b in L[1]:
+			for d in L[2]:
+				var r := wheel_eval([a, b, d])
+				c[r.outcome] += 1
+				if int(r.scatters) >= 3:
+					c.trigger += 1
+				c.total += 1
+	var t := float(c.total)
+	var p := float(c.trigger) / t
+	_wheel_odds = {"sense": c.sense / t, "resonance": c.resonance / t, "bagua": c.bagua / t, "trigger": p,
+		"spins": 1.0 / (1.0 - float(Data.wheel_cfg.free_spins) * p), "combos": c.total}
+	return _wheel_odds
+
+
+static func wheel_outcome_name(outcome: String) -> String:
+	return {"none": "", "sense": "門派感應", "resonance": "門派共鳴", "bagua": "八卦歸一"}.get(outcome, "")
 
 
 func base_rarity_weights() -> Array:
@@ -749,6 +859,28 @@ func _owned_weapon_lv(wid: String) -> int:
 	return 0
 
 
+func _sect_candidate(sect: String, rar: String, seen: Dictionary) -> Dictionary:
+	## 指定門派的武學候選：先找同稀有度，沒有就往下找，再沒有就往上找
+	var order: Array = Data.rarity_order
+	var start := order.find(rar)
+	var tries_order: Array = []
+	for i in range(start, -1, -1):
+		tries_order.append(order[i])
+	for i in range(start + 1, order.size()):
+		tries_order.append(order[i])
+	for r in tries_order:
+		var p := _pool(r, "M", seen)
+		var items: Array = []
+		var weights: Array = []
+		for i in p[0].size():
+			if String(Data.martial[p[0][i]].sect) == sect:
+				items.append(p[0][i])
+				weights.append(p[1][i])
+		if not items.is_empty():
+			return {"kind": "M", "id": _pick_weighted(items, weights), "rarity": r}
+	return {}
+
+
 func _pool(rar: String, kind: String, seen: Dictionary) -> Array:
 	## 回傳 [items, weights]
 	var items: Array = []
@@ -787,17 +919,31 @@ func _pool(rar: String, kind: String, seen: Dictionary) -> Array:
 	return [items, weights]
 
 
-func roll_choices() -> Array:
+func roll_choices(o := {}) -> Array:
+	## o（天機輪）：sect＋sect_slots＝前幾張保證是該門派武學；bump＝稀有度升幾階；legendary＝第一張必出絕世
 	var n := int(Data.gacha.choices_per_draw) + int(f("extra_choice"))
 	var cands: Array = []
 	var seen := {}
 	var weights := rarity_weights()
 	var tries := 0
+	var sect: String = o.get("sect", "")
+	var sect_slots: int = int(o.get("sect_slots", 0))
+	var bump: int = int(o.get("bump", 0))
 	while cands.size() < n and tries < 60:
 		tries += 1
 		var rar: String = _pick_weighted(Data.rarity_order, weights)
+		if bump > 0:
+			rar = Data.rarity_order[mini(Data.rarity_order.find(rar) + bump, Data.rarity_order.size() - 1)]
+		if cands.is_empty() and o.get("legendary", false) and not (_pool("legendary", "M", seen)[0].is_empty() and _pool("legendary", "W", seen)[0].is_empty()):
+			rar = "legendary"   # 八卦歸一
 		if cands.is_empty() and since_legendary >= int(Data.gacha.hard_pity) - 1 and not (_pool("legendary", "M", seen)[0].is_empty() and _pool("legendary", "W", seen)[0].is_empty()):
 			rar = "legendary"   # 天機保底；已經沒有可出的絕世時不強制
+		if sect != "" and cands.size() < sect_slots:
+			var sc := _sect_candidate(sect, rar, seen)
+			if not sc.is_empty():
+				seen[sc.id] = true
+				cands.append(sc)
+				continue
 		var kind := "W" if rng.randf() < float(Data.gacha.weapon_pool_ratio) else "M"
 		var p := _pool(rar, kind, seen)
 		if p[0].is_empty() and kind == "W":

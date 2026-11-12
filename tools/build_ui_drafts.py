@@ -8,6 +8,7 @@
 需要 Pillow（轉換立繪與背景成內嵌圖）。
 """
 import base64
+import json
 import io
 import math
 import os
@@ -1605,6 +1606,110 @@ def s13_bow_aim():
     return doc("\n".join(b), "13 弓・拉弓與瞄準")
 
 
+# ---------------------------------------------------------------- 天機輪（悟道碑）
+WHEEL_SECT_GLYPH = {"tianjian": "劍", "tianmo": "魔", "tangmen": "唐", "shaolin": "禪", "wudang": "太"}
+
+
+def wheel_tile(x, y, w, h, sym, dim=False, hot=False):
+    """轉輪上的一格符號。"""
+    o = []
+    op = .35 if dim else 1
+    if sym in WHEEL_SECT_GLYPH:
+        col = SECT_COL[sym]
+        o.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="{INK}" stroke="{col}" stroke-width="{4 if hot else 2.5}" opacity="{op}"/>')
+        o.append(f'<rect x="{x+10}" y="{y+10}" width="{w-20}" height="{h-20}" fill="{col}" opacity="{.18*op:.2f}"/>')
+        o.append(text(x + w / 2, y + h / 2 + h * .21, WHEEL_SECT_GLYPH[sym], h * .6, col, SERIF, 900, "middle", f'opacity="{op}"'))
+    elif sym == "bagua":
+        o.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="{TEAL_D}" stroke="{TEAL}" stroke-width="{4 if hot else 3}" opacity="{op}" {"filter=\'url(#glowTeal)\'" if hot else ""}/>')
+        cx, cy, r = x + w / 2, y + h / 2, h * .36
+        pts = " ".join(f"{cx+math.cos(math.radians(22.5+45*i))*r:.1f},{cy+math.sin(math.radians(22.5+45*i))*r:.1f}" for i in range(8))
+        o.append(f'<polygon points="{pts}" fill="none" stroke="{BONE}" stroke-width="2" opacity="{.6*op:.2f}"/>')
+        o.append(text(cx, cy + h * .18, "卦", h * .5, BONE, SERIF, 900, "middle", f'opacity="{op}"'))
+    elif sym == "wu":
+        o.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="#2a0f0a" stroke="{EMBER}" stroke-width="{4 if hot else 3}" opacity="{op}" {"filter=\'url(#glowRed)\'" if hot else ""}/>')
+        o.append(brush_title(x + w / 2, y + h / 2 + h * .22, "悟", h * .6, EMBER, INK, max(3, h * .06), "middle", -4))
+    else:
+        o.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="#141217" stroke="#3b363f" stroke-width="2" opacity="{op}"/>')
+        o.append(text(x + w / 2, y + h / 2 + h * .16, "雲", h * .44, "#4d4853", SERIF, 900, "middle"))
+    return "\n".join(o)
+
+
+def s14_tianji_wheel():
+    reels = [r["strip"].split("|") for r in _csv("wheel_reels")]
+    res = json.load(open(os.path.join(ROOT, "docs/shrine-math/results.json"), encoding="utf-8"))
+    P = res["P"]
+    # 示意：中線 唐門、八卦、唐門 → 門派共鳴；第一軸上方一個悟
+    win = [["wu", "tangmen", "cloud"], ["shaolin", "bagua", "tianjian"], ["wudang", "tangmen", "tianmo"]]
+    b = []
+    _dim_scene(b, 0.9)
+    b.append(f'<circle cx="800" cy="430" r="430" fill="url(#tealBloom)" opacity=".35"/>')
+    b.append(brush_title(800, 82, "悟道碑・天機輪", 62, BONE, INK, 9, "middle", -1))
+    b.append(narration(470, 102, 660, 46, ["可參悟 2 次（含頓悟 0）　｜　持有 236 銀兩"], 18))
+    # 石碑
+    x0, y0, w0, h0 = 500, 176, 600, 470
+    b.append(f'<path d="M{x0+30},{y0} H{x0+w0-30} L{x0+w0},{y0+30} V{y0+h0} H{x0} V{y0+30} Z" fill="#1a171d" stroke="{BONE}" stroke-width="4"/>')
+    b.append(f'<path d="M{x0+18},{y0+12} H{x0+w0-18}" stroke="{BONE}" stroke-width="1" opacity=".4"/>')
+    b.append(text(800, y0 + 38, "天　機　輪", 22, GREY, SERIF, 900, "middle"))
+    tw, th, gap = 150, 112, 22
+    rx0 = 800 - (3 * tw + 2 * gap) / 2
+    ry0 = y0 + 62
+    for i in range(3):
+        rx = rx0 + i * (tw + gap)
+        b.append(f'<rect x="{rx-6}" y="{ry0-6}" width="{tw+12}" height="{3*th+12}" fill="{INK}" stroke="#55505a" stroke-width="2"/>')
+        for j in range(3):
+            sym = win[i][j]
+            hot = j == 1 and sym in ("tangmen", "bagua")
+            b.append(wheel_tile(rx, ry0 + j * th + 4, tw, th - 8, sym, dim=(j != 1 and sym != "wu"), hot=hot or sym == "wu"))
+    # 中線
+    ly = ry0 + th * 1.5
+    b.append(f'<rect x="{rx0-30}" y="{ly-th/2}" width="{3*tw+2*gap+60}" height="{th}" fill="none" stroke="{BLOOD}" stroke-width="4" filter="url(#glowRed)"/>')
+    for sx, d in ((rx0 - 44, 1), (rx0 + 3 * tw + 2 * gap + 44, -1)):
+        b.append(f'<path d="M{sx-d*16},{ly-18} L{sx+d*10},{ly} L{sx-d*16},{ly+18} Z" fill="{BLOOD}"/>')
+    b.append(text(rx0 - 44, ly - 30, "中線", 15, BLOOD, SANS, 900, "middle"))
+    # 結果
+    b.append(f'<g>{burst(800, 700, 270, 56, 22, 0.25, BONE, INK, 5, 6)}</g>')
+    b.append(brush_title(800, 716, "門派共鳴・唐門", 46, BLOOD, INK, 8, "middle", -2))
+    b.append(text(800, 776, "三張候選皆出唐門武學，稀有度升一階", 18, BONE, SANS, 900, "middle", f'stroke="{INK}" stroke-width="5" paint-order="stroke"'))
+    # 左：輪譜＋機率公示
+    x, y, w, h = 40, 176, 420, 560
+    b.append(slant(x, y, w, h, 22, INK, BONE, 3))
+    b.append(text(x + 34, y + 44, "天機輪譜", 26, BONE, SERIF, 900))
+    b.append(text(x + w - 30, y + 44, "每轉機率", 15, GREY, SANS, 900, "end"))
+    rows = [(["tangmen", "tangmen", "bagua"], "門派共鳴", "三張候選皆出該門派，稀有度升一階", P["resonance"]),
+            (["shaolin", "bagua", "cloud"], "門派感應", "前兩軸同門：一張候選保證是該門派", P["sense"]),
+            (["bagua", "bagua", "bagua"], "八卦歸一", "一張必出絕世，其餘稀有度升一階", P["bagua"]),
+            (["wu", "wu", "wu"], "頓悟", "任意位置 3 個悟：免費參悟 +3，可再觸發", res["p_trigger"])]
+    for i, (syms, name, desc, pr) in enumerate(rows):
+        yy = y + 74 + i * 112
+        for k, sym in enumerate(syms):
+            b.append(wheel_tile(x + 30 + k * 46, yy, 42, 40, sym))
+        b.append(text(x + 186, yy + 26, name, 22, EMBER if name in ("八卦歸一", "頓悟") else BONE, SERIF, 900))
+        b.append(text(x + w - 30, yy + 26, f"{pr*100:.2f}%", 20, TEAL, SANS, 900, "end"))
+        b.append(text(x + 30, yy + 70, desc, 15, "#c9c2cb", SANS, 700))
+    b.append(text(x + 30, y + h - 52, f"每次參悟平均轉 {res['spins_per_charge']:.3f} 次（含頓悟）", 14, GREY, SANS, 700))
+    b.append(text(x + 30, y + h - 28, "八卦百搭任何門派；悟每軸最多出現一個", 14, GREY, SANS, 700))
+    # 右：天機、頓悟
+    x, y, w, h = 1140, 176, 420, 560
+    b.append(slant(x, y, w, h, 22, INK, BONE, 3))
+    b.append(text(x + 34, y + 44, "天機", 26, BONE, SERIF, 900))
+    b.append(bar(x + 34, y + 70, w - 80, 16, 13 / 20, "url(#tealFill)", segs=20, cut=6))
+    b.append(text(x + 34, y + 116, "13 / 20 未遇絕世　第 20 次必出", 15, GREY, SANS, 700))
+    b.append(text(x + 34, y + 176, "頓悟", 26, EMBER, SERIF, 900))
+    for k in range(3):
+        b.append(wheel_tile(x + 34 + k * 64, y + 196, 56, 52, "wu", dim=k > 0))
+    b.append(text(x + 34, y + 280, "剩餘免費參悟　1", 18, BONE, SANS, 900))
+    b.append(text(x + 34, y + 340, "本次參悟", 20, BONE, SERIF, 900))
+    log = [("第 1 轉", "頓悟　＋3"), ("第 2 轉", "門派感應・少林"), ("第 3 轉", "門派共鳴・唐門")]
+    for i, (a, c) in enumerate(log):
+        b.append(text(x + 34, y + 376 + i * 30, a, 15, GREY, SANS, 700))
+        b.append(text(x + 120, y + 376 + i * 30, c, 16, TEAL if i == 2 else BONE, SANS, 900))
+    b.append(button(470, 822, 220, 54, "參悟・轉輪", "hover", 22, "空白"))
+    b.append(button(714, 822, 210, 54, "重轉（4 兩）", "normal", 20))
+    b.append(button(948, 822, 200, 54, "離開悟道碑", "normal", 20))
+    b.append(note(1200, 20, ["稿註：轉輪停下後顯示結果，0.8 秒後換成三選一卡片（沿用 04 稿）；", "左側機率由遊戲啟動時窮舉輪帶算出，與 tools/shrine_math 一致。"]))
+    return doc("\n".join(b), "14 悟道碑・天機輪")
+
+
 def build(only=None):
     os.makedirs(OUT, exist_ok=True)
     screens = {k: v for k, v in globals().items() if k.startswith("s") and k[1:3].isdigit()}
@@ -1613,7 +1718,7 @@ def build(only=None):
             continue
         slug = {"s00": "00-style", "s01": "01-main-menu", "s02": "02-character-select", "s03": "03-hud",
                 "s04": "04-shrine", "s05": "05-martial-panel", "s06": "06-pause", "s07": "07-result",
-                "s08": "08-start-weapon", "s09": "09-drop-compare", "s10": "10-smith", "s11": "11-merchant", "s12": "12-meridian", "s12b": "12b-meridian-scroll", "s12c": "12c-meridian-pose", "s12d": "12d-meridian-poses", "s13": "13-bow-aim"}[name.split("_")[0]]
+                "s08": "08-start-weapon", "s09": "09-drop-compare", "s10": "10-smith", "s11": "11-merchant", "s12": "12-meridian", "s12b": "12b-meridian-scroll", "s12c": "12c-meridian-pose", "s12d": "12d-meridian-poses", "s13": "13-bow-aim", "s14": "14-tianji-wheel"}[name.split("_")[0]]
         path = os.path.join(OUT, slug + ".svg")
         with open(path, "w", encoding="utf-8") as f:
             f.write(fn())

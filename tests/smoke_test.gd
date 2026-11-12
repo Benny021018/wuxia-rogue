@@ -46,6 +46,7 @@ func _run_character(cid: String) -> void:
 		await _check_weapon_views(player)
 		await _check_loot_and_shops(world, player)
 		_check_meridians_and_shrine(player)
+		_check_wheel()
 		await _check_bow(player)
 		await _check_cover_tactics(world, player)
 		await _check_hit_reactions(world)
@@ -124,6 +125,10 @@ func _run_character(cid: String) -> void:
 						Game.choose(c[0], 1)
 				main.gacha.open()
 				main.gacha._on_draw()
+				main.gacha._skip()
+				_check(main.gacha.state == "result" and not main.gacha.current.is_empty(), "天機輪轉完有候選")
+				main.gacha._set_state("cards")
+				main.gacha._on_pick(main.gacha.current[0], 1)
 				main.gacha._on_close()
 				main.mode = "play"
 			if ri < 4:
@@ -192,7 +197,7 @@ func _run_character(cid: String) -> void:
 	Game.switch_weapon(0)
 	main.gacha.open()
 	main.gacha.current = [{"kind": "W", "id": "W301", "rarity": "legendary"}]
-	main.gacha._refresh()
+	main.gacha._set_state("cards")
 	var labels: Array = []
 	for b in main.gacha.cards_root.find_children("*", "Button", true, false):
 		labels.append(b.text)
@@ -363,6 +368,65 @@ func _check_meridians_and_shrine(player) -> void:
 	Game.refreshes_this_stage = keep[6]
 	Game.free_draws = keep[7]
 	Game.realm = keep[8]
+	Game.recompute()
+
+
+func _check_wheel() -> void:
+	## 天機輪：遊戲實作（GDScript）和數學模型（tools/shrine_math/wheel.py）分別驗證，再逐盤面對照
+	var f := FileAccess.open("res://tests/wheel_golden.json", FileAccess.READ)
+	_check(f != null, "找到天機輪黃金樣本 tests/wheel_golden.json")
+	if f == null:
+		return
+	var cases: Array = JSON.parse_string(f.get_as_text()).cases
+	var bad := 0
+	for c in cases:
+		var r := Game.wheel_eval(c.stops.map(func(x): return int(x)))
+		if r.outcome != c.outcome or r.sect != c.sect or int(r.scatters) != int(c.scatters):
+			bad += 1
+			if bad <= 3:
+				print("  天機輪不一致：", c, " → ", r)
+	_check(cases.size() > 400 and bad == 0, "天機輪逐盤面判定與數學模型一致（%d 組）" % cases.size())
+	# 機率公示：遊戲窮舉的精確機率＝模型的精確機率
+	var rf := FileAccess.open("res://docs/shrine-math/results.json", FileAccess.READ)
+	if rf:
+		var th: Dictionary = JSON.parse_string(rf.get_as_text())
+		var odds := Game.wheel_odds()
+		_check(is_equal_approx(odds.sense, th.P.sense) and is_equal_approx(odds.resonance, th.P.resonance) and is_equal_approx(odds.bagua, th.P.bagua) and is_equal_approx(odds.trigger, th.p_trigger), "機率公示與數學模型的精確值相同")
+	# 遊戲的亂數實際轉：頓悟率、門派共鳴率要落在理論的 99.9% 區間（|z| ≤ 3.29）
+	var n := 20000
+	var trig := 0
+	var res := 0
+	for i in n:
+		var r := Game.wheel_eval(Game.wheel_spin())
+		if int(r.scatters) >= 3:
+			trig += 1
+		if r.outcome == "resonance":
+			res += 1
+	var odds2 := Game.wheel_odds()
+	var z1: float = (float(trig) / n - odds2.trigger) / sqrt(odds2.trigger * (1.0 - odds2.trigger) / n)
+	var z2: float = (float(res) / n - odds2.resonance) / sqrt(odds2.resonance * (1.0 - odds2.resonance) / n)
+	print("  天機輪 20,000 轉：頓悟 z=%.2f、門派共鳴 z=%.2f" % [z1, z2])
+	_check(absf(z1) <= 3.29 and absf(z2) <= 3.29, "遊戲亂數的頓悟率與共鳴率符合理論")
+	# 結果套用到候選
+	var keep_l := Game.since_legendary
+	var keep_m: Dictionary = Game.martial.duplicate()
+	var keep_free := Game.wheel_free
+	Game.martial = {}
+	var cands := Game.roll_choices({"sect": "tangmen", "sect_slots": 99, "bump": 1})
+	_check(cands.size() >= 3 and cands.all(func(c): return c.kind == "M" and Data.martial[c.id].sect == "tangmen"), "門派共鳴：三張候選都是該門派")
+	cands = Game.roll_choices({"legendary": true, "bump": 1})
+	_check(cands.any(func(c): return c.rarity == "legendary") and cands.all(func(c): return c.rarity != "common"), "八卦歸一：必出絕世、其餘升階")
+	Game.wheel_free = 0
+	var trig_stops: Array = []
+	for c in cases:
+		if int(c.scatters) >= 3:
+			trig_stops = c.stops.map(func(x): return int(x))
+			break
+	Game.wheel_roll(trig_stops)
+	_check(Game.wheel_free == int(Data.wheel_cfg.free_spins) and Game.draws_left() >= Game.wheel_free, "頓悟送免費參悟")
+	Game.since_legendary = keep_l
+	Game.martial = keep_m
+	Game.wheel_free = keep_free
 	Game.recompute()
 
 

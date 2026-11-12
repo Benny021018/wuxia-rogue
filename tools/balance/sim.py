@@ -29,6 +29,13 @@ from collections import Counter, defaultdict
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA = os.path.join(ROOT, "data")
 FEATURED = ["W001", "W007", "W301"]
+try:   # 天機輪的輪帶與判定（tools/shrine_math/wheel.py）
+    import sys as _sys
+    _sys.path.insert(0, os.path.join(ROOT, "tools", "shrine_math"))
+    from wheel import Spec as _WheelSpec
+    WHEEL = _WheelSpec()
+except Exception:   # 舊版本沒有天機輪
+    WHEEL = None
 REST_STOPS_DEFAULT = {4, 9, 14, 19}
 OFFENSE_STATS = {"dmg_pct", "atk_speed_pct", "crit_rate_pct", "crit_dmg_pct", "area_pct"}
 
@@ -274,13 +281,17 @@ class Run:
                 w.append(self.d.g("owned_upgrade_weight_mult") if lv else 1.0)
         return items, w
 
-    def roll(self, kind_mix=True, pity=True, n=3):
+    def roll(self, kind_mix=True, pity=True, n=3, bump=0, legendary=False):
         seen, cands = set(), []
         tries = 0
         while len(cands) < n and tries < 60:
             tries += 1
             rw = self.rarity_weights(pity)
             rar = self.rng.choices(self.d.order, rw)[0]
+            if bump:   # 天機輪：門派共鳴、八卦歸一的稀有度升階
+                rar = self.d.order[min(self.d.order.index(rar) + bump, len(self.d.order) - 1)]
+            if legendary and not cands:
+                rar = "legendary"
             if pity and not cands and self.since_leg >= self.d.g("hard_pity") - 1:
                 if self._pool("legendary", "M", seen)[0] or self._pool("legendary", "W", seen)[0]:
                     rar = "legendary"
@@ -427,11 +438,29 @@ class Run:
     def refresh_cost(self, n):
         return self.d.s("refresh_cost_base") * (1 + self.d.s("refresh_cost_growth")) ** n * self.price_mult()
 
+    def wheel_roll(self):
+        """天機輪轉一次：回傳候選；頓悟時把免費參悟加進 self.wheel_free。"""
+        if WHEEL is None:
+            return self.roll()
+        stops = [self.rng.randrange(len(r)) for r in WHEEL.reels]
+        o, _, scat = WHEEL.evaluate(stops)
+        self.log["wheel_" + o] += 1
+        if scat >= 3:
+            self.wheel_free += WHEEL.free_spins
+            self.log["wheel_trigger"] += 1
+        if o == "resonance":
+            return self.roll(bump=WHEEL.res_bump)
+        if o == "bagua":
+            return self.roll(bump=WHEEL.bagua_bump, legendary=True)
+        return self.roll()
+
     def free_draws(self):
         n_ref = 0
         seq = [int(x) for x in str(self.d.shop.get("shrine_free_per_stage", "1")).split("|")]
-        for _ in range(seq[min(self.stage, len(seq)) - 1]):
-            cands = self.roll()
+        self.wheel_free = seq[min(self.stage, len(seq)) - 1]
+        while self.wheel_free > 0:
+            self.wheel_free -= 1
+            cands = self.wheel_roll()
             while True:
                 cur = max([self.gain(x) for x in cands] or [0])
                 c = self.refresh_cost(n_ref)
@@ -444,7 +473,7 @@ class Run:
                 self.log["spend_refresh"] += c
                 self.log["n_refresh"] += 1
                 n_ref += 1
-                cands = self.roll()
+                cands = self.wheel_roll()
             self.log["n_draw"] += 1
             best = max(cands, key=self.gain) if cands else None
             if best and self.gain(best) > 0:

@@ -1,0 +1,8 @@
+key,value,note
+rows,3,每軸顯示幾列；只有中線算連線
+free_spins,3,頓悟（3 個悟）送的免費參悟次數；頓悟中可再觸發
+scatter_min_gap,3,輪帶上兩個悟至少間隔幾格，保證每軸畫面最多出現一個悟
+sense_sect_slots,1,門派感應（中線前兩軸同門）：候選中保證幾張是該門派武學
+resonance_bump,1,門派共鳴（中線三軸同門）：三張候選都出該門派武學，稀有度再升幾階
+bagua_bump,1,八卦歸一（中線三個八卦）：一張必出絕世，其餘稀有度再升幾階
+strip_seed,20261112,tools/shrine_math/make_reels.py 產生輪帶用的亂數種子
