@@ -186,3 +186,36 @@ static func _trail_band(tool: SurfaceTool, outer: PackedVector3Array, inner: Pac
 static func impact_wave(parent: Node3D, center: Vector3, radius: float, duration: float, color: Color) -> void:
 	attack_trail(parent,center+Vector3.UP*.09,Vector3.FORWARD,radius,360,0,color,duration)
 	play(parent,center+Vector3.UP*.35,&"ground-slam",radius*.95,duration,color)
+
+
+# ------------------------------------------------------------------ 打擊粒子與跳字
+const BURST := preload("res://scripts/burst.gd")
+
+
+## 一次性打擊粒子：kind = "spark"（亮色拉長的火花）、"ink"（受重力落下的血墨）、"dust"（緩慢上浮的煙塵）
+static func burst(parent: Node, pos: Vector3, dir: Vector3, color: Color, amount: int, kind := "spark", speed := 7.0, size_m := 1.0) -> void:
+	if parent == null or not parent.is_inside_tree() or amount <= 0:
+		return
+	var p := BURST.new()
+	p.name = "Burst"
+	parent.add_child(p)
+	p.setup(pos, dir, color, amount, kind, speed, size_m)
+
+
+## 傷害跳字：彈出放大 → 縮回 → 往上飄並淡出；暴擊更大、帶橘紅與輕微抖動
+static func damage_number(parent: Node, pos: Vector3, value: int, crit := false, color := Color.WHITE) -> void:
+	if parent == null or not parent.is_inside_tree():
+		return
+	var l := label3d(str(value) + ("!" if crit else ""), 64 if crit else 40, color)
+	l.outline_size = 18 if crit else 14
+	parent.add_child(l)
+	var side := randf_range(-0.35, 0.35)
+	l.global_position = pos + Vector3(side, 0.15, randf_range(-0.2, 0.2))
+	l.scale = Vector3.ONE * (2.1 if crit else 1.5)
+	var t := l.create_tween()
+	t.tween_property(l, "scale", Vector3.ONE * (1.15 if crit else 1.0), 0.09).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.tween_property(l, "global_position", l.global_position + Vector3(side * 0.6, 1.05, 0), 0.6).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.parallel().tween_property(l, "modulate:a", 0.0, 0.35).set_delay(0.3)
+	if crit:
+		t.parallel().tween_property(l, "scale", Vector3.ONE * 0.9, 0.6)
+	t.tween_callback(l.queue_free)

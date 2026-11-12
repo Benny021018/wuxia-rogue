@@ -411,6 +411,8 @@ func _lock(i: int) -> void:
 	wave_alive = 0
 	wave_size = 0
 	_next_wave()
+	Sfx.play("zone_lock")
+	Feel.shake(0.22)
 	zone_locked.emit(r.stage, "%s・%s" % [Data.maps[map_id].name_zh, row.area_zh])
 
 
@@ -467,6 +469,8 @@ func _clear_zone() -> void:
 	state = "cleared"
 	var r: Dictionary = rooms[current]
 	_set_gate(r.gate_out, false)
+	Sfx.play("zone_clear")
+	Sfx.play("gate_open", r.gate_out.global_position)
 	Game.on_zone_cleared()
 	if r.stage < Data.stages.size():
 		shrine_node = Node3D.new()
@@ -477,6 +481,7 @@ func _clear_zone() -> void:
 		pillar.global_position.y = 0.0
 		pillar.rotation.y = PI / 2.0
 		FX.play(shrine_node, pillar.global_position + Vector3.UP, &"magic-circle-cast", 2.5, 0.8)
+		Sfx.play("shrine_appear", r.shrine)
 		var lab := FX.label3d("悟道碑\n［E］參悟", 64, Color(0.7, 1, 0.85))
 		lab.position.y = 3.3
 		shrine_node.add_child(lab)
@@ -580,6 +585,7 @@ func spawn_drop(pos: Vector3, item: Dictionary) -> Node3D:
 	var d := Node3D.new()
 	add_child(d)
 	d.global_position = Vector3(pos.x, 0.0, pos.z)
+	Sfx.play("loot_drop", d.global_position)
 	var spin := Node3D.new()
 	spin.position.y = 0.9
 	d.add_child(spin)
@@ -627,6 +633,8 @@ func spawn_enemy(id: String, pos: Vector3, _is_boss: bool):
 
 
 func boss_spawned(e) -> void:
+	Sfx.play("boss_appear")
+	Feel.shake(float(Data.feel.shake_boom))
 	boss_appeared.emit(e)
 
 

@@ -57,12 +57,14 @@ func _put(c: Control, x: float, y: float, w: float, h: float) -> Control:
 
 
 func open_smith() -> void:
+	Sfx.play("ui_open")
 	kind = "smith"
 	visible = true
 	_refresh()
 
 
 func open_merchant() -> void:
+	Sfx.play("ui_open")
 	kind = "merchant"
 	visible = true
 	_refresh()
@@ -166,13 +168,19 @@ func _smith_slot(slot: int, x: float) -> void:
 
 func _on_upgrade(slot: int) -> void:
 	if Game.upgrade_weapon(slot):
+		Sfx.play("forge")
 		_clang()
+	else:
+		Sfx.play("ui_error")
 	_refresh()
 
 
 func _on_reforge(slot: int) -> void:
 	if Game.reforge_weapon(slot):
+		Sfx.play("reforge")
 		_clang()
+	else:
+		Sfx.play("ui_error")
 	_refresh()
 
 
@@ -254,15 +262,16 @@ func _merchant_card(i: int, x: float) -> void:
 
 
 func _on_buy(i: int) -> void:
-	Game.buy_martial(i)
+	Sfx.play("purchase" if Game.buy_martial(i) else "ui_error")
 	_refresh()
 
 
 func _on_refresh() -> void:
-	Game.refresh_merchant()
+	Sfx.play("shop_refresh" if Game.refresh_merchant() else "ui_error")
 	_refresh()
 
 
 func _on_close() -> void:
+	Sfx.play("ui_close")
 	visible = false
 	closed.emit()

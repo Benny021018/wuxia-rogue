@@ -1,0 +1,31 @@
+key,value,note
+hitstop_light_s,0.045,一般命中的頓幀（秒，真實時間）
+hitstop_heavy_s,0.075,重兵器命中（權重 ≥ 1.5）的頓幀
+hitstop_crit_s,0.09,暴擊頓幀
+hitstop_kill_s,0.11,擊殺頓幀
+hitstop_scale,0.04,頓幀期間的時間倍率（0 = 完全停住）
+hitstop_max_s,0.14,多段命中疊加時的上限
+shake_hit,0.16,一般命中的震動量（0～1，實際強度是平方）
+shake_heavy,0.28,重兵器命中
+shake_crit,0.32,暴擊
+shake_kill,0.38,擊殺
+shake_hurt,0.45,玩家受傷（再乘受傷比例）
+shake_boom,0.6,範圍爆炸、首領登場
+shake_decay,2.4,震動每秒衰減量
+shake_max_offset,0.09,震動最大位移（公尺）
+shake_max_roll_deg,1.6,震動最大翻滾角
+flash_hold_s,0.045,受擊閃白維持
+flash_fade_s,0.12,受擊閃白淡出
+knock_speed,3.2,一般命中的擊退初速（公尺／秒，再乘武器權重）
+knock_crit_mult,1.5,暴擊擊退倍率
+knock_decay,10,擊退速度每秒衰減比例
+knock_mass_elite,0.45,精英受擊退比例
+knock_mass_boss,0.12,首領受擊退比例
+squash,0.22,受擊形變幅度（壓扁比例）
+death_fling_s,0.32,擊殺後屍身被打飛到消失的時間
+death_fling_m,1.6,擊殺打飛距離
+particles_hit,14,一般命中的火花數
+particles_crit,26,暴擊火花數
+particles_kill,40,擊殺時的血墨飛濺數
+footstep_m,2.1,每走幾公尺一個腳步聲
+heartbeat_hp,0.3,生命低於此比例開始心跳

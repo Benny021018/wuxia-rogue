@@ -35,7 +35,20 @@ func _ready() -> void:
 	screens.to_menu.connect(_to_menu)
 	screens.quit_game.connect(func(): get_tree().quit())
 	Game.leveled_up.connect(_on_level_up)
+	Game.martial_breakthrough.connect(func(_m, _lv, _d): Sfx.play("chime_up"))
+	Game.bond_activated.connect(func(_s, _t, _n): Sfx.play("chime_up", Vector3.INF, 0.0, 1.12))
+	Game.gold_changed.connect(_on_gold_changed)
 	_to_menu()
+
+
+var _last_gold := 0.0
+
+
+func _on_gold_changed() -> void:
+	## 打怪拿到銀兩時叮一聲（花錢的音效由商店介面各自處理）
+	if Game.gold > _last_gold + 0.5 and mode == "play":
+		Sfx.play("coin")
+	_last_gold = Game.gold
 
 
 func _on_level_up(_lv: int) -> void:
@@ -45,6 +58,7 @@ func _on_level_up(_lv: int) -> void:
 
 func _to_menu() -> void:
 	get_tree().paused = false
+	Feel.reset()
 	Game.running = false
 	if world:
 		world.set_physics_process(false)
@@ -191,6 +205,7 @@ func _on_interact() -> void:
 	match t[0]:
 		"drop":
 			var item: Dictionary = world.take_drop(t[1])
+			Sfx.play("pickup")
 			var old = Game.pick_up(item)
 			if old != null:
 				world.spawn_drop(player.global_position + player.global_basis.z * -1.2, old)
@@ -224,6 +239,8 @@ func open_meridian() -> void:
 func _resume() -> void:
 	if mode == "end" or mode == "menu":
 		return
+	if mode == "pause" or mode == "inventory":
+		Sfx.play("ui_close")
 	screens.hide_all()
 	if gacha:
 		gacha.visible = false
@@ -237,6 +254,9 @@ func _resume() -> void:
 
 
 func _on_died() -> void:
+	Feel.reset()
+	Sfx.play("player_death")
+	Sfx.play("defeat")
 	mode = "end"
 	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -244,6 +264,8 @@ func _on_died() -> void:
 
 
 func _on_won() -> void:
+	Feel.reset()
+	Sfx.play("victory")
 	mode = "end"
 	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -257,6 +279,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				mode = "pause"
 				get_tree().paused = true
 				Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+				Sfx.play("ui_open")
 				screens.show_pause()
 			"pause", "inventory":
 				_resume()
@@ -278,6 +301,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				mode = "inventory"
 				get_tree().paused = true
 				Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+				Sfx.play("ui_open")
 				screens.show_inventory(false)
 			"inventory":
 				_resume()

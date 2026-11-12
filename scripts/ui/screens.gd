@@ -77,8 +77,9 @@ func show_main() -> void:
 	_at(panel, 1060, 360, 470, 420)
 	var first := UIKit.button("踏上江湖", show_select, 34, 380, 78)
 	_at(first, 1100, 400, 380, 78)
-	_at(UIKit.button("操作說明", show_help.bind(false), 28, 380, 66), 1100, 510, 380, 66)
-	_at(UIKit.button("離開遊戲", func(): quit_game.emit(), 28, 380, 66), 1100, 606, 380, 66)
+	_at(UIKit.button("操作說明", show_help.bind(false), 28, 380, 66), 1100, 496, 380, 60)
+	_at(UIKit.button("設定", show_settings.bind(false), 28, 380, 60), 1100, 572, 380, 60)
+	_at(UIKit.button("離開遊戲", func(): quit_game.emit(), 28, 380, 60), 1100, 648, 380, 60)
 	_at(UIKit.label("滑鼠點選　Enter 確認", 16, UIKit.GREY, HORIZONTAL_ALIGNMENT_CENTER), 1100, 720, 380, 30)
 	var sparks := UIKit.fx()
 	sparks.add_embers(Rect2(0, 560, 1600, 340), 70)
@@ -324,6 +325,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if ke == null:
 		return
 	var keycode := ke.physical_keycode
+	if has_meta("settings_from") and keycode == KEY_ESCAPE:
+		_settings_back()
+		get_viewport().set_input_as_handled()
+		return
 	if get_meta("picking_weapon", false):
 		var n := Game.starter_weapons().size()
 		if keycode == KEY_LEFT or keycode == KEY_A:
@@ -354,6 +359,96 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 
+# ------------------------------------------------------------------ 設定（docs/ui-drafts/15-settings.svg）
+const SETTING_GROUPS := [["聲音", ["master_volume", "music_volume", "sfx_volume"]],
+	["操作與畫面", ["mouse_sens", "screen_shake", "hitstop", "damage_numbers", "fullscreen"]]]
+var settings_sliders := {}      # key -> ComicSlider（測試用）
+
+
+func show_settings(from_pause := false) -> void:
+	_clear()
+	set_meta("settings_from", "pause" if from_pause else "main")
+	if not from_pause:
+		_full(UIKit.backdrop("res://assets/ui/greenwood_pass.webp"))
+	_full(UIKit.overlay(0.7))
+	var lines := _fx()
+	lines.add_speed_lines(Vector2(330, 450), 300, 1200, 80, Color(UIKit.INK, 0.7), 61, 1.5)
+	_at(UIKit.title("設定", 150, UIKit.BONE, 14, false, -5), 80, 200, 500, 170)
+	_at(UIKit.box_text("narration", "音量即時生效，\n設定會自動保存。", 22), 110, 420, 440, 120)
+	var panel := UIKit.box("slant")
+	panel.slant = 30
+	_at(panel, 640, 110, 880, 690)
+	settings_sliders.clear()
+	var y := 140.0
+	var first: Control = null
+	for g in SETTING_GROUPS:
+		_at(UIKit.label(g[0], 18, UIKit.TEAL), 690, y, 300, 26)
+		y += 32.0
+		for key in g[1]:
+			var c := _setting_row(key, y)
+			if first == null:
+				first = c
+			y += 64.0 if not Settings.is_toggle(key) else 54.0
+		y += 18.0
+	_at(UIKit.button("恢復預設", func(): Settings.reset_defaults(); show_settings(from_pause), 22, 220, 54), 1000, 730, 220, 54)
+	_at(UIKit.button("返回", _settings_back, 24, 220, 54, "Esc"), 1240, 730, 220, 54)
+	_focus_first(first)
+
+
+func _setting_text(key: String) -> String:
+	var v := Settings.get_value(key)
+	if key == "mouse_sens":
+		return "%.2f×" % v
+	return "%d%%" % int(round(v * 100.0))
+
+
+func _setting_row(key: String, y: float) -> Control:
+	var row: Dictionary = Data.settings_cfg[key]
+	_at(UIKit.label(row.label_zh, 24, UIKit.BONE, HORIZONTAL_ALIGNMENT_LEFT, true), 700, y, 200, 40)
+	if Settings.is_toggle(key):
+		var on := Settings.on(key)
+		var btns: Array = []
+		for i in 2:
+			var want := i == 0
+			var b := UIKit.button("開" if want else "關", func():
+				Settings.set_value(key, 1.0 if want else 0.0)
+				_style_toggle(btns, Settings.on(key)), 20, 96, 38)
+			_at(b, 900 + i * 110, y, 96, 38)
+			btns.append(b)
+		_style_toggle(btns, on)
+		return btns[0]
+	var sl := ComicSlider.new()
+	sl.min_value = Settings.lo(key)
+	sl.max_value = Settings.hi(key)
+	sl.step = Settings.step(key)
+	sl.value = Settings.get_value(key)
+	_at(sl, 900, y - 6, 430, 44)
+	var val := UIKit.label(_setting_text(key), 22, UIKit.BONE, HORIZONTAL_ALIGNMENT_RIGHT)
+	_at(val, 1350, y, 110, 40)
+	sl.value_changed.connect(func(v):
+		Settings.set_value(key, v)
+		val.text = _setting_text(key)
+		if key == "sfx_volume" or key == "master_volume":
+			Sfx.play("ui_hover"))
+	settings_sliders[key] = sl
+	return sl
+
+
+func _style_toggle(btns: Array, on: bool) -> void:
+	for i in btns.size():
+		btns[i].set_meta("toggle", true)
+		btns[i].selected = (i == 0) == on
+
+
+func _settings_back() -> void:
+	var from: String = get_meta("settings_from", "main")
+	remove_meta("settings_from")
+	if from == "pause":
+		show_pause()
+	else:
+		show_main()
+
+
 # ------------------------------------------------------------------ 暫停
 func show_pause() -> void:
 	_clear()
@@ -369,9 +464,10 @@ func show_pause() -> void:
 	var first := UIKit.button("繼續", func(): resume.emit(), 32, 400, 72)
 	_at(first, 960, 300, 400, 72)
 	_at(UIKit.button("武學與門派", show_inventory.bind(true), 26, 400, 64), 960, 404, 400, 64)
-	_at(UIKit.button("操作說明", show_help.bind(true), 26, 400, 64), 960, 500, 400, 64)
-	_at(UIKit.button("放棄本局", _confirm_quit, 22, 400, 54), 960, 596, 400, 54)
-	_at(UIKit.label("Esc 繼續", 16, UIKit.GREY, HORIZONTAL_ALIGNMENT_CENTER), 960, 690, 400, 26)
+	_at(UIKit.button("操作說明", show_help.bind(true), 26, 400, 56), 960, 488, 400, 56)
+	_at(UIKit.button("設定", show_settings.bind(true), 26, 400, 56), 960, 556, 400, 56)
+	_at(UIKit.button("放棄本局", _confirm_quit, 22, 400, 50), 960, 626, 400, 50)
+	_at(UIKit.label("Esc 繼續", 16, UIKit.GREY, HORIZONTAL_ALIGNMENT_CENTER), 960, 694, 400, 26)
 	_focus_first(first)
 
 

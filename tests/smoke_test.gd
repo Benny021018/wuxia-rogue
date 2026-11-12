@@ -8,10 +8,13 @@ var errors := 0
 
 
 func _ready() -> void:
+	Settings.save_enabled = false     # 不寫入玩家的設定檔
+	Settings.values["hitstop"] = 0.0   # 頓幀以真實時間計算，整局流程測試先關掉（_check_game_feel 會單獨測）
 	main = MAIN.new()
 	add_child(main)
 	await _frames(5)
 	_check_music("menu")
+	await _check_audio_settings()
 	for cid in Data.char_order:
 		await _run_character(cid)
 	print("SMOKE_DONE errors=%d" % errors)
@@ -52,6 +55,7 @@ func _run_character(cid: String) -> void:
 		await _check_bow(player)
 		await _check_cover_tactics(world, player)
 		await _check_hit_reactions(world)
+		await _check_game_feel(world, player)
 		var gate = world.rooms[0].gate_out
 		var meshes := (gate as Node).find_children("*", "MeshInstance3D", true, false)
 		_check(meshes.size() == 1, "山寨門只有一個可見模型")
@@ -398,12 +402,15 @@ func _check_wheel() -> void:
 	var n := 20000
 	var trig := 0
 	var res := 0
+	var saved_state := Game.rng.state
+	Game.rng.seed = 20261113          # 固定種子：結果可重現，不會有千分之一的隨機失敗
 	for i in n:
 		var r := Game.wheel_eval(Game.wheel_spin())
 		if int(r.scatters) >= 3:
 			trig += 1
 		if r.outcome == "resonance":
 			res += 1
+	Game.rng.state = saved_state
 	var odds2 := Game.wheel_odds()
 	var z1: float = (float(trig) / n - odds2.trigger) / sqrt(odds2.trigger * (1.0 - odds2.trigger) / n)
 	var z2: float = (float(res) / n - odds2.resonance) / sqrt(odds2.resonance * (1.0 - odds2.resonance) / n)
@@ -620,6 +627,118 @@ func _check_loot_and_shops(world, player) -> void:
 	Game.martial_order = old_order
 	Game.recompute()
 	await _frames(2)
+
+
+func _check_audio_settings() -> void:
+	# 預設值：音樂 30%、音效 50%（data/settings_config.csv）
+	_check(is_equal_approx(float(Data.settings_cfg.music_volume.default), 0.3) and is_equal_approx(float(Data.settings_cfg.sfx_volume.default), 0.5), "預設音樂 30%、音效 50%")
+	var mi := AudioServer.get_bus_index("Music")
+	var si := AudioServer.get_bus_index("SFX")
+	_check(mi > 0 and si > 0, "建立 Music／SFX 匯流排")
+	_check(Music.players[0].bus == "Music" and Sfx._p2[0].bus == "SFX" and Sfx._p3[0].bus == "SFX", "配樂與音效走各自的匯流排")
+	var old := Settings.get_value("music_volume")
+	Settings.set_value("music_volume", 0.5)
+	_check(absf(AudioServer.get_bus_volume_db(mi) - linear_to_db(0.5)) < 0.01, "音樂音量套用到匯流排")
+	Settings.set_value("music_volume", 0.0)
+	_check(AudioServer.is_bus_mute(mi), "音樂調到 0 會靜音")
+	Settings.set_value("music_volume", old)
+	_check(not AudioServer.is_bus_mute(mi) or old <= 0.001, "還原音樂音量")
+	# 每個音效都載得到
+	var missing: Array = []
+	for id in Data.sfx:
+		if Sfx.streams(id).is_empty():
+			missing.append(id)
+	_check(missing.is_empty(), "sfx.csv 的音效檔都在（缺：%s）" % str(missing))
+	_check(Data.sfx.size() >= 60, "音效清單至少 60 個（實際 %d）" % Data.sfx.size())
+	Sfx._last_ms.clear()
+	_check(Sfx.play("ui_click") != null and Sfx.play("ui_click") == null, "同一音效最短間隔內不重播")
+	_check(Sfx.play("not_a_sound") == null, "未知音效不會當機")
+	# 設定頁
+	main.screens.show_settings(false)
+	await _frames(2)
+	var sl = main.screens.settings_sliders.get("sfx_volume")
+	_check(sl != null and main.screens.settings_sliders.size() == 5, "設定頁有 5 個滑桿（實際 %d）" % main.screens.settings_sliders.size())
+	if sl:
+		var before := Settings.get_value("sfx_volume")
+		sl.value = 0.8
+		_check(is_equal_approx(Settings.get_value("sfx_volume"), 0.8), "拖滑桿改音效音量")
+		Settings.set_value("sfx_volume", before)
+	var esc := InputEventKey.new()
+	esc.physical_keycode = KEY_ESCAPE
+	esc.pressed = true
+	main.screens._unhandled_key_input(esc)
+	await _frames(1)
+	_check(not main.screens.has_meta("settings_from"), "Esc 離開設定頁")
+	main.screens.show_main()
+
+
+func _check_game_feel(world, player) -> void:
+	# 頓幀：時間變慢，之後自動恢復；關掉設定就沒有
+	Feel.reset()
+	Settings.values["hitstop"] = 1.0
+	Feel.hitstop(0.05)
+	_check(Engine.time_scale < 0.2, "命中頓幀壓低時間")
+	var waited := 0
+	while Engine.time_scale < 1.0 and waited < 2000:
+		await get_tree().process_frame
+		waited += 1
+	_check(Engine.time_scale == 1.0, "頓幀結束恢復正常時間")
+	Settings.values["hitstop"] = 0.0
+	Feel.hitstop(0.05)
+	_check(Engine.time_scale == 1.0, "關閉頓幀設定後不停頓")
+	# 震動
+	Feel.shake(0.6)
+	await get_tree().process_frame
+	_check(Feel.trauma > 0.0 and absf(player.cam.h_offset) + absf(player.cam.v_offset) > 0.0, "畫面震動帶動相機")
+	Settings.values["screen_shake"] = 0.0
+	Feel.reset()
+	Feel.shake(0.6)
+	_check(Feel.trauma == 0.0, "畫面震動設為 0 就不震")
+	Settings.values["screen_shake"] = 1.0
+	Feel.reset()
+	# 一次命中：分層音效、擊退、形變、粒子、跳字
+	Sfx.log_plays = true
+	Sfx.played.clear()
+	Sfx._last_ms.clear()
+	var e = world.spawn_enemy("H01", player.global_position + player.global_basis * Vector3(0, 0, -2.5), false)
+	e.max_hp = 1.0e6
+	e.hp = 1.0e6
+	var before_nodes: Array = world.get_children()
+	player._imp = {"crit": false, "kill": false, "metal": false}
+	_check(player.deal(e, 10.0, false, 1.0), "測試命中成功")
+	player._impact_feedback(1.0)
+	_check(e._knock.length() > 0.5, "命中把敵人往後擊退")
+	_check(Sfx.played.has("hit_low") and Sfx.played.has("hit_mid_flesh") and Sfx.played.has("hit_high"), "命中播三層音效（低頻、中頻、高頻）：%s" % str(Sfx.played))
+	await _frames(2)
+	_check(not e._impact_pivot.scale.is_equal_approx(Vector3.ONE), "受擊形變（擠壓伸展）")
+	var parts := 0
+	var nums := 0
+	for c in world.get_children():
+		if c in before_nodes:
+			continue
+		if c.get_script() == preload("res://scripts/burst.gd"):
+			parts += 1
+		elif c is Label3D:
+			nums += 1
+	_check(parts >= 2 and nums >= 1, "命中噴出粒子與傷害跳字（粒子 %d、跳字 %d）" % [parts, nums])
+	# 擊殺：加層音效、屍身打飛後才消失
+	Sfx.played.clear()
+	Sfx._last_ms.clear()
+	e.hp = 1.0
+	player._imp = {"crit": false, "kill": false, "metal": false}
+	player.deal(e, 50.0, false, 1.8)
+	player._impact_feedback(1.8)
+	_check(e.dead and is_instance_valid(e) and e.collision_layer == 0, "擊殺後屍身先被打飛（無碰撞）")
+	_check(Sfx.played.has("kill_boom") and Sfx.played.has("enemy_death"), "擊殺加層音效")
+	var gone := false
+	for i in 200:
+		await get_tree().physics_frame
+		if not is_instance_valid(e):
+			gone = true
+			break
+	_check(gone, "打飛結束後移除屍身")
+	Sfx.log_plays = false
+	Feel.reset()
 
 
 func _check_music(key: String) -> void:
@@ -845,9 +964,10 @@ func _check_hit_reactions(world) -> void:
 	var origin: Vector3 = e.global_position
 	var right: Vector3 = e.player.cam.global_basis.x.slide(Vector3.UP).normalized()
 	e.take_hit(1, origin - right, false, .65)
+	_check(e._flash_meshes[0].material_overlay == e._flash and e._flash.albedo_color.a > .5 and e._flash.albedo_color.g > .9, "受擊立即閃白")
 	await _frames(3)
 	var light: float = e._impact_pivot.position.dot(right)
-	_check(e._flash_meshes[0].material_overlay == e._flash and e._flash.albedo_color.a > .5, "受擊立即泛紅")
+	_check(e._flash.albedo_color.a > .3, "閃白後轉紅淡出")
 	await _frames(4)
 	_check(light > 0 and e._impact_pivot.position.dot(right) < 0, "單次受擊在畫面左右兩側擺動")
 	e.take_hit(1, origin + right, false, 1.8)

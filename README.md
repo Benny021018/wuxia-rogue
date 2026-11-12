@@ -139,6 +139,10 @@ python3 tools/balance/sim.py --set drop_chance_minion=0.02      # 試算單一�
 
 AI 協作規則寫在 `AGENTS.md`（Codex 會自動讀取；Claude 經由 `CLAUDE.md` 讀取）。GitHub Actions 會在每次 push 或 PR 時自動跑冒煙測試（`.github/workflows/smoke-test.yml`）。
 
+## 音效與打擊感
+
+命中有頓幀、震屏、受擊閃白、擊退＋形變、粒子＋跳字，音效分低頻重擊、中頻碎裂、高頻風聲三層。全部 69 個音效（65 個獨立合成、79 個檔案）由 `tools/sfx/make_sfx.py` 程式合成，設計與清單見 [`docs/audio/sfx.md`](docs/audio/sfx.md)。主選單與暫停選單的「設定」可以調整主音量、音樂（預設 30%）、音效（預設 50%）、滑鼠靈敏度、畫面震動，以及開關頓幀、傷害跳字、全螢幕。
+
 ## 配樂
 
 主題曲（主選單）與地圖一「綠林山寨」的配樂由 `tools/music/` 程式化作曲、分析、渲染；風格分析、和聲語法、動機、結構與聲部見 [`docs/music/README.md`](docs/music/README.md)。播放設定在 `data/music.csv`。

@@ -13,6 +13,7 @@ func _ready() -> void:
 	for i in 2:
 		var p := AudioStreamPlayer.new()
 		p.volume_db = -80.0
+		p.bus = "Music"
 		add_child(p)
 		players.append(p)
 

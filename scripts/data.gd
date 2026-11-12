@@ -25,6 +25,10 @@ var map_order: Array = []
 var enemies := {}           # enemy_id -> row
 var ranged_ai := {}         # enemy_id -> 遠程 AI 參數（ranged_ai.csv）
 var music := {}             # key（menu 或 map_id）-> 配樂設定（music.csv）
+var sfx := {}               # id -> 音效設定（sfx.csv）
+var settings_cfg := {}      # key -> 設定預設值與範圍（settings_config.csv）
+var settings_order: Array = []
+var feel := {}              # 打擊感數值（feel_config.csv）
 var stages: Array = []      # index = stage-1
 var stage_report: Array = []
 var zones := {}             # "1".."20" -> layout
@@ -75,6 +79,12 @@ func _ready() -> void:
 		ranged_ai[r.enemy_id] = r
 	for r in _csv("music"):
 		music[r.key] = r
+	for r in _csv("sfx"):
+		sfx[r.id] = r
+	for r in _csv("settings_config"):
+		settings_cfg[r.key] = r
+		settings_order.append(r.key)
+	feel = _kv("feel_config")
 	for r in _csv("meridians"):
 		meridians[r.meridian_id] = r
 		meridian_order.append(r.meridian_id)

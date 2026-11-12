@@ -1710,6 +1710,50 @@ def s14_tianji_wheel():
     return doc("\n".join(b), "14 悟道碑・天機輪")
 
 
+def slider_row(x, y, w, label, frac, value, hover=False):
+    """設定頁的一列：左字、中間滑桿（斜切條＋菱形握把）、右數值。"""
+    s = [text(x, y + 24, label, 24, EMBER if hover else BONE, SERIF, 900)]
+    bx, bw = x + 200, w - 330
+    s.append(bar(bx, y + 6, bw, 22, frac, "url(#tealFill)" if hover else "url(#bloodFill)", segs=10, cut=8))
+    kx = bx + (bw - 8) * frac
+    s.append(f'<path d="M{kx},{y-4} l12,21 l-12,21 l-12,-21 z" fill="{BONE}" stroke="{INK}" stroke-width="3"/>')
+    s.append(text(x + w - 10, y + 26, value, 22, TEAL if hover else BONE, SANS, 900, "end"))
+    return "\n".join(s)
+
+
+def toggle_row(x, y, w, label, on):
+    s = [text(x, y + 24, label, 24, BONE, SERIF, 900)]
+    for i, (t, sel) in enumerate((("開", on), ("關", not on))):
+        bx = x + 200 + i * 110
+        s.append(slant(bx, y, 96, 38, 10, BLOOD if sel else INK, BONE, 2))
+        s.append(text(bx + 48, y + 27, t, 20, BONE if sel else GREY, SERIF, 900, "middle"))
+    return "\n".join(s)
+
+
+def s15_settings():
+    b = []
+    _dim_scene(b, 0.7)
+    b.append(speed_lines(330, 450, 300, 1200, 80, INK, 0.7, 61, 9))
+    b.append(brush_title(330, 330, "設定", 150, BONE, INK, 14, "middle", -5))
+    b.append(narration(110, 400, 440, 120, ["音量即時生效，", "設定會自動保存。"], 22))
+    x, y, w = 640, 110, 880
+    b.append(slant(x, y, w, 690, 30, INK, BONE, 3, 'opacity=".93"'))
+    b.append(text(x + 50, y + 56, "聲音", 18, TEAL, SANS, 900))
+    rows = [("主音量", 1.0, "100%"), ("音樂", 0.3, "30%"), ("音效", 0.5, "50%")]
+    for i, (lab, fr, val) in enumerate(rows):
+        b.append(slider_row(x + 60, y + 80 + i * 64, w - 120, lab, fr, val, hover=i == 1))
+    b.append(text(x + 50, y + 300, "操作與畫面", 18, TEAL, SANS, 900))
+    b.append(slider_row(x + 60, y + 324, w - 120, "滑鼠靈敏度", (1.0 - 0.3) / 2.2, "1.00×"))
+    b.append(slider_row(x + 60, y + 388, w - 120, "畫面震動", 1.0, "100%"))
+    b.append(toggle_row(x + 60, y + 452, w - 120, "頓幀", True))
+    b.append(toggle_row(x + 60, y + 506, w - 120, "傷害跳字", True))
+    b.append(toggle_row(x + 60, y + 560, w - 120, "全螢幕", False))
+    b.append(button(x + w - 520, y + 620, 220, 54, "恢復預設", "normal", 22))
+    b.append(button(x + w - 280, y + 620, 220, 54, "返回", "hover", 24, "Esc"))
+    b.append(note(30, 820, ["稿註：主選單與暫停選單都有「設定」按鈕；滑桿可拖曳、滾輪或 ← → 微調，", "音樂預設 30%、音效預設 50%，數值與範圍讀 data/settings_config.csv。"]))
+    return doc("\n".join(b), "15 設定")
+
+
 def build(only=None):
     os.makedirs(OUT, exist_ok=True)
     screens = {k: v for k, v in globals().items() if k.startswith("s") and k[1:3].isdigit()}
@@ -1718,7 +1762,7 @@ def build(only=None):
             continue
         slug = {"s00": "00-style", "s01": "01-main-menu", "s02": "02-character-select", "s03": "03-hud",
                 "s04": "04-shrine", "s05": "05-martial-panel", "s06": "06-pause", "s07": "07-result",
-                "s08": "08-start-weapon", "s09": "09-drop-compare", "s10": "10-smith", "s11": "11-merchant", "s12": "12-meridian", "s12b": "12b-meridian-scroll", "s12c": "12c-meridian-pose", "s12d": "12d-meridian-poses", "s13": "13-bow-aim", "s14": "14-tianji-wheel"}[name.split("_")[0]]
+                "s08": "08-start-weapon", "s09": "09-drop-compare", "s10": "10-smith", "s11": "11-merchant", "s12": "12-meridian", "s12b": "12b-meridian-scroll", "s12c": "12c-meridian-pose", "s12d": "12d-meridian-poses", "s13": "13-bow-aim", "s14": "14-tianji-wheel", "s15": "15-settings"}[name.split("_")[0]]
         path = os.path.join(OUT, slug + ".svg")
         with open(path, "w", encoding="utf-8") as f:
             f.write(fn())
