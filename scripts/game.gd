@@ -664,6 +664,11 @@ func roll_choices() -> Array:
 		if kind == "W" and _owned_weapon_lv(id) == 0:
 			cand.affixes = roll_affixes(id, affix_count("shrine"))
 		cands.append(cand)
+	# 武學全部圓滿、幸運又把凡品權重壓到接近 0 時，武器（全部同品質）仍可出現
+	if cands.is_empty():
+		for wid in FEATURED_WEAPONS:
+			if _owned_weapon_lv(wid) == 0 and cands.size() < n:
+				cands.append({"kind": "W", "id": wid, "rarity": Data.weapons[wid].rarity, "affixes": roll_affixes(wid, affix_count("shrine"))})
 	# 唐門門主：必有一門唐門武學
 	if f("guarantee_tangmen") > 0 and not cands.any(func(c): return c.kind == "M" and Data.martial[c.id].sect == "tangmen"):
 		var opts: Array = []
