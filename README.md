@@ -139,6 +139,10 @@ python3 tools/balance/sim.py --set drop_chance_minion=0.02      # 試算單一�
 
 AI 協作規則寫在 `AGENTS.md`（Codex 會自動讀取；Claude 經由 `CLAUDE.md` 讀取）。GitHub Actions 會在每次 push 或 PR 時自動跑冒煙測試（`.github/workflows/smoke-test.yml`）。
 
+## 配樂
+
+主題曲（主選單）與地圖一「綠林山寨」的配樂由 `tools/music/` 程式化作曲、分析、渲染；風格分析、和聲語法、動機、結構與聲部見 [`docs/music/README.md`](docs/music/README.md)。播放設定在 `data/music.csv`。
+
 ## 天機輪機率模型
 
 悟道碑的參悟改成三軸「天機輪」，數學規格、窮舉理論值、蒙地卡羅驗證與 Python／GDScript 黃金測試見 `docs/shrine-math/report.md`，重跑：

@@ -67,6 +67,7 @@ func _to_menu() -> void:
 	mode = "menu"
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	screens.show_main()
+	Music.play("menu")
 
 
 func _start(cid: String, start_wid := "") -> void:
@@ -112,6 +113,7 @@ func _start(cid: String, start_wid := "") -> void:
 
 
 func _on_map_entered(i: int) -> void:
+	Music.play(Data.map_order[i])
 	if hud == null:
 		return
 	var m: Dictionary = Data.maps[Data.map_order[i]]

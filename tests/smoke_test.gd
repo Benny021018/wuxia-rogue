@@ -11,6 +11,7 @@ func _ready() -> void:
 	main = MAIN.new()
 	add_child(main)
 	await _frames(5)
+	_check_music("menu")
 	for cid in Data.char_order:
 		await _run_character(cid)
 	print("SMOKE_DONE errors=%d" % errors)
@@ -43,6 +44,7 @@ func _run_character(cid: String) -> void:
 	var player = main.player
 	player.invuln_t = 1.0e9
 	if cid == Data.char_order[0]:
+		_check_music(Data.map_order[0])
 		await _check_weapon_views(player)
 		await _check_loot_and_shops(world, player)
 		_check_meridians_and_shrine(player)
@@ -618,6 +620,20 @@ func _check_loot_and_shops(world, player) -> void:
 	Game.martial_order = old_order
 	Game.recompute()
 	await _frames(2)
+
+
+func _check_music(key: String) -> void:
+	_check(Music.current == key, "目前配樂是 %s（實際 %s）" % [key, Music.current])
+	var row: Dictionary = Data.music.get(key, {})
+	_check(not row.is_empty(), "music.csv 有 %s" % key)
+	if row.is_empty():
+		return
+	var p: AudioStreamPlayer = Music.active_player()
+	var s = p.stream
+	_check(p.playing and s is AudioStreamOggVorbis, "%s 配樂正在播放" % key)
+	if s is AudioStreamOggVorbis:
+		_check(s.loop and absf(s.loop_offset - float(row.loop_offset_s)) < 0.001, "%s 配樂循環點正確" % key)
+		_check(float(row.loop_offset_s) < s.get_length(), "%s 循環點在曲長之內" % key)
 
 
 func _check_draw(enemy, world) -> void:

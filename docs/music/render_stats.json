@@ -1,0 +1,26 @@
+{
+ "greenwood": {
+  "lufs": -16.0,
+  "peak_db": -4.94,
+  "seconds": 80.0,
+  "loop_offset": 7.2727,
+  "clipped": 0,
+  "bands": {
+   "低 <200Hz": 0.191,
+   "中 200–2k": 0.587,
+   "高 >2k": 0.222
+  }
+ },
+ "theme": {
+  "lufs": -16.0,
+  "peak_db": -4.76,
+  "seconds": 166.0,
+  "loop_offset": 0.0,
+  "clipped": 0,
+  "bands": {
+   "低 <200Hz": 0.2,
+   "中 200–2k": 0.655,
+   "高 >2k": 0.145
+  }
+ }
+}
