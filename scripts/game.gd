@@ -579,7 +579,7 @@ func try_break(mid: String) -> int:
 		var had_ren_du := ren_du_open()
 		acu_open[mid] = acu_level(mid) + 1
 		acu_fails.erase(pid)
-		_set_level(1 + acu_total())
+		_set_level(level_for_points(acu_total()))
 		var m: Dictionary = Data.meridians[mid]
 		if acu_level(mid) >= Data.meridian_len(mid):
 			message.emit("%s全通：%s" % [m.name_zh, Data.stat_text(m.bonus_stat, float(m.bonus_value))])
@@ -594,8 +594,28 @@ func try_break(mid: String) -> int:
 	return 1 if ok else 0
 
 
+func level_for_points(n: int) -> int:
+	## 打通 n 個穴位對應的等級：realm_points 的三個門檻對到 Lv10／20／30，中間依比例
+	var th: Array = [0]
+	for part in String(Data.meridian_cfg.realm_points).split("|"):
+		th.append(int(part))
+	var lv: Array = [1, 10, 20, 30]
+	for i in 3:
+		if n < int(th[i + 1]):
+			return int(lv[i]) + int(floor(float(n - int(th[i])) * float(int(lv[i + 1]) - int(lv[i])) / float(int(th[i + 1]) - int(th[i]))))
+	return 30
+
+
+func points_to_next_realm() -> int:
+	var n := acu_total()
+	for part in String(Data.meridian_cfg.realm_points).split("|"):
+		if n < int(part):
+			return int(part) - n
+	return 0
+
+
 func _set_level(new_level: int) -> void:
-	## 境界由打通的穴位數決定：等級＝1＋穴位數，Lv10／20／30 突破一流／絕頂／化境
+	## 境界由打通的穴位數決定（level_for_points），Lv10／20／30 突破一流／絕頂／化境
 	new_level = mini(new_level, Data.levels.size())
 	while level < new_level:
 		level += 1

@@ -145,6 +145,9 @@ class Run:
                 return r
         return None
 
+    def mlen(self, mid):
+        return sum(1 for r in self.d.acupoints if r["meridian_id"] == mid)
+
     def _offense_pts(self, stat, pts):
         return float(pts) * float(self.d.mc.get("sim_acu_scale", 1.0)) if stat in OFFENSE_STATS else 0.0
 
@@ -156,10 +159,10 @@ class Run:
             for dep in range(1, n + 1):
                 r = self.acu(mid, dep)
                 pts += self._offense_pts(r["stat_id"], r["points"])
-            if n >= 4:
+            if n >= self.mlen(mid):
                 m = self.d.meridians[mid]
                 pts += self._offense_pts(m["bonus_stat"], m["bonus_points"])
-        if self.opened.get("ren", 0) >= 4 and self.opened.get("du", 0) >= 4:
+        if self.opened.get("ren", 0) >= self.mlen("ren") and self.opened.get("du", 0) >= self.mlen("du"):
             for st, pt in zip(self.d.mc["ren_du_stat"].split("|"), self.d.mc["ren_du_points"].split("|")):
                 pts += self._offense_pts(st, pt)
         return 10 * pts
@@ -186,7 +189,7 @@ class Run:
                 if r is None:
                     continue
                 v = self._offense_pts(r["stat_id"], r["points"]) + 0.01
-                if dep == 4:
+                if dep == self.mlen(mid):
                     m = self.d.meridians[mid]
                     v += self._offense_pts(m["bonus_stat"], m["bonus_points"])
                 v *= self.chance(r)

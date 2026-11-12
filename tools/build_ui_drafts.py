@@ -1362,178 +1362,126 @@ def s12b_meridian_scroll():
     return doc("\n".join(b), "12b 奇經八脈・古卷打坐圖")
 
 
-# ---------------------------------------------------------------- 經脈頁 C 案：一脈一式（剪影＋星圖）
-# 八條經脈各一個招式。關節座標在 600×600 框內；剪影由關節連成粗筆畫，自繪。
-POSES = {
-    "du": ("馬步衝拳", dict(head=(300, 150), neck=(300, 195), shL=(255, 208), shR=(345, 208), elL=(228, 282), haL=(270, 312), elR=(425, 206), haR=(505, 204),
-                          hip=(300, 362), knL=(198, 432), knR=(402, 432), ftL=(188, 556), ftR=(412, 556), toeL=-1, toeR=1)),
-    "ren": ("抱元守一", dict(head=(300, 122), neck=(300, 166), shL=(258, 180), shR=(342, 180), elL=(204, 252), haL=(262, 288), elR=(396, 252), haR=(338, 288),
-                           hip=(300, 352), knL=(268, 456), knR=(332, 456), ftL=(260, 558), ftR=(340, 558), toeL=-1, toeR=1)),
-    "chong": ("弓步推掌", dict(head=(332, 166), neck=(322, 210), shL=(286, 224), shR=(362, 220), elL=(214, 252), haL=(150, 292), elR=(442, 226), haR=(522, 204),
-                             hip=(292, 372), knL=(200, 466), knR=(402, 432), ftL=(108, 556), ftR=(412, 556), toeL=-1, toeR=1)),
-    "dai": ("仆步穿掌", dict(head=(384, 282), neck=(370, 324), shL=(336, 338), shR=(406, 348), elL=(266, 402), haL=(188, 472), elR=(472, 302), haR=(522, 232),
-                           hip=(332, 442), knL=(222, 502), knR=(432, 442), ftL=(108, 552), ftR=(422, 556), toeL=-1, toeR=1)),
-    "yangwei": ("側踹腿", dict(head=(230, 164), neck=(248, 206), shL=(214, 234), shR=(286, 214), elL=(174, 292), haL=(216, 332), elR=(332, 262), haR=(300, 304),
-                              hip=(300, 342), knL=(286, 452), knR=(392, 302), ftL=(270, 558), ftR=(504, 252), toeL=-1, toeR=0)),
-    "yinwei": ("金雞獨立", dict(head=(300, 132), neck=(300, 174), shL=(258, 188), shR=(342, 188), elL=(214, 132), haL=(246, 62), elR=(422, 216), haR=(492, 172),
-                              hip=(300, 352), knL=(234, 332), knR=(306, 456), ftL=(226, 432), ftR=(310, 558), toeL=-1, toeR=1)),
-    "yangqiao": ("騰空飛躍", dict(head=(372, 172), neck=(354, 214), shL=(318, 234), shR=(390, 224), elL=(254, 252), haL=(190, 212), elR=(452, 182), haR=(512, 122),
-                                hip=(292, 332), knL=(200, 382), knR=(382, 362), ftL=(108, 332), ftR=(352, 442), toeL=-1, toeR=-1)),
-    "yinqiao": ("靜坐調息", dict(head=(300, 252), neck=(300, 296), shL=(256, 312), shR=(344, 312), elL=(226, 402), haL=(206, 486), elR=(374, 402), haR=(394, 486),
-                               hip=(300, 472), knL=(190, 502), knR=(410, 502), ftL=(334, 528), ftR=(266, 528), toeL=0, toeR=0)),
-}
-# 穴位掛在哪兩個關節之間（a, b, t）：招式換了，穴位跟著身體走
-ANCHOR = {
-    "du1": ("hip", "hip", 0), "du2": ("hip", "neck", .38), "du3": ("neck", "neck", 0), "du4": ("head", "head", 0),
-    "ren1": ("hip", "neck", -.06), "ren2": ("hip", "neck", .2), "ren3": ("hip", "neck", .42), "ren4": ("hip", "neck", .78),
-    "chong1": ("hipR", "knR", .3), "chong2": ("hipR", "hipR", 0), "chong3": ("hip", "neck", .32), "chong4": ("hip", "neck", .6),
-    "dai1": ("hipL", "shL", .4), "dai2": ("hipL", "hipL", 0), "dai3": ("hipR", "hipR", 0), "dai4": ("hipR", "shR", .45),
-    "yangwei1": ("ftL", "ftL", 0), "yangwei2": ("knL", "ftL", .45), "yangwei3": ("shL", "shL", 0), "yangwei4": ("neck", "head", .55),
-    "yinwei1": ("knR", "ftR", .5), "yinwei2": ("hipR", "hipR", 0), "yinwei3": ("hipR", "shR", .62), "yinwei4": ("neck", "neck", 0),
-    "yangqiao1": ("ftR", "ftR", 0), "yangqiao2": ("knR", "ftR", .55), "yangqiao3": ("knR", "knR", 0), "yangqiao4": ("hipR", "hipR", 0),
-    "yinqiao1": ("ftL", "ftL", 0), "yinqiao2": ("knL", "ftL", .5), "yinqiao3": ("neck", "neck", 0), "yinqiao4": ("head", "head", 0),
-}
+# ---------------------------------------------------------------- 經脈頁 C 案：一脈一式（剪影＋穴位星圖）
+# 剪影：assets/ui/meridian/<經脈>.webp（去背的招式剪影）；穴位位置：acupoints.csv 的 fx、fy（佔圖的比例）
+SIL_DEFS = (f'<defs><filter id="silRim" x="-5%" y="-5%" width="110%" height="110%"><feMorphology in="SourceAlpha" operator="dilate" radius="2.2" result="d"/>'
+            f'<feFlood flood-color="{BONE}"/><feComposite in2="d" operator="in" result="rim"/><feMerge><feMergeNode in="rim"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'
+            '<filter id="silBone"><feColorMatrix type="matrix" values="0 0 0 0 .95  0 0 0 0 .93  0 0 0 0 .89  0 0 0 1 0"/></filter>'
+            '<filter id="silGrey"><feColorMatrix type="matrix" values="0 0 0 0 .47  0 0 0 0 .45  0 0 0 0 .48  0 0 0 1 0"/></filter></defs>')
 
 
-def _joints(mid_):
-    j = dict(POSES[mid_][1])
-    hx, hy = j["hip"]
-    j["hipL"], j["hipR"] = (hx - 24, hy), (hx + 24, hy)
-    return j
+def pose_image(mid_, x, y, size, mode="silRim"):
+    key = "mer_" + mid_
+    if key not in _cache:
+        _cache[key] = _img(f"assets/ui/meridian/{mid_}.webp", "PNG", (640, 640))
+    return f'<image href="{_cache[key]}" x="{x}" y="{y}" width="{size}" height="{size}" filter="url(#{mode})"/>'
 
 
-def pose_silhouette(mid_, ox, oy, sc=1.0, rim=BONE, fill="#060507"):
-    j = _joints(mid_)
-
-    def draw(grow, col):
-        o = []
-        L = lambda a, b, w: o.append(f'<path d="M{j[a][0]},{j[a][1]} L{j[b][0]},{j[b][1]}" stroke="{col}" stroke-width="{w+grow}" stroke-linecap="round" fill="none"/>')
-        tor = " ".join(f"{j[k][0]},{j[k][1]}" for k in ("shL", "shR", "hipR", "hipL"))
-        o.append(f'<polygon points="{tor}" fill="{col}" stroke="{col}" stroke-width="{36+grow}" stroke-linejoin="round"/>')
-        L("neck", "head", 26)
-        for sd in "LR":
-            L("sh" + sd, "el" + sd, 30); L("el" + sd, "ha" + sd, 24)
-            L("hip" + sd, "kn" + sd, 46); L("kn" + sd, "ft" + sd, 34)
-            o.append(f'<circle cx="{j["ha"+sd][0]}" cy="{j["ha"+sd][1]}" r="{15+grow/2}" fill="{col}"/>')
-            t = j["toe" + sd]
-            if t:
-                fx, fy = j["ft" + sd]
-                o.append(f'<path d="M{fx},{fy+6} L{fx+t*34},{fy+10}" stroke="{col}" stroke-width="{22+grow}" stroke-linecap="round"/>')
-        hx, hy = j["head"]
-        o.append(f'<circle cx="{hx}" cy="{hy}" r="{36+grow/2}" fill="{col}"/>')
-        o.append(f'<circle cx="{hx}" cy="{hy-40}" r="{13+grow/2}" fill="{col}"/>')
-        # 衣襬：腰下一片，讓剪影像穿著長衫
-        o.append(f'<polygon points="{j["hipL"][0]-14},{j["hipL"][1]-10} {j["hipR"][0]+14},{j["hipR"][1]-10} {(j["hipR"][0]+j["knR"][0])/2+16:.0f},{(j["hipR"][1]+j["knR"][1])/2+10:.0f} {(j["hipL"][0]+j["knL"][0])/2-16:.0f},{(j["hipL"][1]+j["knL"][1])/2+10:.0f}" fill="{col}" stroke="{col}" stroke-width="{10+grow}" stroke-linejoin="round"/>')
-        return "".join(o)
-
-    return (f'<g transform="translate({ox} {oy}) scale({sc})" filter="url(#rough)">'
-            + (draw(7, rim) if rim else "") + draw(0, fill) + "</g>")
-
-
-def pose_points(mid_, ox, oy, sc=1.0):
-    j = _joints(mid_)
-    out = []
-    for d in range(1, 5):
-        a, b, t = ANCHOR[f"{mid_}{d}"]
-        x = j[a][0] + (j[b][0] - j[a][0]) * t
-        y = j[a][1] + (j[b][1] - j[a][1]) * t
-        if a == "head":
-            y -= 14
-        out.append((ox + x * sc, oy + y * sc))
-    return out
+def meridian_points(mid_):
+    rows = [r for r in _csv("acupoints") if r["meridian_id"] == mid_]
+    return sorted(rows, key=lambda r: int(r["depth"]))
 
 
 def ink_disc(cx, cy, r, uid):
-    o = [f'<defs><radialGradient id="disc{uid}" cx="42%" cy="38%" r="75%"><stop offset="0" stop-color="#2f8f96"/><stop offset=".6" stop-color="#134a50"/><stop offset="1" stop-color="#0a2226"/></radialGradient></defs>']
+    o = [f'<defs><radialGradient id="disc{uid}" cx="42%" cy="38%" r="75%"><stop offset="0" stop-color="#3a9ea5"/><stop offset=".6" stop-color="#175a61"/><stop offset="1" stop-color="#0b2a2f"/></radialGradient></defs>']
     o.append(f'<circle cx="{cx}" cy="{cy}" r="{r*1.25}" fill="url(#tealBloom)" opacity=".35"/>')
     o.append(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="url(#disc{uid})"/>')
     o.append(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="#050406" stroke-width="{r*0.12:.0f}" filter="url(#dry)"/>')
-    o.append(f'<path d="M{cx-r*0.6:.0f},{cy-r*0.2:.0f} q{r*0.3:.0f},{-r*0.2:.0f} {r*0.6:.0f},0 t{r*0.5:.0f},{r*0.1:.0f}" fill="none" stroke="{BONE}" stroke-width="1.2" opacity=".18"/>')
     return "".join(o)
 
 
 def star_nodes(P, n, sel_idx, fails_k=0, sc=1.0, labels=None):
-    """穴位星圖：已通＝青色亮點與亮線；下一穴＝橘色準框；未通＝白色小點細線；最後一穴是大珠。"""
+    """穴位星圖：已通＝青色亮點與亮線；下一穴＝橘點＋準框；未通＝白色小點細線；最後一穴是大珠。"""
     o = []
-    for i in range(3):
+    N = len(P)
+    for i in range(N - 1):
         (x0, y0), (x1, y1) = P[i], P[i + 1]
         lit = i + 1 < n
-        o.append(f'<path d="M{x0:.1f},{y0:.1f} L{x1:.1f},{y1:.1f}" stroke="{TEAL if lit else BONE}" stroke-width="{(3.5 if lit else 1.5)*sc}" opacity="{1 if lit else .55}" {"filter=\'url(#glowTeal)\'" if lit else ""}/>')
-        mx, my = (x0 + x1) / 2, (y0 + y1) / 2
-        o.append(f'<circle cx="{mx:.1f}" cy="{my:.1f}" r="{3.5*sc}" fill="{TEAL if lit else BONE}" opacity="{1 if lit else .7}"/>')
+        o.append(f'<path d="M{x0:.1f},{y0:.1f} L{x1:.1f},{y1:.1f}" stroke="{TEAL if lit else BONE}" stroke-width="{(3.5 if lit else 1.5)*sc}" opacity="{1 if lit else .6}" {"filter=\'url(#glowTeal)\'" if lit else ""}/>')
     for i, (x, y) in enumerate(P):
-        on, nxt, big = i < n, i == n, i == 3
-        r = (17 if big else 11) * sc
+        on, nxt, big = i < n, i == n, i == N - 1
+        r = (13 if big else 8) * sc
         if on:
-            o.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r}" fill="{TEAL}" stroke="{BONE}" stroke-width="{2.5*sc}" filter="url(#glowTeal)"/>')
-            o.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r*0.4:.1f}" fill="{BONE}"/>')
+            o.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r}" fill="{TEAL}" stroke="{BONE}" stroke-width="{2*sc}" filter="url(#glowTeal)"/>')
+            o.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r*0.38:.1f}" fill="{BONE}"/>')
         else:
-            o.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r}" fill="{INK}" stroke="{EMBER if nxt else BONE}" stroke-width="{(3.5 if nxt else 2)*sc}" {"filter=\'url(#glowRed)\'" if nxt else ""}/>')
-            o.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r*0.35:.1f}" fill="{EMBER if nxt else BONE}" opacity="{1 if nxt else .8}"/>')
-            if big:
-                o.append(f'<path d="M{x-r*0.55:.1f},{y:.1f} a{r*0.55:.1f},{r*0.55:.1f} 0 0 1 {r*1.1:.1f},0" fill="none" stroke="{BONE}" stroke-width="{1.5*sc}" opacity=".7"/>')
-        if i == sel_idx:   # 準框
-            R = r + 14 * sc
+            o.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r}" fill="{INK}" stroke="{EMBER if nxt else BONE}" stroke-width="{(3 if nxt else 1.8)*sc}" {"filter=\'url(#glowRed)\'" if nxt else ""}/>')
+            o.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r*0.36:.1f}" fill="{EMBER if nxt else BONE}"/>')
+        if i == sel_idx:
+            R = r + 12 * sc
             o.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{R}" fill="none" stroke="{BONE}" stroke-width="{2*sc}"/>')
             for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
                 o.append(f'<rect x="{x+dx*R-4*sc:.1f}" y="{y+dy*R-4*sc:.1f}" width="{8*sc}" height="{8*sc}" fill="{BONE}" transform="rotate(45 {x+dx*R:.1f} {y+dy*R:.1f})"/>')
-        if labels:
-            o.append(text(x + r + 8, y - r - 2, labels[i] + (f" ×{fails_k}" if (nxt and fails_k) else ""), 17 * sc if sc >= 1 else 13, BONE if (on or nxt) else GREY, SERIF, 900,
-                          extra=f'stroke="{INK}" stroke-width="5" paint-order="stroke"'))
+    if labels:
+        for i, (x, y) in enumerate(P):
+            on, nxt = i < n, i == n
+            side = 1 if i % 2 == 0 else -1
+            lab = labels[i] + (f" ×{fails_k}" if (nxt and fails_k) else "")
+            off = 30 if i == sel_idx else 16
+            o.append(text(x + side * off, y + 5, lab, 15, TEAL if on else (EMBER if nxt else BONE), SERIF, 900, "start" if side > 0 else "end",
+                          f'stroke="{INK}" stroke-width="5" paint-order="stroke" opacity="{1 if (on or nxt) else .8}"'))
     return "".join(o)
+
+
+_DEMO_OPEN = {"ren": 9, "du": 4, "chong": 2, "yangwei": 5, "yinwei": 1}
 
 
 def s12c_meridian_pose():
     mer = _csv("meridians", "meridian_id")
-    acu = _csv("acupoints", "point_id")
     cfg = {r["key"]: r["value"] for r in _csv("meridian_config")}
     levels = _csv("character_levels")
-    opened = {"ren": 4, "du": 2, "chong": 1, "yangwei": 3, "yinwei": 1}
-    fails = {"du3": 2}
+    opened = _DEMO_OPEN
     sel = "du"
+    pts = meridian_points(sel)
+    N = len(pts)
+    n = opened.get(sel, 0)
+    fails = {f"{sel}{n+1}": 2}
     total = sum(opened.values())
-    realm = levels[total]["display_zh"]
+    all_n = len(_csv("acupoints"))
+    th = [0] + [int(x) for x in cfg["realm_points"].split("|")]
+    lv = 30
+    for i in range(3):
+        if total < th[i + 1]:
+            lv = [1, 10, 20][i] + (total - th[i]) * 10 // (th[i + 1] - th[i]) if i else 1 + (total * 9) // th[1]
+            break
+    realm = levels[lv - 1]["display_zh"]
+    to_next = next((t - total for t in th[1:] if t > total), 0)
     cost = round(float(cfg["cost_a"]) * (total + 1) ** float(cfg["cost_exp"]) + float(cfg["cost_b"]))
     m = mer[sel]
-    n = opened.get(sel, 0)
-    b = []
+    b = [SIL_DEFS]
     _dim_scene(b, 0.92)
     b.append(text(40, 62, "經脈", 44, BONE, SERIF, 900, extra=f'stroke="{INK}" stroke-width="8" paint-order="stroke"'))
     b.append(f'<rect x="150" y="34" width="150" height="30" fill="{TEAL}"/>')
     b.append(text(225, 56, realm, 17, INK, SANS, 900, "middle"))
-    b.append(text(316, 56, f"已通 {total} / 32 穴", 16, GREY, SANS, 900))
-    # 大框
+    b.append(text(316, 56, f"已通 {total} / {all_n} 穴　再通 {to_next} 穴突破", 16, GREY, SANS, 900))
     b.append(f'<rect x="40" y="96" width="1520" height="700" fill="{INK2}" stroke="{BONE}" stroke-width="3"/>')
     b.append(f'<rect x="48" y="104" width="1504" height="684" fill="none" stroke="{BONE}" stroke-width="1" opacity=".4"/>')
     b.append(slant(620, 74, 360, 46, 16, INK, BONE, 3))
     b.append(text(800, 106, "經脈圖", 26, BONE, SERIF, 900, "middle"))
     # 左上：這條脈
     b.append(f'<rect x="92" y="130" width="76" height="76" transform="rotate(45 130 168)" fill="{INK}" stroke="{TEAL}" stroke-width="3"/>')
-    b.append(pose_silhouette(sel, 82, 118, 0.16, rim=None, fill=BONE))
+    b.append(pose_image(sel, 88, 126, 84, "silBone"))
     b.append(brush_title(130, 262, m["name_zh"], 34, EMBER, INK, 7, "middle", -2))
     b.append(text(130, 290, m["alias_zh"], 15, TEAL, SANS, 900, "middle"))
-    b.append(text(130, 314, POSES[sel][0], 15, GREY, SERIF, 900, "middle"))
+    b.append(text(130, 314, m["pose_zh"], 15, GREY, SERIF, 900, "middle"))
     # 中：墨圓、招式剪影、穴位星圖
-    ox, oy = 280, 124
-    b.append(ink_disc(ox + 300, oy + 330, 262, "c"))
-    b.append(splatter(ox + 80, oy + 520, 120, 26, "#050406", 7, 9).replace('filter="url(#glowRed)"', ""))
-    b.append(pose_silhouette(sel, ox, oy))
-    P = pose_points(sel, ox, oy)
-    b.append(star_nodes(P, n, n, fails.get(f"{sel}{n+1}", 0), 1.0, [acu[f"{sel}{d}"]["name_zh"] for d in range(1, 5)]))
-    # 左右切換
-    for x, dr in ((224, 1), (936, -1)):
-        b.append(f'<path d="M{x+dr*14},{454} L{x-dr*14},{490} L{x+dr*14},{526} L{x+dr*4},{490} Z" fill="{BONE}" stroke="{INK}" stroke-width="3"/>')
-    b.append(text(224, 556, "A", 14, GREY, SANS, 900, "middle"))
-    b.append(text(936, 556, "D", 14, GREY, SANS, 900, "middle"))
-    b.append(button(470, 722, 220, 50, "返回（K）", "normal", 22))
-    b.append(text(720, 754, "真氣", 20, BONE, SERIF, 900))
-    b.append(f'<circle cx="784" cy="747" r="11" fill="{TEAL}" stroke="{BONE}" stroke-width="2" filter="url(#glowTeal)"/>')
-    b.append(text(804, 755, "1,284", 22, TEAL, SANS, 900))
+    size, ox, oy = 600, 290, 112
+    b.append(ink_disc(ox + size / 2, oy + size / 2 + 10, 262, "c"))
+    b.append(pose_image(sel, ox, oy, size))
+    P = [(ox + float(r["fx"]) * size, oy + float(r["fy"]) * size) for r in pts]
+    b.append(star_nodes(P, n, n, fails.get(f"{sel}{n+1}", 0), 1.0, [r["name_zh"] for r in pts]))
+    for x, dr in ((236, 1), (944, -1)):
+        b.append(f'<path d="M{x+dr*14},{424} L{x-dr*14},{460} L{x+dr*14},{496} L{x+dr*4},{460} Z" fill="{BONE}" stroke="{INK}" stroke-width="3"/>')
+    b.append(text(236, 526, "A", 14, GREY, SANS, 900, "middle"))
+    b.append(text(944, 526, "D", 14, GREY, SANS, 900, "middle"))
+    b.append(button(470, 728, 220, 50, "返回（K）", "normal", 22))
+    b.append(text(720, 760, "真氣", 20, BONE, SERIF, 900))
+    b.append(f'<circle cx="784" cy="753" r="11" fill="{TEAL}" stroke="{BONE}" stroke-width="2" filter="url(#glowTeal)"/>')
+    b.append(text(804, 761, "1,284", 22, TEAL, SANS, 900))
     # 右：衝擊穴位
     x, y, w, h = 1050, 124, 480, 644
-    pid = f"{sel}{n+1}"
-    a = acu[pid]
-    k = fails.get(pid, 0)
+    a = pts[n]
+    k = fails.get(a["point_id"], 0)
     base = float(a["base_chance"])
     ch = min(1.0, base + float(cfg["chance_step"]) * k)
     b.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="{INK}" stroke="#55505a" stroke-width="2"/>')
@@ -1544,48 +1492,49 @@ def s12c_meridian_pose():
     b.append(f'<path d="M{x+40},{y+146} H{x+w-40}" stroke="#3b363f" stroke-width="2"/>')
     b.append(text(x + 40, y + 190, _stat_text(a["stat_id"], a["value"]).replace("+", "　+"), 24, TEAL, SANS, 900))
     b.append(text(x + 40, y + 250, "成功率", 17, GREY, SANS, 900))
-    b.append(text(x + w - 40, y + 252, f"{int(ch*100)}%", 30, EMBER, SANS, 900, "end"))
+    b.append(text(x + w - 40, y + 252, f"{int(round(ch*100))}%", 30, EMBER, SANS, 900, "end"))
     bx, bw = x + 40, w - 80
     b.append(f'<rect x="{bx}" y="{y+266}" width="{bw}" height="16" fill="#1b1418" stroke="{BONE}" stroke-width="1.5"/>')
     b.append(f'<rect x="{bx}" y="{y+266}" width="{bw*base:.0f}" height="16" fill="{TEAL}"/>')
     b.append(f'<rect x="{bx+bw*base:.0f}" y="{y+266}" width="{bw*(ch-base):.0f}" height="16" fill="{EMBER}"/>')
-    b.append(text(x + 40, y + 310, f"基礎 {int(base*100)}%　＋　已衝擊 {k} 次 ×{int(float(cfg['chance_step'])*100)}%", 15, GREY, SANS, 700))
+    b.append(text(x + 40, y + 310, f"基礎 {int(round(base*100))}%　＋　已衝擊 {k} 次 ×{int(float(cfg['chance_step'])*100)}%", 15, GREY, SANS, 700))
     b.append(text(x + 40, y + 334, "失敗會耗去真氣，但下次更容易打通", 15, GREY, SANS, 700))
     b.append(system_box(x + 40, y + 376, w - 80, 86, [f"全通加成　{_stat_text(m['bonus_stat'], m['bonus_value'])}", "任、督都全通：打通任督二脈"], 16, tag=f"{m['name_zh']}全通", dark=True))
-    b.append(text(x + w / 2, y + h - 136, f"{m['name_zh']}：{n} / 4", 22, BONE, SERIF, 900, "middle"))
-    b.append(pips(x + w / 2 - 44, y + h - 118, n, 4, 12, TEAL, ()))
+    b.append(text(x + w / 2, y + h - 136, f"{m['name_zh']}：{n} / {N}", 22, BONE, SERIF, 900, "middle"))
+    b.append(pips(x + w / 2 - N * 11, y + h - 118, n, N, 12, TEAL, ()))
     b.append(button(x + 110, y + h - 96, 260, 54, "衝　擊", "hover", 26, "空白"))
     b.append(text(x + w / 2, y + h - 16, f"消耗真氣　{cost}", 18, BONE, SANS, 900, "middle"))
     # 下：八脈（各自的招式）
     for i, mid_ in enumerate(mer):
         nn = opened.get(mid_, 0)
+        NN = len(meridian_points(mid_))
         cx = 150 + i * 186
         on = mid_ == sel
-        b.append(slant(cx - 84, 812, 172, 74, 14, "#231019" if on else INK, EMBER if on else ("#2a8f93" if nn >= 4 else "#55505a"), 3 if on else 2))
-        b.append(pose_silhouette(mid_, cx - 78, 812, 0.118, rim=None, fill=BONE if (on or nn) else "#77727a"))
-        b.append(text(cx + 30, 846, mer[mid_]["name_zh"], 18, BONE if (on or nn) else GREY, SERIF, 900, "middle"))
-        b.append(text(cx + 30, 870, f"{nn} / 4", 13, TEAL if nn >= 4 else GREY, SANS, 900, "middle"))
-    b.append(note(1180, 14, ["稿註（C 案）：一脈一頁、一脈一式；A／D 或點下方切換。", "青亮點＝已通，橘點＋準框＝正要衝的穴，大珠＝該脈最後一穴。"]))
+        b.append(slant(cx - 84, 812, 172, 74, 14, "#231019" if on else INK, EMBER if on else ("#2a8f93" if nn >= NN else "#55505a"), 3 if on else 2))
+        b.append(pose_image(mid_, cx - 76, 815, 68, "silBone" if (on or nn) else "silGrey"))
+        b.append(text(cx + 32, 846, mer[mid_]["name_zh"], 18, BONE if (on or nn) else GREY, SERIF, 900, "middle"))
+        b.append(text(cx + 32, 870, f"{nn} / {NN}", 13, TEAL if nn >= NN else GREY, SANS, 900, "middle"))
+    b.append(note(1180, 14, ["稿註：一脈一頁、一脈一式；A／D 或點下方切換。", "青亮點＝已通，橘點＋準框＝正要衝的穴，大珠＝該脈最後一穴。"]))
     return doc("\n".join(b), "12c 奇經八脈・一脈一式")
 
 
 def s12d_meridian_poses():
     mer = _csv("meridians", "meridian_id")
-    acu = _csv("acupoints", "point_id")
-    opened = {"ren": 4, "du": 2, "chong": 1, "yangwei": 3, "yinwei": 1}
-    b = [f'<rect width="{W}" height="{H}" fill="{INK2}"/>']
-    b.append(brush_title(800, 62, "八脈八式", 50, BONE, INK, 8, "middle", -1))
+    opened = _DEMO_OPEN
+    b = [SIL_DEFS, f'<rect width="{W}" height="{H}" fill="{INK2}"/>']
+    b.append(brush_title(800, 56, "八脈八式", 46, BONE, INK, 8, "middle", -1))
     for i, mid_ in enumerate(mer):
-        cx, cy = 200 + (i % 4) * 400, 270 + (i // 4) * 410
-        sc = 0.56
-        ox, oy = cx - 300 * sc, cy - 330 * sc
-        b.append(ink_disc(cx, cy, 150, f"d{i}"))
-        b.append(pose_silhouette(mid_, ox, oy, sc))
-        n = opened.get(mid_, 0)
-        b.append(star_nodes(pose_points(mid_, ox, oy, sc), n, -1, 0, 0.62, [acu[f"{mid_}{d}"]["name_zh"] for d in range(1, 5)]))
-        b.append(brush_title(cx - 150, cy - 150, mer[mid_]["name_zh"], 30, EMBER, INK, 6, "start", -2))
-        b.append(text(cx + 170, cy - 156, POSES[mid_][0], 18, BONE, SERIF, 900, "end"))
-        b.append(text(cx, cy + 196, mer[mid_]["desc"], 14, GREY, SANS, 700, "middle"))
+        cx, cy = 200 + (i % 4) * 400, 272 + (i // 4) * 412
+        size = 340
+        ox, oy = cx - size / 2, cy - size / 2
+        pts = meridian_points(mid_)
+        b.append(ink_disc(cx, cy + 6, 150, f"d{i}"))
+        b.append(pose_image(mid_, ox, oy, size))
+        P = [(ox + float(r["fx"]) * size, oy + float(r["fy"]) * size) for r in pts]
+        b.append(star_nodes(P, opened.get(mid_, 0), -1, 0, 0.6))
+        b.append(brush_title(cx - 180, cy - 160, mer[mid_]["name_zh"], 28, EMBER, INK, 6, "start", -2))
+        b.append(text(cx + 184, cy - 164, f'{mer[mid_]["pose_zh"]}・{len(pts)} 穴', 16, BONE, SERIF, 900, "end"))
+        b.append(text(cx, cy + 186, "　".join(r["name_zh"] for r in pts), 12.5, GREY, SERIF, 700, "middle"))
     return doc("\n".join(b), "12d 八脈八式")
 
 

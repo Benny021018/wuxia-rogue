@@ -256,7 +256,7 @@ func _check_meridians_and_shrine() -> void:
 	Game.level = 1
 	Game.zhenqi = 0.0
 	Game.recompute()
-	_check(Data.meridian_order.size() == 8 and Data.meridian_len("du") == 4, "奇經八脈各四個穴位")
+	_check(Data.meridian_order.size() == 8 and Data.meridian_len("du") >= 6 and Data.meridian_len("dai") <= 10 and Data.acupoints.size() == 61, "奇經八脈每條 6～10 個穴位")
 	_check(Game.try_break("du") == -1, "真氣不夠時不能衝穴")
 	var pid: String = Game.next_point("du").point_id
 	var c0 := Game.break_chance(pid)
@@ -269,13 +269,14 @@ func _check_meridians_and_shrine() -> void:
 	while Game.acu_level("du") < 1 and tries < 20:
 		tries += 1
 		Game.try_break("du")
-	_check(Game.acu_level("du") == 1 and Game.st("dmg_pct") > dmg0 and Game.level == 2, "打通長強：傷害提升、境界進一重")
+	_check(Game.acu_level("du") == 1 and Game.st("dmg_pct") > dmg0, "打通長強：傷害提升")
+	_check(Game.level_for_points(0) == 1 and Game.level_for_points(12) == 10 and Game.level_for_points(26) == 20 and Game.level_for_points(40) == 30, "穴位數對應境界")
 	for mid in Data.meridian_order:
 		var guard := 0
 		while not Game.next_point(mid).is_empty() and guard < 60:
 			guard += 1
 			Game.try_break(mid)
-	_check(Game.acu_total() == 32 and Game.ren_du_open() and Game.realm_name(Game.level) == "化境", "奇經八脈全通、打通任督二脈、境界化境")
+	_check(Game.acu_total() == Data.acupoints.size() and Game.ren_du_open() and Game.realm_name(Game.level) == "化境", "奇經八脈全通、打通任督二脈、境界化境")
 	# 悟道碑：每區免費參悟、刷新花銀兩
 	Game.shrine_charges = 0
 	Game.free_draws = 0
