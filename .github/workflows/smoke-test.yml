@@ -19,6 +19,8 @@ jobs:
           unzip -q godot.zip
           mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot
           chmod +x godot
+      - name: 天機輪數學模型（理論＋模擬，失敗會中止）
+        run: python3 tools/shrine_math/wheel.py > /dev/null
       - name: 匯入資源
         run: ./godot --headless --path . --import || true
       - name: 冒煙測試

@@ -407,6 +407,8 @@ func _check_wheel() -> void:
 	var z2: float = (float(res) / n - odds2.resonance) / sqrt(odds2.resonance * (1.0 - odds2.resonance) / n)
 	print("  天機輪 20,000 轉：頓悟 z=%.2f、門派共鳴 z=%.2f" % [z1, z2])
 	_check(absf(z1) <= 3.29 and absf(z2) <= 3.29, "遊戲亂數的頓悟率與共鳴率符合理論")
+	if rf:
+		_check_wheel_budget(JSON.parse_string(FileAccess.get_file_as_string("res://docs/shrine-math/results.json")))
 	# 結果套用到候選
 	var keep_l := Game.since_legendary
 	var keep_m: Dictionary = Game.martial.duplicate()
@@ -427,6 +429,59 @@ func _check_wheel() -> void:
 	Game.since_legendary = keep_l
 	Game.martial = keep_m
 	Game.wheel_free = keep_free
+	Game.recompute()
+
+
+func _check_wheel_budget(th: Dictionary) -> void:
+	## 候選稀有度：讓 Game.roll_choices() 實際抽，平均預算要符合模型的期望值（|z| ≤ 3.29）
+	## 模型的計算邊界是起始狀態：沒學過武學、無幸運、無保底、無額外候選與保證效果
+	var keep_l := Game.since_legendary
+	var keep_m: Dictionary = Game.martial.duplicate()
+	var keep_d := [Game.draws_this_stage, Game.total_draws]
+	var keep_rng: int = Game.rng.state
+	Game.rng.seed = 20261112   # 固定種子，結果可重現
+	Game.martial = {}
+	Game.recompute()
+	var clean: bool = Game.st("luck") == 0.0 and Game.f("extra_choice") == 0.0 and Game.f("guarantee_tangmen") == 0.0 and Game.f("guarantee_upgrade") == 0.0
+	_check(clean, "天機輪預算檢查的前提：無幸運、無額外候選與保證效果")
+	if clean:
+		var budget := {}
+		for r in Data.rarity_order:
+			budget[r] = float(Data.rarity[r].power_budget)
+		var cases: Array = [["一般", {}, float(th.g.none)],
+			["八卦歸一", {"legendary": true, "bump": int(Data.wheel_cfg.bagua_bump)}, float(th.g.bagua)]]
+		for sect in th.g.resonance_by_sect:
+			cases.append(["共鳴・" + String(sect), {"sect": sect, "sect_slots": 99, "bump": int(Data.wheel_cfg.resonance_bump)}, float(th.g.resonance_by_sect[sect])])
+		var n := 4000
+		var bad: Array = []
+		var line: Array = []
+		for c in cases:
+			var s := 0.0
+			var s2 := 0.0
+			for i in n:
+				Game.martial = {}
+				Game.since_legendary = 0
+				var tot := 0.0
+				for cand in Game.roll_choices(c[1]):
+					tot += float(budget[cand.rarity])
+				s += tot
+				s2 += tot * tot
+			var mean := s / n
+			var sd := sqrt(maxf(1e-12, (s2 / n - mean * mean) * n / (n - 1)))
+			var z: float = (mean - float(c[2])) / (sd / sqrt(n))
+			var extra := ""
+			if String(c[0]).begins_with("共鳴"):
+				extra = "（v1 %.2f）" % ((mean - float(th.naive_v1.g_resonance)) / (sd / sqrt(n)))
+			line.append("%s %.3f/%.3f z=%+.2f%s" % [c[0], mean, float(c[2]), z, extra])
+			if absf(z) > 3.29:
+				bad.append(c[0])
+		print("  天機輪候選預算（種子 20261112，實抽/理論，各 %d 次）：" % n, "、".join(line))
+		_check(bad.is_empty(), "天機輪候選預算符合模型 %s" % [bad])
+	Game.since_legendary = keep_l
+	Game.martial = keep_m
+	Game.draws_this_stage = keep_d[0]
+	Game.total_draws = keep_d[1]
+	Game.rng.state = keep_rng
 	Game.recompute()
 
 
