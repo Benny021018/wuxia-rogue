@@ -6,6 +6,8 @@
 - `scenes/Main.tscn` 只有一個節點；場景、介面全部由程式產生。不要新增手寫的 .tscn，除非有充分理由。
 - 自動載入：`Data`（scripts/data.gd，讀 CSV）、`Game`（scripts/game.gd，一局的狀態與抽獎）。
 - `world.gd` 依 `data/zones.json` 搭地圖；`player.gd` 負責所有戰鬥效果；`enemy.gd` 依 enemy_id 實作怪物機制。
+- 武器分主武器（`Game.weapons[0]`）與副武器（`[1]`），同時只用 `Game.active_weapon` 那一把。
+- 介面一律用 `UIKit` 與 `scripts/ui/comic_*.gd` 元件，版面依 `docs/ui-drafts/` 的 SVG 稿；`UIKit.at()` 直接吃 1600×900 稿面座標。CanvasLayer 會截斷主題繼承，新介面根節點要設 `theme = UIKit.theme()`。改介面後可跑 `res://tests/UICapture.tscn` 截圖對照。新增介面文字後重跑 `tools/subset_fonts.py`，否則缺字會退回系統字型。
 
 ## 規則
 1. **數值一律放在 `data/*.csv`**，不要寫死在程式裡。新增欄位時同步更新讀取它的程式。

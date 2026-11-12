@@ -842,7 +842,7 @@ func take_hit(amount: float, from_pos: Vector3, crit: bool, weight := 1.0) -> fl
 				dmg_in *= 0.3
 				FX.play(world, hit_center() + facing * 0.48, &"shield-block", 0.65, 0.12, Color(1, 0.78, 0.32))
 				if randf() < 0.3:
-					FX.float_text(world, hit_center() + Vector3(0, 0.8, 0), "格擋", Color(0.8, 0.8, 0.8), 28)
+					FX.float_text(world, hit_center() + Vector3(0, 0.8, 0), "格", UIKit.TEAL, 36)
 		"Z04":
 			dmg_in = maxf(dmg_in * 0.25, dmg_in - _armor)
 		"Z06":
@@ -873,9 +873,9 @@ func _apply_damage(v: float, crit: bool, dot: bool) -> float:
 			contact += contact.direction_to(player.cam.global_position) * hit_radius
 		FX.play(world, contact, &"crit-hit" if crit else &"hit-spark", (1.55 if crit else 0.76) * size, 0.24 if crit else 0.14)
 	hp -= v
-	var col := Color(1, 0.85, 0.3) if crit else (Color(0.5, 1, 0.4) if dot else Color.WHITE)
+	var col := UIKit.EMBER if crit else (Color(0.5, 1, 0.4) if dot else UIKit.BONE)
 	if not dot or randf() < 0.15:
-		FX.float_text(world, hit_center() + Vector3(0, 0.6 * size, 0), str(int(v)), col, 44 if crit else 32)
+		FX.float_text(world, hit_center() + Vector3(0, 0.6 * size, 0), str(int(v)), col, 56 if crit else 36)
 	if hp <= 0.0:
 		if eid == "Z06" and not _revived and not _last_hit_from_behind:
 			_revived = true

@@ -12,6 +12,7 @@
 
 - `run_game.bat`：直接開始遊戲
 - `run_tests.bat`：無頭模式跑自動冒煙測試，結果寫在 `tests/smoke.log`，最後一行應為 `SMOKE_DONE errors=0`
+- `res://tests/UICapture.tscn`：依序打開各畫面截圖到 `user://ui_capture/`，對照設計稿用（需要有畫面，不能 `--headless`）
 
 兩個批次檔預設使用 `..\Godot\` 裡的 Godot 4.7.1。若 Godot 放在別處，請設定環境變數 `GODOT`（console 版）和 `GODOT_GUI`。
 
@@ -22,7 +23,9 @@
 | WASD／滑鼠 | 移動／視角 |
 | 空白鍵 | 跳躍（可跳上 1 公尺高台） |
 | Shift | 衝刺（0.2 秒無敵） |
-| 左鍵／右鍵 | 左手／右手武器（可同時按住） |
+| 左鍵 | 用手上的武器出招 |
+| Q／滑鼠滾輪 | 切換主武器、副武器（同時只用一把） |
+| 1／2 | 直接拿主武器／副武器 |
 | E | 在悟道碑參悟 |
 | Tab | 武學與門派面板 |
 | Esc | 暫停 |
@@ -37,12 +40,17 @@ scripts/
   game.gd                 （自動載入 Game）一局的狀態：修為、銀兩、武器、武學、門派、屬性彙總、參悟抽獎
   main.gd                 畫面流程：選單 → 角色 → 遊戲 → 結算
   world.gd                依 zones.json 搭灰盒地圖；鎖陣、分波出怪、破陣、悟道碑、換圖
-  player.gd               第一人稱移動、雙武器、受傷流程、所有武學／門派／境界的戰鬥效果
+  player.gd               第一人稱移動、主副武器切換、受傷流程、所有武學／門派／境界的戰鬥效果
   enemy.gd                20 種敵人的 AI 與首領技能
   projectile.gd           投射物（距離判定，不用物理）
   hazard.gd               毒池、毒霧、火、斷崖等持續傷害區
   fx.gd                   材質、浮動傷害數字、預警圈
   ui/                     HUD、參悟三選一、主選單／角色選擇／暫停／面板／結算
+    ui_kit.gd             （UIKit）配色、字型、主題與元件工廠
+    comic_*.gd            條漫風元件：旁白／系統框、斜切按鈕、斜尾條、朱印、集中線與刀光
+assets/fonts/             隨遊戲附帶的 Noto Serif／Sans TC 裁切字型（OFL，見 OFL.txt）
+assets/models/npc/        休息區的鐵匠鋪與商人攤（Blender 以 tools/build_rest_stops.py 搭建並匯出）
+docs/ui-drafts/           介面 SVG 設計稿（tools/build_ui_drafts.py 產生）
 data/                     與數值平衡腳本共用的 CSV（.import 設為 keep，不會被當成翻譯檔）
 ```
 
@@ -54,9 +62,19 @@ data/                     與數值平衡腳本共用的 CSV（.import 設為 ke
 - 每區的怪物組成、數量、波數：`stages.csv`、`stage_report.csv`
 - 武器、武學、門派傳承：`weapons.csv`、`martial_arts.csv`、`sect_bonds.csv`
 - 抽獎機率、保底、價格：`rarity.csv`、`gacha_config.csv`
+- 武器詞條、掉落機率、鐵匠與商人價格：`weapon_affixes.csv`、`shop_config.csv`
 - 地圖配置（與設計畫布同一份）：`zones.json`
 
 改完數值建議回到數值專案跑一次 `calibrate_all.sh`，重新校準經濟與各區強度。
+
+武器、詞條、掉落、鐵匠與商人的整局模擬在 `tools/balance/sim.py`（只用 Python 標準函式庫）：
+
+```
+python3 tools/balance/sim.py --runs 1000                       # 新舊規則逐區比較、銀兩去向、掉落數
+python3 tools/balance/sim.py --set drop_chance_minion=0.02      # 試算單一參數，不改 CSV
+```
+
+舊規則取自改版前的 commit（`--old-rev`，預設 440139b），新規則取自目前的 `data/`；以 `stage_report.csv` 的目標秒數為錨點換算清場時間。
 
 ## 實作範圍
 
@@ -64,6 +82,10 @@ data/                     與數值平衡腳本共用的 CSV（.import 設為 ke
 - 3 名角色的被動與 9 個境界效果
 - [17 把武器的模型與第一人稱出招預覽](docs/weapon-art.md)
 - 17 把武器：近戰扇形、中距離直線、遠程投射物，以及淬煉 +15%／級
+- 主武器／副武器：同時只用一把，切換有短暫收出時間（`combat_config.csv` 的 `weapon_swap_s`）
+- 所有兵器同一品質（有效 DPS 統一為 100，差別只在打法）；起手兵器（`weapons.csv` 的 `starter`）沒有詞條；打怪隨機掉落帶詞條的兵器（`weapon_affixes.csv`），只有手上那把的詞條生效，走過去按 E 撿起
+- 每張地圖第 4 區破陣後出現鐵匠（強化淬煉、重鑄詞條）與商人（隨機上架武學）；機率與價格在 `shop_config.csv`、`rarity.csv` 的 `martial_price`、`stages.csv` 的 `rest_stop`
+- [條漫風介面](docs/ui-drafts/README.md)：參考韓式武俠條漫的旁白框、系統框、狀聲詞與集中線
 - 38 門武學的 Lv1–5 數值成長
 - 大部分小成／圓滿特效
 - 5 個門派共 15 階門派傳承

@@ -11,6 +11,7 @@ signal realm_broken(level: int, realm_name: String, effect: String)
 signal martial_breakthrough(mid: String, lv: int, desc: String)
 signal bond_activated(sect_id: String, tier: int, name: String)
 signal message(text: String)
+signal weapon_switched(slot: int)
 
 const MAX_LV := 5
 
@@ -18,7 +19,9 @@ var char_id := "nangong"
 var level := 1
 var xiuwei := 0.0
 var gold := 0.0
-var weapons: Array = [null, null]      # 每格 {id, lv}
+var weapons: Array = [null, null]      # 0＝主武器、1＝副武器，每格 {id, lv, affixes, reforges}
+var active_weapon := 0                 # 目前手上的武器格；同時只用一把
+var merchant_stock: Array = []         # 商人上架的武學 [{id, rarity, sold}]
 var martial := {}                      # martial_id -> lv
 var martial_order: Array = []
 var stage := 1
@@ -46,7 +49,7 @@ func _process(delta: float) -> void:
 
 
 # ------------------------------------------------------------------ 開局
-func new_run(cid: String) -> void:
+func new_run(cid: String, start_wid := "") -> void:
 	char_id = cid
 	level = 1
 	xiuwei = 0.0
@@ -61,12 +64,12 @@ func new_run(cid: String) -> void:
 	run_time = 0.0
 	free_draws = 0
 	bond_tiers = {}
-	# 開局從凡品武器中隨機給一把（近戰／中距離／遠程各有機會）
-	var starters: Array = []
-	for wid in FEATURED_WEAPONS:
-		if Data.weapons[wid].rarity == "common":
-			starters.append(wid)
-	weapons = [{"id": starters[rng.randi() % starters.size()], "lv": 1}, null]
+	# 開局自選一把起手武器（weapons.csv 的 starter 欄），沒有詞條
+	var starters := starter_weapons()
+	var first: String = start_wid if start_wid in starters else starters[0]
+	weapons = [make_weapon(first, 0), null]
+	active_weapon = 0
+	merchant_stock = []
 	running = true
 	recompute()
 
@@ -100,6 +103,11 @@ func recompute() -> void:
 				["tang", 10]: _flag("vs_poison_dmg", 20)
 				["tang", 20]: _flag("poison_spread", 1)
 				["tang", 30]: _flag("extra_choice", 1)
+	# 手上那把武器的詞條（收起的武器不生效）
+	var held = current_weapon()
+	if held != null:
+		for a in held.get("affixes", []):
+			s[Data.affixes[a.id].stat_id] += float(a.v)
 	# 武學
 	for mid in martial:
 		var lv: int = martial[mid]
@@ -259,6 +267,226 @@ func martial_slots() -> int:
 	return int(Data.gacha.martial_slots) + int(f("extra_slots"))
 
 
+# ------------------------------------------------------------------ 主武器／副武器
+func current_weapon():
+	return weapons[active_weapon]
+
+
+func switch_weapon(slot := -1) -> bool:
+	## 切換到指定格（-1＝另一格）；該格沒有武器或已在手上時不切換
+	var target := 1 - active_weapon if slot < 0 else slot
+	if target == active_weapon or target < 0 or target > 1 or weapons[target] == null:
+		return false
+	active_weapon = target
+	recompute()
+	weapon_switched.emit(target)
+	return true
+
+
+static func slot_name(slot: int) -> String:
+	return "主武器" if slot == 0 else "副武器"
+
+
+static func starter_weapons() -> Array:
+	var out: Array = []
+	for wid in FEATURED_WEAPONS:
+		if String(Data.weapons[wid].get("starter", "0")) == "1":
+			out.append(wid)
+	return out
+
+
+# ------------------------------------------------------------------ 武器詞條與掉落
+func make_weapon(wid: String, affix_n: int) -> Dictionary:
+	return {"id": wid, "lv": 1, "affixes": roll_affixes(wid, affix_n), "reforges": 0}
+
+
+func roll_affixes(wid: String, n: int) -> Array:
+	## 抽 n 條不重複的詞條；近戰、遠程限定詞條只出現在對應武器
+	var kind: String = Data.weapons[wid].range_type
+	var items: Array = []
+	var weights: Array = []
+	for aid in Data.affix_order:
+		var row: Dictionary = Data.affixes[aid]
+		var rt: String = row.range_type
+		if rt == "melee" and kind == "ranged" or rt == "ranged" and kind == "melee":
+			continue
+		items.append(aid)
+		weights.append(float(row.weight))
+	var out: Array = []
+	for i in mini(n, items.size()):
+		var aid: String = _pick_weighted(items, weights)
+		var k := items.find(aid)
+		items.remove_at(k)
+		weights.remove_at(k)
+		var row: Dictionary = Data.affixes[aid]
+		var tier := affix_tier(row)
+		var lo: float = float(row.min) * tier
+		var hi: float = float(row.max) * tier
+		var v := rng.randf_range(lo, hi)
+		v = snappedf(v, 0.01 if hi < 1.0 else (0.1 if hi <= 5.0 else 1.0))
+		out.append({"id": aid, "v": v})
+	return out
+
+
+func affix_tier(row: Dictionary) -> float:
+	## 詞條品階：越後面的區域掉的詞條數值越高（輸出詞條成長快、生存經濟詞條成長慢）
+	var g: float = float(row.get("tier_growth", 0.0))
+	return 1.0 + g * float(stage - 1)
+
+
+func inherit_level(item: Dictionary, old) -> void:
+	## 淬煉傳承：換上新武器時沿用被換下那把的淬煉等級（減 inherit_lv_loss）
+	if old == null:
+		return
+	var lv: int = int(old.lv) - int(Data.cfg("inherit_lv_loss"))
+	item.lv = clampi(maxi(int(item.lv), lv), 1, MAX_LV)
+
+
+func affix_count(source: String) -> int:
+	## source：minion／elite／boss／shrine，依 shop_config 的權重抽詞條數（1 起算）
+	var w := Data.weights("affix_weights_" + source)
+	if w.is_empty():
+		return 1
+	var idx: Array = range(w.size())
+	return int(_pick_weighted(idx, w)) + 1
+
+
+func roll_weapon_drop(rank: String) -> Dictionary:
+	## 擊殺掉落：依敵人階級決定機率與詞條數；沒掉回傳空字典
+	var chance := Data.cfg("drop_chance_" + rank) * (1.0 + st("luck") * Data.cfg("drop_luck_scale"))
+	if rng.randf() >= chance:
+		return {}
+	var rw := base_rarity_weights()
+	var per_rarity := {}
+	for wid in FEATURED_WEAPONS:
+		var r: String = Data.weapons[wid].rarity
+		per_rarity[r] = int(per_rarity.get(r, 0)) + 1
+	var ids: Array = []
+	var weights: Array = []
+	for wid in FEATURED_WEAPONS:
+		var r: String = Data.weapons[wid].rarity
+		ids.append(wid)
+		weights.append(float(rw[Data.rarity_order.find(r)]) / float(per_rarity[r]))
+	return make_weapon(_pick_weighted(ids, weights), affix_count(rank))
+
+
+func pick_up(item: Dictionary):
+	## 撿起掉落武器：副武器格空著就放進去，否則換掉手上那把；回傳被換下的武器（或 null）
+	var old = null
+	if weapons[1] == null:
+		inherit_level(item, weapons[0])
+		weapons[1] = item
+	else:
+		old = weapons[active_weapon]
+		inherit_level(item, old)
+		weapons[active_weapon] = item
+	recompute()
+	return old
+
+
+# ------------------------------------------------------------------ 鐵匠與商人
+func price_mult() -> float:
+	return pow(1.0 + Data.cfg("price_stage_growth"), stage - 1)
+
+
+func upgrade_cost(slot: int) -> int:
+	## 強化（淬煉+1）的價格；無法強化時回傳 -1
+	var w = weapons[slot]
+	if w == null or int(w.lv) >= MAX_LV:
+		return -1
+	return int(round(Data.cfg("upgrade_cost_base") * pow(1.0 + Data.cfg("upgrade_cost_growth"), int(w.lv) - 1) * price_mult()))
+
+
+func upgrade_weapon(slot: int) -> bool:
+	var c := upgrade_cost(slot)
+	if c < 0 or gold < c:
+		return false
+	gold -= c
+	var w: Dictionary = weapons[slot]
+	w.lv = int(w.lv) + 1
+	if w.lv == MAX_LV:
+		message.emit("器靈覺醒：%s" % Data.weapons[w.id].name_zh)
+	gold_changed.emit()
+	recompute()
+	return true
+
+
+func reforge_cost(slot: int) -> int:
+	## 重鑄詞條的價格；沒有詞條（例如起手武器）時回傳 -1
+	var w = weapons[slot]
+	if w == null or w.get("affixes", []).is_empty():
+		return -1
+	return int(round(Data.cfg("reforge_cost_base") * pow(1.0 + Data.cfg("reforge_cost_growth"), int(w.get("reforges", 0))) * price_mult()))
+
+
+func reforge_weapon(slot: int) -> bool:
+	## 詞條數不變，全部重新抽
+	var c := reforge_cost(slot)
+	if c < 0 or gold < c:
+		return false
+	gold -= c
+	var w: Dictionary = weapons[slot]
+	w.affixes = roll_affixes(w.id, w.affixes.size())
+	w.reforges = int(w.get("reforges", 0)) + 1
+	gold_changed.emit()
+	recompute()
+	return true
+
+
+func restock_merchant() -> void:
+	## 商人上架：依稀有度、門派權重抽不重複的武學
+	merchant_stock = []
+	var seen := {}
+	var weights := base_rarity_weights()
+	var tries := 0
+	while merchant_stock.size() < int(Data.cfg("merchant_slots")) and tries < 60:
+		tries += 1
+		var rar: String = _pick_weighted(Data.rarity_order, weights)
+		var p := _pool(rar, "M", seen)
+		if p[0].is_empty():
+			continue
+		var mid: String = _pick_weighted(p[0], p[1])
+		seen[mid] = true
+		merchant_stock.append({"id": mid, "rarity": rar, "sold": false})
+
+
+func merchant_refresh_cost() -> int:
+	return int(round(Data.cfg("merchant_refresh_cost") * price_mult()))
+
+
+func refresh_merchant() -> bool:
+	var c := merchant_refresh_cost()
+	if gold < c:
+		return false
+	gold -= c
+	gold_changed.emit()
+	restock_merchant()
+	return true
+
+
+func martial_price(mid: String) -> int:
+	return int(round(float(Data.rarity[Data.martial[mid].rarity].martial_price) * price_mult()))
+
+
+func can_learn(mid: String) -> bool:
+	var lv: int = martial.get(mid, 0)
+	return lv < MAX_LV and (lv > 0 or martial.size() < martial_slots())
+
+
+func buy_martial(i: int) -> bool:
+	if i < 0 or i >= merchant_stock.size():
+		return false
+	var item: Dictionary = merchant_stock[i]
+	var c := martial_price(item.id)
+	if item.sold or gold < c or not can_learn(item.id):
+		return false
+	gold -= c
+	gold_changed.emit()
+	item.sold = true
+	choose({"kind": "M", "id": item.id, "rarity": item.rarity})
+	return true
+
+
 # ------------------------------------------------------------------ 修為與境界
 func realm_name(lv: int) -> String:
 	return String(Data.levels[lv - 1].display_zh)
@@ -336,12 +564,18 @@ func pay(c: int) -> bool:
 	return true
 
 
-func rarity_weights() -> Array:
+func base_rarity_weights() -> Array:
+	## 稀有度權重（含幸運，不含天機保底）：掉落與商人用
 	var out: Array = []
 	var luck := st("luck")
 	for r in Data.rarity_order:
 		var row: Dictionary = Data.rarity[r]
 		out.append(maxf(0.0, float(row.weight) * (1.0 + luck * float(row.luck_scale))))
+	return out
+
+
+func rarity_weights() -> Array:
+	var out := base_rarity_weights()
 	if since_legendary >= int(Data.gacha.soft_pity_start):
 		out[3] += (since_legendary - int(Data.gacha.soft_pity_start) + 1) * float(Data.gacha.soft_pity_step)
 	return out
@@ -380,6 +614,8 @@ func _pool(rar: String, kind: String, seen: Dictionary) -> Array:
 			var lv := _owned_weapon_lv(wid)
 			if lv >= MAX_LV:
 				continue
+			if lv > 0 and Data.cfg("shrine_weapon_upgrade") < 0.5:
+				continue  # 淬煉交給鐵匠，悟道碑只出新武器
 			items.append(wid)
 			weights.append(own_mult if lv > 0 else 1.0)
 	else:
@@ -413,8 +649,8 @@ func roll_choices() -> Array:
 	while cands.size() < n and tries < 60:
 		tries += 1
 		var rar: String = _pick_weighted(Data.rarity_order, weights)
-		if cands.is_empty() and since_legendary >= int(Data.gacha.hard_pity) - 1:
-			rar = "legendary"
+		if cands.is_empty() and since_legendary >= int(Data.gacha.hard_pity) - 1 and not (_pool("legendary", "M", seen)[0].is_empty() and _pool("legendary", "W", seen)[0].is_empty()):
+			rar = "legendary"   # 天機保底；已經沒有可出的絕世時不強制
 		var kind := "W" if rng.randf() < float(Data.gacha.weapon_pool_ratio) else "M"
 		var p := _pool(rar, kind, seen)
 		if p[0].is_empty() and kind == "W":
@@ -424,7 +660,10 @@ func roll_choices() -> Array:
 			continue
 		var id: String = _pick_weighted(p[0], p[1])
 		seen[id] = true
-		cands.append({"kind": kind, "id": id, "rarity": rar})
+		var cand := {"kind": kind, "id": id, "rarity": rar}
+		if kind == "W" and _owned_weapon_lv(id) == 0:
+			cand.affixes = roll_affixes(id, affix_count("shrine"))
+		cands.append(cand)
 	# 唐門門主：必有一門唐門武學
 	if f("guarantee_tangmen") > 0 and not cands.any(func(c): return c.kind == "M" and Data.martial[c.id].sect == "tangmen"):
 		var opts: Array = []
@@ -468,7 +707,10 @@ func choose(c: Dictionary, replace_slot: int = -1) -> void:
 		var slot := weapons.find(null)
 		if slot == -1:
 			slot = replace_slot if replace_slot >= 0 else 1
-		weapons[slot] = {"id": c.id, "lv": 1}
+		var item := make_weapon(c.id, 0)
+		item.affixes = c.get("affixes", [])
+		inherit_level(item, weapons[slot] if weapons[slot] != null else weapons[0])
+		weapons[slot] = item
 	else:
 		var lv: int = martial.get(c.id, 0) + 1
 		if lv == 1:
@@ -492,7 +734,11 @@ func describe(c: Dictionary) -> Dictionary:
 		out.sub = "武器・%s・%s" % [w["class"], {"melee": "近戰", "mid": "中距離", "ranged": "遠程"}[w.range_type]]
 		out.level = "淬煉 +%d → +%d" % [lv, lv + 1] if lv > 0 else "新武器"
 		out.body = "%s\n傷害 %s × %s 段，間隔 %s 秒，射程 %s m" % [w.pattern_desc, w.dmg, w.hits, w.interval_s, w.range_m]
-		out.extra = "器靈覺醒（+5）：" + String(w.awaken_desc)
+		var lines: Array = []
+		if lv == 0:
+			for a in c.get("affixes", []):
+				lines.append(Data.affix_text(a))
+		out.extra = "詞條：" + "、".join(lines) if not lines.is_empty() else "器靈覺醒（+5）：" + String(w.awaken_desc)
 		out.needs_slot = lv == 0 and not weapons.has(null)
 	else:
 		var m: Dictionary = Data.martial[c.id]
@@ -507,7 +753,7 @@ func describe(c: Dictionary) -> Dictionary:
 		else:
 			out.extra = "圓滿：" + String(m.lv5_desc)
 		out.needs_slot = false
-	out.rarity_name = Data.rarity[c.rarity].name_zh
+	out.rarity_name = Data.rarity[c.rarity].name_zh if c.kind == "M" else String(Data.weapons[c.id]["class"])
 	return out
 
 
@@ -525,9 +771,19 @@ func _setup_input() -> void:
 				var ev := InputEventKey.new()
 				ev.physical_keycode = k
 				InputMap.action_add_event(a, ev)
-	for pair in [["attack_1", MOUSE_BUTTON_LEFT], ["attack_2", MOUSE_BUTTON_RIGHT]]:
+	# 左鍵出招；Q、滾輪切換主副武器；1、2 直接拿主武器、副武器
+	var buttons := {"attack_1": [MOUSE_BUTTON_LEFT], "switch_weapon": [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]}
+	for a in buttons:
+		if not InputMap.has_action(a):
+			InputMap.add_action(a)
+			for b in buttons[a]:
+				var mb := InputEventMouseButton.new()
+				mb.button_index = b
+				InputMap.action_add_event(a, mb)
+	for pair in [["switch_weapon", KEY_Q], ["weapon_main", KEY_1], ["weapon_sub", KEY_2]]:
 		if not InputMap.has_action(pair[0]):
 			InputMap.add_action(pair[0])
-			var mb := InputEventMouseButton.new()
-			mb.button_index = pair[1]
-			InputMap.action_add_event(pair[0], mb)
+		var ev := InputEventKey.new()
+		ev.physical_keycode = pair[1]
+		if not InputMap.action_has_event(pair[0], ev):
+			InputMap.action_add_event(pair[0], ev)

@@ -1,0 +1,210 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1600 900" width="1600" height="900">
+<title>00 風格稿</title>
+
+<defs>
+  <!-- 乾筆邊緣：字與筆觸的毛邊 -->
+  <filter id="rough" x="-10%" y="-20%" width="120%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="7" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="7" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <!-- 乾筆飛白：橫向斷絲 -->
+  <filter id="dry" x="-10%" y="-20%" width="120%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.006 0.22" numOctaves="2" seed="11" result="s"/>
+    <feColorMatrix in="s" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.6 1.75" result="m"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="4" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="6" result="d"/>
+    <feComposite in="d" in2="m" operator="in"/>
+  </filter>
+  <!-- 青光、血光 -->
+  <filter id="glowTeal" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur stdDeviation="10" result="b"/>
+    <feFlood flood-color="#16c6cc" flood-opacity=".85"/><feComposite in2="b" operator="in" result="g"/>
+    <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="glowRed" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur stdDeviation="9" result="b"/>
+    <feFlood flood-color="#ff4a17" flood-opacity=".8"/><feComposite in2="b" operator="in" result="g"/>
+    <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="soft"><feGaussianBlur stdDeviation="2"/></filter>
+  <!-- 紙紋／網點 -->
+  <filter id="grain" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="2"/>
+    <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .07 0"/>
+  </filter>
+  <pattern id="tone" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+    <circle cx="3.5" cy="3.5" r="1.2" fill="#000" opacity=".55"/>
+  </pattern>
+  <pattern id="hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
+    <rect width="10" height="3" fill="#fff" opacity=".06"/>
+  </pattern>
+  <!-- 電光青背光、血色暗角 -->
+  <radialGradient id="tealBloom" cx="50%" cy="45%" r="60%">
+    <stop offset="0" stop-color="#16c6cc" stop-opacity=".95"/>
+    <stop offset=".45" stop-color="#0b5f66" stop-opacity=".75"/>
+    <stop offset="1" stop-color="#0b0a0d" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="vignette" cx="50%" cy="50%" r="75%">
+    <stop offset=".55" stop-color="#000" stop-opacity="0"/>
+    <stop offset="1" stop-color="#000" stop-opacity=".85"/>
+  </radialGradient>
+  <linearGradient id="bloodFill" x1="0" x2="1">
+    <stop offset="0" stop-color="#6e0a10"/><stop offset=".7" stop-color="#b3121c"/><stop offset="1" stop-color="#ff4a17"/>
+  </linearGradient>
+  <linearGradient id="tealFill" x1="0" x2="1">
+    <stop offset="0" stop-color="#0b5f66"/><stop offset="1" stop-color="#16c6cc"/>
+  </linearGradient>
+  <linearGradient id="blade" x1="0" x2="1">
+    <stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".45" stop-color="#fff"/>
+    <stop offset=".55" stop-color="#d9f7f8"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+  </linearGradient>
+  <!-- 青色雙色調（把背景圖壓成墨＋青） -->
+  <filter id="duoTeal">
+    <feColorMatrix type="matrix" values=".25 .45 .1 0 0  .25 .45 .1 0 0  .25 .45 .1 0 0  0 0 0 1 0" result="g"/>
+    <feComponentTransfer in="g">
+      <feFuncR type="table" tableValues="0.02 0.05 0.35 0.9"/>
+      <feFuncG type="table" tableValues="0.02 0.25 0.7 0.98"/>
+      <feFuncB type="table" tableValues="0.03 0.28 0.72 0.98"/>
+    </feComponentTransfer>
+  </filter>
+  <filter id="duoInk">
+    <feColorMatrix type="matrix" values=".25 .45 .1 0 0  .25 .45 .1 0 0  .25 .45 .1 0 0  0 0 0 1 0" result="g"/>
+    <feComponentTransfer in="g">
+      <feFuncR type="table" tableValues="0.02 0.1 0.45"/>
+      <feFuncG type="table" tableValues="0.02 0.09 0.4"/>
+      <feFuncB type="table" tableValues="0.03 0.12 0.45"/>
+    </feComponentTransfer>
+  </filter>
+</defs>
+
+<rect width="1600" height="900" fill="#0b0a0d"/>
+<text x="60" y="82" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="44" font-weight="900" fill="#f3ede4" text-anchor="start" >天魔劫・介面風格稿</text>
+<text x="60" y="118" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="18" font-weight="500" fill="#8d8790" text-anchor="start" >基準：韓式武俠條漫語彙——墨黑底、血紅／橘紅、電光青背光、旁白黑框、系統白框、狀聲詞、集中線</text>
+<rect x="60" y="150" width="96" height="96" fill="#0b0a0d" stroke="#f3ede4" stroke-width="2"/>
+<text x="60" y="272" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="17" font-weight="700" fill="#f3ede4" text-anchor="start" >墨黑</text>
+<text x="60" y="292" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="12" font-weight="500" fill="#8d8790" text-anchor="start" >#0b0a0d</text>
+<text x="60" y="310" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="12" font-weight="500" fill="#8d8790" text-anchor="start" >底色</text>
+<rect x="172" y="150" width="96" height="96" fill="#2a1d36" stroke="#f3ede4" stroke-width="2"/>
+<text x="172" y="272" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="17" font-weight="700" fill="#f3ede4" text-anchor="start" >髮影紫</text>
+<text x="172" y="292" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="12" font-weight="500" fill="#8d8790" text-anchor="start" >#2a1d36</text>
+<text x="172" y="310" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="12" font-weight="500" fill="#8d8790" text-anchor="start" >陰影</text>
+<rect x="284" y="150" width="96" height="96" fill="#b3121c" stroke="#f3ede4" stroke-width="2"/>
+<text x="284" y="272" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="17" font-weight="700" fill="#f3ede4" text-anchor="start" >血紅</text>
+<text x="284" y="292" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="12" font-weight="500" fill="#8d8790" text-anchor="start" >#b3121c</text>
+<text x="284" y="310" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="12" font-weight="500" fill="#8d8790" text-anchor="start" >生命／敵</text>
+<rect x="396" y="150" width="96" height="96" fill="#ff4a17" stroke="#f3ede4" stroke-width="2"/>
+<text x="396" y="272" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="17" font-weight="700" fill="#f3ede4" text-anchor="start" >橘紅</text>
+<text x="396" y="292" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="12" font-weight="500" fill="#8d8790" text-anchor="start" >#ff4a17</text>
+<text x="396" y="310" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="12" font-weight="500" fill="#8d8790" text-anchor="start" >標題／強調</text>
+<rect x="508" y="150" width="96" height="96" fill="#16c6cc" stroke="#f3ede4" stroke-width="2"/>
+<text x="508" y="272" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="17" font-weight="700" fill="#f3ede4" text-anchor="start" >電光青</text>
+<text x="508" y="292" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="12" font-weight="500" fill="#8d8790" text-anchor="start" >#16c6cc</text>
+<text x="508" y="310" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="12" font-weight="500" fill="#8d8790" text-anchor="start" >系統／修為</text>
+<rect x="620" y="150" width="96" height="96" fill="#f3ede4" stroke="#f3ede4" stroke-width="2"/>
+<text x="620" y="272" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="17" font-weight="700" fill="#f3ede4" text-anchor="start" >骨白</text>
+<text x="620" y="292" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="12" font-weight="500" fill="#8d8790" text-anchor="start" >#f3ede4</text>
+<text x="620" y="310" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="12" font-weight="500" fill="#8d8790" text-anchor="start" >文字／框線</text>
+<rect x="732" y="150" width="96" height="96" fill="#f2cf3a" stroke="#f3ede4" stroke-width="2"/>
+<text x="732" y="272" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="17" font-weight="700" fill="#f3ede4" text-anchor="start" >冷黃</text>
+<text x="732" y="292" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="12" font-weight="500" fill="#8d8790" text-anchor="start" >#f2cf3a</text>
+<text x="732" y="310" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="12" font-weight="500" fill="#8d8790" text-anchor="start" >極少量點睛</text>
+<text x="880" y="170" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#8d8790" text-anchor="start" >稀有度（色相沿用 rarity.csv，明度改配黑底）</text>
+<g transform="rotate(-3 940 222)"><g filter="url(#rough)"><rect x="921.25" y="201.0" width="37.5" height="42.0" fill="#a9a4ac"/></g><rect x="925.25" y="205.0" width="29.5" height="34.0" fill="none" stroke="#f3ede4" stroke-width="1.5" opacity=".8"/><text x="940" y="232.8" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="30" font-weight="900" fill="#f3ede4" text-anchor="middle" >凡品</text></g>
+<text x="940" y="290" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="12" font-weight="500" fill="#8d8790" text-anchor="middle" >#a9a4ac</text>
+<g transform="rotate(-1 1090 222)"><g filter="url(#rough)"><rect x="1071.25" y="201.0" width="37.5" height="42.0" fill="#27b8d6"/></g><rect x="1075.25" y="205.0" width="29.5" height="34.0" fill="none" stroke="#f3ede4" stroke-width="1.5" opacity=".8"/><text x="1090" y="232.8" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="30" font-weight="900" fill="#f3ede4" text-anchor="middle" >良品</text></g>
+<text x="1090" y="290" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="12" font-weight="500" fill="#8d8790" text-anchor="middle" >#27b8d6</text>
+<g transform="rotate(1 1240 222)"><g filter="url(#rough)"><rect x="1221.25" y="201.0" width="37.5" height="42.0" fill="#9a5cf0"/></g><rect x="1225.25" y="205.0" width="29.5" height="34.0" fill="none" stroke="#f3ede4" stroke-width="1.5" opacity=".8"/><text x="1240" y="232.8" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="30" font-weight="900" fill="#f3ede4" text-anchor="middle" >神兵</text></g>
+<text x="1240" y="290" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="12" font-weight="500" fill="#8d8790" text-anchor="middle" >#9a5cf0</text>
+<g transform="rotate(3 1390 222)"><g filter="url(#rough)"><rect x="1371.25" y="201.0" width="37.5" height="42.0" fill="#ff8a1e"/></g><rect x="1375.25" y="205.0" width="29.5" height="34.0" fill="none" stroke="#f3ede4" stroke-width="1.5" opacity=".8"/><text x="1390" y="232.8" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="30" font-weight="900" fill="#f3ede4" text-anchor="middle" >絕世</text></g>
+<text x="1390" y="290" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="12" font-weight="500" fill="#8d8790" text-anchor="middle" >#ff8a1e</text>
+<g transform="rotate(-4 60 420)" ><g filter="url(#rough)">
+<text x="60" y="420" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="110" font-weight="900" text-anchor="start" fill="none" stroke="#f3ede4" stroke-width="22" stroke-linejoin="round">鎖陣</text>
+<text x="60" y="420" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="110" font-weight="900" text-anchor="start" fill="none" stroke="#0b0a0d" stroke-width="12" stroke-linejoin="round">鎖陣</text>
+<text x="60" y="420" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="110" font-weight="900" text-anchor="start" fill="#ff4a17">鎖陣</text>
+</g></g>
+<text x="60" y="462" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="700" fill="#8d8790" text-anchor="start" >標題／狀聲詞：極粗襯線＋乾筆毛邊＋黑描邊（＋白外框），可傾斜；突破類用青光</text>
+<g transform="rotate(3 330 430)" ><g filter="url(#rough)">
+<text x="330" y="430" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="76" font-weight="900" text-anchor="start" fill="none" stroke="#0b0a0d" stroke-width="9" stroke-linejoin="round">破陣</text>
+<text x="330" y="430" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="76" font-weight="900" text-anchor="start" fill="#f3ede4">破陣</text>
+</g></g>
+<g transform="rotate(-3 520 430)" filter="url(#glowTeal)"><g filter="url(#rough)">
+<text x="520" y="430" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="76" font-weight="900" text-anchor="start" fill="none" stroke="#0b0a0d" stroke-width="9" stroke-linejoin="round">突破</text>
+<text x="520" y="430" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="76" font-weight="900" text-anchor="start" fill="#16c6cc">突破</text>
+</g></g>
+<rect x="60" y="492" width="420" height="110" fill="#0b0a0d" stroke="#f3ede4" stroke-width="3"/>
+<rect x="66" y="498" width="408" height="98" fill="none" stroke="#f3ede4" stroke-width="1" opacity=".55"/>
+<text x="270.0" y="537.76" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="22" font-weight="700" fill="#f3ede4" text-anchor="middle" >十年前，天魔神教血洗中原。</text>
+<text x="270.0" y="572.08" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="22" font-weight="700" fill="#f3ede4" text-anchor="middle" >如今天魔復活。</text>
+<text x="60" y="615" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="700" fill="#8d8790" text-anchor="start" >旁白框：區域名、劇情、結算句（襯線）</text>
+<path d="M540,488 H900 L910,498 V574 L900,584 H540 L530,574 V498 Z" fill="#fbf8f3" stroke="#0b0a0d" stroke-width="3.5"/>
+<path d="M525,497 V483 H539" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M915,497 V483 H901" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M525,575 V589 H539" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M915,575 V589 H901" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<rect x="544" y="475" width="52.199999999999996" height="26" fill="#0b0a0d"/>
+<text x="553" y="492.64" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14.76" font-weight="900" fill="#16c6cc" text-anchor="start" >系統</text>
+<text x="550" y="531.98" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="18" font-weight="700" fill="#0b0a0d" text-anchor="start" >修為 +12　精進至 三流・第三重</text>
+<text x="550" y="558.98" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="18" font-weight="700" fill="#0b0a0d" text-anchor="start" >銀兩 +18</text>
+<text x="530" y="615" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="700" fill="#8d8790" text-anchor="start" >系統框：數值、提示、說明（黑體）</text>
+<path d="M960,488 H1240 L1250,498 V574 L1240,584 H960 L950,574 V498 Z" fill="#16131a" stroke="#16c6cc" stroke-width="3.5"/>
+<path d="M945,497 V483 H959" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M1255,497 V483 H1241" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M945,575 V589 H959" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M1255,575 V589 H1241" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<rect x="964" y="475" width="52.199999999999996" height="26" fill="#16c6cc"/>
+<text x="973" y="492.64" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14.76" font-weight="900" fill="#0b0a0d" text-anchor="start" >提示</text>
+<text x="970" y="531.98" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="18" font-weight="700" fill="#f3ede4" text-anchor="start" >按 E 參悟</text>
+<text x="970" y="558.98" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="18" font-weight="700" fill="#f3ede4" text-anchor="start" >悟道碑浮現</text>
+<text x="950" y="615" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="700" fill="#8d8790" text-anchor="start" >暗版系統框：戰鬥中不擋畫面</text>
+<text x="60" y="668" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#8d8790" text-anchor="start" >按鈕狀態</text>
+<path d="M76,690 H320 L304,752 H60 Z" fill="#0b0a0d" stroke="#f3ede4" stroke-width="3" />
+<path d="M82,696 H314" stroke="#f3ede4" stroke-width="1" opacity=".4"/>
+<text x="190.0" y="730.36" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="26" font-weight="900" fill="#f3ede4" text-anchor="middle" >踏上江湖</text>
+<g filter="url(#glowRed)"><path d="M376,690 H620 L604,752 H360 Z" fill="#b3121c" stroke="#f3ede4" stroke-width="3" /></g>
+<path d="M348,705.5 V682 H390" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M632,736.5 V760 H590" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<text x="490.0" y="730.36" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="26" font-weight="900" fill="#f3ede4" text-anchor="middle" >踏上江湖</text>
+<path d="M676,690 H920 L904,752 H660 Z" fill="#1b1a1d" stroke="#4a474d" stroke-width="2" />
+<text x="790.0" y="730.36" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="26" font-weight="900" fill="#5d5a60" text-anchor="middle" >再悟（60）</text>
+<text x="60" y="780" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="400" fill="#8d8790" text-anchor="start" >一般</text>
+<text x="360" y="780" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="400" fill="#8d8790" text-anchor="start" >游標／焦點：血紅底＋青括弧</text>
+<text x="660" y="780" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="400" fill="#8d8790" text-anchor="start" >停用</text>
+<text x="980" y="668" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#8d8790" text-anchor="start" >生命／修為／首領條</text>
+<path d="M980,690 H1500 L1488,724 H980 Z" fill="#1b1418" stroke="#0b0a0d" stroke-width="7" stroke-linejoin="round"/>
+<clipPath id="c980_690"><path d="M980,690 H1500 L1488,724 H980 Z"/></clipPath>
+<g clip-path="url(#c980_690)"><rect x="980" y="690" width="345.44" height="34" fill="url(#bloodFill)"/><path d="M1325.44,690 l12,0 l-12,34 z" fill="url(#bloodFill)"/><rect x="980" y="690" width="520" height="10.88" fill="#fff" opacity=".12"/><rect x="980" y="690" width="520" height="34" fill="url(#hatch)"/></g>
+<path d="M980,690 H1500 L1488,724 H980 Z" fill="none" stroke="#f3ede4" stroke-width="2"/>
+<text x="994" y="714.0" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="19" font-weight="900" fill="#f3ede4" text-anchor="start" stroke="#0b0a0d" stroke-width="4" paint-order="stroke">98 / 144</text>
+<path d="M980,740 H1500 L1494,752 H980 Z" fill="#1b1418" stroke="#0b0a0d" stroke-width="7" stroke-linejoin="round"/>
+<clipPath id="c980_740"><path d="M980,740 H1500 L1494,752 H980 Z"/></clipPath>
+<g clip-path="url(#c980_740)"><rect x="980" y="740" width="205.60000000000002" height="12" fill="url(#tealFill)"/><path d="M1185.6,740 l6,0 l-6,12 z" fill="url(#tealFill)"/><rect x="980" y="740" width="520" height="3.84" fill="#fff" opacity=".12"/><rect x="980" y="740" width="520" height="12" fill="url(#hatch)"/></g>
+<path d="M980,740 H1500 L1494,752 H980 Z" fill="none" stroke="#f3ede4" stroke-width="2"/>
+<path d="M1035.6000000000001,740 l-4.199999999999999,12" stroke="#0b0a0d" stroke-width="2.5"/>
+<path d="M1087.0,740 l-4.199999999999999,12" stroke="#0b0a0d" stroke-width="2.5"/>
+<path d="M1138.4,740 l-4.199999999999999,12" stroke="#0b0a0d" stroke-width="2.5"/>
+<path d="M1189.8,740 l-4.199999999999999,12" stroke="#0b0a0d" stroke-width="2.5"/>
+<path d="M1241.2,740 l-4.199999999999999,12" stroke="#0b0a0d" stroke-width="2.5"/>
+<path d="M1292.6000000000001,740 l-4.199999999999999,12" stroke="#0b0a0d" stroke-width="2.5"/>
+<path d="M1344.0,740 l-4.199999999999999,12" stroke="#0b0a0d" stroke-width="2.5"/>
+<path d="M1395.4,740 l-4.199999999999999,12" stroke="#0b0a0d" stroke-width="2.5"/>
+<path d="M1446.8,740 l-4.199999999999999,12" stroke="#0b0a0d" stroke-width="2.5"/>
+<path d="M980,772 H1500 L1490,794 H980 Z" fill="#1b1418" stroke="#0b0a0d" stroke-width="7" stroke-linejoin="round"/>
+<clipPath id="c980_772"><path d="M980,772 H1500 L1490,794 H980 Z"/></clipPath>
+<g clip-path="url(#c980_772)"><rect x="980" y="772" width="418.2" height="22" fill="url(#bloodFill)"/><path d="M1398.2,772 l10,0 l-10,22 z" fill="url(#bloodFill)"/><rect x="980" y="772" width="520" height="7.04" fill="#fff" opacity=".12"/><rect x="980" y="772" width="520" height="22" fill="url(#hatch)"/></g>
+<path d="M980,772 H1500 L1490,794 H980 Z" fill="none" stroke="#f3ede4" stroke-width="2"/>
+<path d="M1114.5,772 l-7.0,22" stroke="#0b0a0d" stroke-width="2.5"/>
+<path d="M1242.0,772 l-7.0,22" stroke="#0b0a0d" stroke-width="2.5"/>
+<path d="M1369.5,772 l-7.0,22" stroke="#0b0a0d" stroke-width="2.5"/>
+<text x="980" y="822" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="700" fill="#8d8790" text-anchor="start" >等級刻點：</text>
+<rect x="1064.4" y="811.4" width="11.200000000000001" height="11.200000000000001" fill="#ff4a17"/><rect x="1086.4" y="811.4" width="11.200000000000001" height="11.200000000000001" fill="#ff4a17"/><rect x="1106.3" y="809.3" width="15.400000000000002" height="15.400000000000002" transform="rotate(45 1114 817)" fill="#ff4a17" stroke="#f3ede4" stroke-width="1.5"/><rect x="1130.4" y="811.4" width="11.200000000000001" height="11.200000000000001" fill="#2e2a31"/><rect x="1150.3" y="809.3" width="15.400000000000002" height="15.400000000000002" transform="rotate(45 1158 817)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/>
+<text x="1210" y="822" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="400" fill="#8d8790" text-anchor="start" >◆＝小成／圓滿</text>
+<g transform="translate(1370 380)"><polygon points="150.0,0.0 113.2,11.0 142.7,28.4 95.2,29.8 121.4,54.1 78.7,48.3 88.2,74.4 47.8,57.6 46.4,87.5 16.4,63.5 0.0,92.0 -18.6,72.1 -46.4,87.5 -54.6,65.7 -88.2,74.4 -70.4,43.2 -121.4,54.1 -101.6,31.8 -142.7,28.4 -113.3,11.0 -150.0,0.0 -94.3,-9.2 -142.7,-28.4 -96.9,-30.3 -121.4,-54.1 -70.4,-43.2 -88.2,-74.4 -49.3,-59.3 -46.4,-87.5 -16.3,-63.3 -0.0,-92.0 18.3,-70.8 46.4,-87.5 47.5,-57.2 88.2,-74.4 69.8,-42.8 121.4,-54.1 95.7,-29.9 142.7,-28.4 100.7,-9.8" fill="#f3ede4" stroke="#0b0a0d" stroke-width="5" stroke-linejoin="miter"/></g>
+<g transform="rotate(-6 1370 405)" ><g filter="url(#rough)">
+<text x="1370" y="405" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="72" font-weight="900" text-anchor="middle" fill="none" stroke="#0b0a0d" stroke-width="9" stroke-linejoin="round">斬！</text>
+<text x="1370" y="405" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="72" font-weight="900" text-anchor="middle" fill="#b3121c">斬！</text>
+</g></g>
+<text x="1370" y="312" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="700" fill="#8d8790" text-anchor="middle" >吶喊泡泡：橫幅、首領登場</text>
+<g filter="url(#glowTeal)" opacity=".9"><path d="M1486,855 V846 H1495" fill="none" stroke="#f3ede4" stroke-width="2.5"/><path d="M1514,855 V846 H1505" fill="none" stroke="#f3ede4" stroke-width="2.5"/><path d="M1486,865 V874 H1495" fill="none" stroke="#f3ede4" stroke-width="2.5"/><path d="M1514,865 V874 H1505" fill="none" stroke="#f3ede4" stroke-width="2.5"/><circle cx="1500" cy="860" r="2.5" fill="#16c6cc"/></g>
+<text x="1480" y="865" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="700" fill="#8d8790" text-anchor="end" >準星</text>
+<rect width="1600" height="900" filter="url(#grain)" pointer-events="none"/>
+</svg>

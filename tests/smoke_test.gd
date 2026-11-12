@@ -22,6 +22,13 @@ func _frames(n: int) -> void:
 		await get_tree().physics_frame
 
 
+func _click() -> InputEventMouseButton:
+	var e := InputEventMouseButton.new()
+	e.button_index = MOUSE_BUTTON_LEFT
+	e.pressed = true
+	return e
+
+
 func _check(cond: bool, what: String) -> void:
 	if not cond:
 		errors += 1
@@ -37,6 +44,7 @@ func _run_character(cid: String) -> void:
 	player.invuln_t = 1.0e9
 	if cid == Data.char_order[0]:
 		await _check_weapon_views(player)
+		await _check_loot_and_shops(world, player)
 		await _check_cover_tactics(world, player)
 		await _check_hit_reactions(world)
 		var gate = world.rooms[0].gate_out
@@ -100,6 +108,9 @@ func _run_character(cid: String) -> void:
 					if guard % 30 == 0:
 						player.deal(e, 1.0e7, false)
 			_check(world.state == "cleared", "第%d區破陣（%d 幀）" % [r.stage, guard])
+			if String(Data.stage_row(r.stage).rest_stop) == "1":
+				var learnable: bool = Data.martial.keys().any(func(mid): return Game.can_learn(mid))
+				_check(world.smith_node != null and world.merchant_node != null and (Game.merchant_stock.size() > 0 or not learnable), "第%d區破陣後出現鐵匠與商人" % r.stage)
 			# 參悟
 			if r.stage < Data.stages.size():
 				Game.gold += 5000.0
@@ -145,9 +156,10 @@ func _run_character(cid: String) -> void:
 		Game.recompute()
 		for k in 3:
 			player.cooldowns = [0.0, 0.0]
-			player._attack(0)
-			player._attack(1)
+			player._attack(Game.active_weapon)
 			await _frames(2)
+			player._do_switch(-1)
+			player.swap_t = 0.0
 	player.invuln_t = 0.0
 	for k in 30:
 		player.take_damage(5.0, null)
@@ -156,6 +168,68 @@ func _run_character(cid: String) -> void:
 	player.invuln_t = 1.0e9
 	await _frames(400)
 	# 介面
+	_check(main.screens.theme == UIKit.theme() and main.hud.theme == UIKit.theme() and main.gacha.theme == UIKit.theme(), "介面根節點套用條漫主題")
+	_check(UIKit.serif() is FontFile and UIKit.sans() is FontFile, "載入隨附的裁切字型")
+	for pid in Data.char_order:
+		var crop = UIKit.portrait_crop(pid, 1.5, 0.3)
+		var full: Texture2D = load("res://assets/portraits/%s.webp" % pid)
+		_check(crop is AtlasTexture and Rect2(Vector2.ZERO, Vector2(full.get_size())).encloses(crop.region) and absf(crop.region.size.aspect() - 1.5) < 0.01, "%s 立繪依臉部位置裁切" % pid)
+	Game.weapons = [{"id": "W001", "lv": 2}, {"id": "W007", "lv": 1}]
+	Game.active_weapon = 0
+	Game.recompute()
+	main.hud._process(0.0)
+	_check(main.hud.weapon_cards[0].line.visible and not main.hud.weapon_cards[1].line.visible, "HUD 標出手上的主武器")
+	Game.switch_weapon()
+	main.hud._process(0.0)
+	_check(main.hud.weapon_cards[1].line.visible and main.hud.weapon_cards[1].name.text == "竹弓", "HUD 跟著切換到副武器")
+	Game.switch_weapon(0)
+	main.gacha.open()
+	main.gacha.current = [{"kind": "W", "id": "W301", "rarity": "legendary"}]
+	main.gacha._refresh()
+	var labels: Array = []
+	for b in main.gacha.cards_root.find_children("*", "Button", true, false):
+		labels.append(b.text)
+	_check(labels.has("替換主武器：青鞘太刀") and labels.has("替換副武器：竹弓"), "參悟卡以主副武器替換")
+	main.gacha._on_close()
+	main.mode = "play"
+	main.hud.show_banner("鎖　陣", "測試", "lock")
+	main.hud.push_message("器靈覺醒：測試")
+	await _frames(2)
+	_check(main.hud.banner_burst.visible and main.hud.msg_box.get_child_count() > 0, "鎖陣橫幅與系統訊息")
+	# 起手兵器、掉落比較、鐵匠、商人
+	main.screens.show_weapon_pick()
+	_check(main.screens.get_meta("picking_weapon", false), "選角後進入起手兵器")
+	var picked: Array = []
+	var record := func(_c, w): picked.append(w)
+	main.screens.start_run.disconnect(main._start)
+	main.screens.start_run.connect(record)
+	main.screens._on_weapon_card_input(_click(), "W301", main.screens._weapon_sel)
+	main.screens.start_run.disconnect(record)
+	main.screens.start_run.connect(main._start)
+	_check(picked == ["W301"], "點選起手兵器出師")
+	main.hud.show_drop_compare(Game.make_weapon("W007", 2))
+	_check(main.hud.drop_panel.visible and main.hud.drop_panel.get_child_count() > 3, "掉落兵器比較面板")
+	main.hud.show_drop_compare(null)
+	Game.gold = 5000.0
+	Game.weapons = [Game.make_weapon("W001", 0), Game.make_weapon("W007", 2)]
+	Game.recompute()
+	main.open_shop("smith")
+	await _frames(2)
+	var lv0: int = Game.weapons[1].lv
+	main.shop._on_upgrade(1)
+	_check(Game.weapons[1].lv == lv0 + 1 and main.mode == "shop", "鐵匠頁強化副武器")
+	main.shop._on_reforge(1)
+	_check(Game.weapons[1].reforges == 1, "鐵匠頁重鑄副武器詞條")
+	main.shop._on_close()
+	main.open_shop("merchant")
+	Game.restock_merchant()
+	main.shop._refresh()
+	await _frames(2)
+	main.shop._on_buy(0)
+	var stamps: int = main.shop.body.find_children("*", "ComicSeal", true, false).filter(func(n): return n.text == "已售出").size()
+	_check(Game.merchant_stock.is_empty() or (Game.merchant_stock[0].sold and stamps == 1), "商人賣出後蓋已售出印章")
+	main.shop._on_close()
+	_check(main.mode == "play" and not main.shop.visible, "離開商人回到遊戲")
 	main.screens.show_pause()
 	main.screens.show_inventory(true)
 	main.screens.show_end(true)
@@ -165,6 +239,99 @@ func _run_character(cid: String) -> void:
 	print("SMOKE_OK ", cid)
 	main._to_menu()
 	await _frames(3)
+
+
+func _check_loot_and_shops(world, player) -> void:
+	var old_weapons: Array = Game.weapons.duplicate(true)
+	var old_gold: float = Game.gold
+	var old_martial: Dictionary = Game.martial.duplicate()
+	var old_order: Array = Game.martial_order.duplicate()
+	# 起手武器
+	_check(Game.starter_weapons() == ["W001", "W007", "W301"], "起手可選太刀、弓、大劍")
+	# 詞條
+	var affixes: Array = Game.roll_affixes("W007", 4)
+	var ids := {}
+	var in_range := true
+	for a in affixes:
+		ids[a.id] = true
+		var row: Dictionary = Data.affixes[a.id]
+		var t: float = Game.affix_tier(row)
+		in_range = in_range and float(a.v) >= float(row.min) * t - 0.01 and float(a.v) <= float(row.max) * t + 0.01 and row.range_type != "melee"
+	_check(affixes.size() == 4 and ids.size() == 4 and in_range, "遠程武器抽 4 條不重複、在範圍內、沒有近戰限定的詞條")
+	# 詞條品階：後面區域數值較高，輸出詞條成長比生存詞條快
+	var keep_stage: int = Game.stage
+	Game.stage = 20
+	var late_tier: float = Game.affix_tier(Data.affixes["A01"])
+	_check(late_tier > 3.0 and Game.affix_tier(Data.affixes["A07"]) < 2.0, "第20區輸出詞條品階>3、減傷詞條品階<2")
+	Game.stage = keep_stage
+	# 淬煉傳承
+	var heir: Dictionary = Game.make_weapon("W007", 1)
+	Game.inherit_level(heir, {"id": "W001", "lv": 4, "affixes": [], "reforges": 0})
+	_check(int(heir.lv) == 4 - int(Data.cfg("inherit_lv_loss")), "換武器時沿用舊武器的淬煉等級")
+	# 悟道碑不再為已持有武器淬煉
+	var keep_w: Array = Game.weapons.duplicate(true)
+	Game.weapons = [Game.make_weapon("W001", 0), null]
+	var pw: Array = Game._pool(Data.weapons["W001"].rarity, "W", {})
+	_check(not ("W001" in pw[0]) and "W007" in pw[0], "悟道碑武器候選不含已持有的武器")
+	Game.weapons = keep_w
+	var boss_drop: Dictionary = Game.roll_weapon_drop("boss")
+	_check(not boss_drop.is_empty() and boss_drop.affixes.size() >= 3 and boss_drop.id in Game.FEATURED_WEAPONS, "首領必掉至少 3 條詞條的武器")
+	# 手上那把的詞條才生效
+	Game.weapons = [Game.make_weapon("W001", 0), {"id": "W007", "lv": 1, "affixes": [{"id": "A01", "v": 10.0}], "reforges": 0}]
+	Game.active_weapon = 0
+	Game.recompute()
+	var base_dmg := Game.st("dmg_pct")
+	Game.switch_weapon(1)
+	_check(is_equal_approx(Game.st("dmg_pct"), base_dmg + 10.0), "切到副武器後它的詞條生效")
+	Game.switch_weapon(0)
+	_check(is_equal_approx(Game.st("dmg_pct"), base_dmg), "收起的武器詞條不生效")
+	# 撿取
+	Game.weapons[1] = null
+	var drop: Dictionary = Game.make_weapon("W301", 2)
+	_check(Game.pick_up(drop) == null and Game.weapons[1] == drop, "副武器格空著時撿起放進副武器")
+	var again: Dictionary = Game.make_weapon("W007", 1)
+	var swapped = Game.pick_up(again)
+	_check(swapped != null and swapped.id == "W001" and Game.weapons[0] == again, "兩格都有武器時換掉手上那把")
+	var node: Node3D = world.spawn_drop(player.global_position, Game.make_weapon("W001", 3))
+	main.mode = "play"
+	main._on_interact()
+	_check(not is_instance_valid(node) or node.is_queued_for_deletion(), "站在掉落武器上按 E 撿起")
+	_check(Game.current_weapon().id == "W001" and Game.current_weapon().affixes.size() == 3, "撿起的武器換到手上")
+	_check(world.drops.size() == 1, "換下的武器掉在地上")
+	for d in world.drops:
+		d.queue_free()
+	world.drops = []
+	# 鐵匠
+	Game.gold = 1000.0
+	var cost := Game.upgrade_cost(0)
+	var lv: int = Game.weapons[0].lv
+	_check(cost > 0 and Game.upgrade_weapon(0) and Game.weapons[0].lv == lv + 1 and is_equal_approx(Game.gold, 1000.0 - cost), "鐵匠強化扣銀兩並淬煉+1")
+	var before: Array = Game.weapons[0].affixes.duplicate(true)
+	cost = Game.reforge_cost(0)
+	_check(cost > 0 and Game.reforge_weapon(0) and Game.weapons[0].affixes.size() == before.size() and Game.weapons[0].reforges == 1, "重鑄詞條數不變並記錄次數")
+	_check(Game.reforge_cost(0) > cost, "重鑄越多次越貴")
+	Game.weapons[1] = Game.make_weapon("W007", 0)
+	_check(Game.reforge_cost(1) == -1 and not Game.reforge_weapon(1), "沒有詞條的武器不能重鑄")
+	# 商人
+	Game.martial = {}
+	Game.martial_order = []
+	Game.restock_merchant()
+	_check(Game.merchant_stock.size() == int(Data.cfg("merchant_slots")), "商人上架 %d 門武學" % int(Data.cfg("merchant_slots")))
+	var first: Dictionary = Game.merchant_stock[0]
+	var price := Game.martial_price(first.id)
+	var gold_before := Game.gold
+	_check(Game.buy_martial(0) and Game.martial.get(first.id, 0) == 1 and is_equal_approx(Game.gold, gold_before - price), "買武學扣銀兩並習得")
+	_check(not Game.buy_martial(0), "賣出的武學不能再買")
+	var refresh := Game.merchant_refresh_cost()
+	gold_before = Game.gold
+	_check(Game.refresh_merchant() and is_equal_approx(Game.gold, gold_before - refresh), "刷新上架扣銀兩")
+	Game.weapons = old_weapons
+	Game.active_weapon = 0
+	Game.gold = old_gold
+	Game.martial = old_martial
+	Game.martial_order = old_order
+	Game.recompute()
+	await _frames(2)
 
 
 func _check_draw(enemy, world) -> void:
@@ -254,35 +421,58 @@ func _check_cover_tactics(world, player) -> void:
 
 func _check_weapon_views(player) -> void:
 	var allowed: Array = []
+	var held: Array = Game.weapons.duplicate(true)
+	Game.weapons = [null, null]  # 已持有的武器不會出現在悟道碑，先清空再看整個池
 	for rarity in Data.rarity_order:
 		allowed.append_array(Game._pool(rarity,"W",{})[0])
+	Game.weapons = held
 	allowed.sort()
 	_check(allowed==["W001","W007","W301"],"此版本只開放太刀、弓、大劍")
 	var old: Array = Game.weapons.duplicate(true)
 	Game.weapons[0] = {"id":"W007","lv":1}
 	Game.weapons[1] = {"id":"W301","lv":1}
+	Game.active_weapon = 0
 	Game.recompute()
 	var bow = player.weapon_models[0]
 	var greatsword = player.weapon_models[1]
+	_check(bow.visible and not greatsword.visible, "同時只拿主武器，副武器收起")
 	var events: Array = []
 	bow.attack(.8,1,func(i): events.append("bow%d"%i))
-	greatsword.attack(.8,1,func(i): events.append("sword%d"%i))
 	await _frames(8)
 	_check(events.is_empty() and bow.arrow.visible,"蓄力尚未放箭")
 	_check(bow.loader.visible and bow.loader.position.distance_to(bow.arrow.position)<.001,"搭箭時副手夾住箭尾")
 	Game.recompute()
 	_check(player.weapon_models[0] == bow,"刷新屬性保留進行中的動作")
-	await _frames(21)
+	player.request_switch()
+	await _frames(2)
+	_check(Game.active_weapon == 0 and bow.visible, "出招途中按切換，等動作做完")
+	await _frames(19)
 	_check(bow.flex_mesh.get_blend_shape_value(0)>.95 and bow.arrow.visible and bow.loader.position.distance_to(bow.arrow.position)<.001,"滿弓時弓身變形且箭尾仍在指間")
 	await _frames(28)
-	_check(events.count("bow0")==1 and events.count("sword0")==1 and events.size()==2,"一箭與一次大劍揮擊各觸發一次")
-	_check(not bow.arrow.visible and not bow.loader.visible and bow.position.is_equal_approx(bow.home),"放箭後收臂回到握位")
-	player._attack(0)
+	_check(events.count("bow0")==1 and events.size()==1,"一箭只觸發一次")
+	for i in 60:
+		if Game.active_weapon == 1:
+			break
+		await get_tree().physics_frame
+	_check(Game.active_weapon == 1 and greatsword.visible and not bow.visible, "動作結束後換成副武器")
+	_check(player.swap_t > 0.0, "切換後有收出時間")
 	var count: int = player.attack_count
-	player._attack(1)
-	_check(not greatsword.visible and player.attack_count==count,"副手搭箭時另一把武器收起並等待")
-	await _frames(62)
-	_check(greatsword.visible,"收勢後恢復另一把武器")
+	player._attack(0)
+	_check(player.attack_count == count, "收起的主武器不能出招")
+	player.cooldowns = [0.0, 0.0]
+	player.set_physics_process(true)
+	Input.action_press("attack_1")
+	await _frames(2)
+	_check(player.attack_count == count, "收出時間內按攻擊不出招")
+	await _frames(int(Data.cfg("weapon_swap_s") * 60.0) + 2)
+	Input.action_release("attack_1")
+	_check(player.attack_count == count + 1, "收出時間過後副武器出招")
+	await _frames(90)
+	Game.weapons[1] = null
+	Game.active_weapon = 0
+	Game.recompute()
+	player.request_switch(1)
+	_check(player.switch_request == -9 and not Game.switch_weapon(1), "副武器格是空的不能切換")
 	Game.weapons[0] = {"id":"W001","lv":1}
 	Game.recompute()
 	var tachi = player.weapon_models[0]

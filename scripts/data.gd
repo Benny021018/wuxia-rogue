@@ -7,6 +7,9 @@ var stat_values := {}       # stat_id -> per_point
 var stat_names := {}        # stat_id -> 中文名
 var gacha := {}             # key -> value
 var combat := {}            # key -> value
+var shop := {}              # key -> value（掉落、鐵匠、商人）
+var affixes := {}           # affix_id -> row（武器詞條）
+var affix_order: Array = []
 var characters := {}        # char_id -> row
 var char_order: Array = []
 var passives: Array = []
@@ -34,6 +37,10 @@ func _ready() -> void:
 		stat_names[r.stat_id] = r.name_zh
 	gacha = _kv("gacha_config")
 	combat = _kv("combat_config")
+	shop = _kv("shop_config")
+	for r in _csv("weapon_affixes"):
+		affixes[r.affix_id] = r
+		affix_order.append(r.affix_id)
 	for r in _csv("characters"):
 		characters[r.char_id] = r
 		char_order.append(r.char_id)
@@ -90,7 +97,24 @@ func _kv(name: String) -> Dictionary:
 func cfg(key: String) -> float:
 	if combat.has(key):
 		return float(combat[key])
+	if shop.has(key):
+		return float(shop[key])
 	return float(gacha.get(key, 0.0))
+
+
+func weights(key: String) -> Array:
+	## 讀「a|b|c」格式的權重
+	var out: Array = []
+	for part in String(shop.get(key, "")).split("|", false):
+		out.append(float(part))
+	return out
+
+
+func affix_text(a: Dictionary) -> String:
+	## 武器詞條的顯示文字，例：鋒利　傷害+8%
+	var row: Dictionary = affixes[a.id]
+	var s := ("%.2f" % float(a.v)).rstrip("0").rstrip(".")
+	return "%s　%s" % [row.name_zh, String(row.template).replace("{v}", s)]
 
 
 func stage_row(stage: int) -> Dictionary:

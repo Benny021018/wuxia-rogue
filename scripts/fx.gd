@@ -59,11 +59,11 @@ static func sphere(radius: float, color: Color, emission := 0.0) -> MeshInstance
 static func label3d(text: String, size := 48, color := Color.WHITE) -> Label3D:
 	var l := Label3D.new()
 	l.text = text
-	l.font = font()
+	l.font = UIKit.serif()
 	l.font_size = size
 	l.modulate = color
-	l.outline_size = 8
-	l.outline_modulate = Color(0, 0, 0, 0.8)
+	l.outline_size = 14
+	l.outline_modulate = UIKit.INK
 	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	l.no_depth_test = true
 	l.pixel_size = 0.006

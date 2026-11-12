@@ -3,7 +3,7 @@ extends CharacterBody3D
 const MELEE_EFFECTS := {"劍": &"thrust", "槍": &"thrust", "棍": &"spin-slash", "鞭": &"whip-crack", "鉤": &"double-slash", "拳": &"blunt-hit", "巨劍": &"heavy-cleave"}
 const SWEEP_DEGREES := {"刀": 120.0, "棍": 360.0, "拳": 60.0, "鉤": 90.0, "巨劍": 140.0, "扇": 50.0, "鞭": 360.0}
 const THRUST_HALF_WIDTH := 0.9
-## 第一人稱玩家：移動、雙武器攻擊、受傷流程，以及武學／門派／境界的戰鬥效果
+## 第一人稱玩家：移動、主副武器切換與攻擊、受傷流程，以及武學／門派／境界的戰鬥效果
 
 signal hp_changed
 signal died
@@ -17,10 +17,11 @@ const PROJ := preload("res://scripts/projectile.gd")
 var hp := 100.0
 var shield := 0.0
 var cam: Camera3D
-var weapon_models: Array = [null, null]
-var next_hand := 0
+var weapon_models: Array = [null, null]   # 對應 Game.weapons；只有手上那把可見
 var queued_press := [false,false]
 var cooldowns := [0.0, 0.0]
+var swap_t := 0.0                          # 切換武器的收出時間，期間不能出招
+var switch_request := -9                   # 待切換的武器格（-9＝無）
 var yaw := 0.0
 var pitch := 0.0
 var dash_t := 0.0
@@ -94,7 +95,7 @@ func refresh_weapon_models() -> void:
 		if w != null:
 			var view := preload("res://scripts/weapon_view.gd").new()
 			cam.add_child(view)
-			view.setup(w.id,i)
+			view.setup(w.id,0)   # 兩格都用慣用手的握位；同時只拿一把
 			weapon_models[i] = view
 			queued_press[i] = false
 	_show_hands()
@@ -110,6 +111,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		cam.rotation.x = pitch
 	elif event.is_action_pressed("interact"):
 		interact_pressed.emit()
+	elif event.is_action_pressed("switch_weapon"):
+		request_switch(-1)
+	elif event.is_action_pressed("weapon_main"):
+		request_switch(0)
+	elif event.is_action_pressed("weapon_sub"):
+		request_switch(1)
 
 
 func _physics_process(delta: float) -> void:
@@ -138,24 +145,47 @@ func _physics_process(delta: float) -> void:
 	if global_position.y < -10.0:
 		global_position.y = 2.0
 		velocity = Vector3.ZERO
-	# 雙手武器借用另一隻手，按住雙鍵時輪流出招。
-	var priority := next_hand
-	for offset in 2:
-		var i := (priority+offset)%2
-		var action := "attack_%d" % (i+1)
+	# 同時只用一把武器：左鍵出招，出招動作結束後才換手
+	for i in 2:
 		cooldowns[i] = maxf(0.0,cooldowns[i]-delta)
-		queued_press[i] = input_enabled and Game.weapons[i]!=null and (queued_press[i] or Input.is_action_just_pressed(action))
-		if input_enabled and Game.weapons[i]!=null and cooldowns[i]<=0 and (queued_press[i] or Input.is_action_pressed(action)):
-			_attack(i)
+	swap_t = maxf(0.0, swap_t - delta)
+	if switch_request != -9 and not _busy(weapon_models[Game.active_weapon]):
+		_do_switch(switch_request)
+	var a := Game.active_weapon
+	queued_press[a] = input_enabled and Game.weapons[a]!=null and (queued_press[a] or Input.is_action_just_pressed("attack_1"))
+	if input_enabled and Game.weapons[a]!=null and cooldowns[a]<=0 and swap_t<=0 and switch_request == -9 and (queued_press[a] or Input.is_action_pressed("attack_1")):
+		_attack(a)
 
-func _holding_both(view) -> bool:
-	return view != null and view.needs_support() and view.timeline != null and view.timeline.is_running()
+
+func request_switch(slot := -1) -> void:
+	## 排入切換；手上的動作做完才換（Q／滾輪＝另一把，1／2＝指定）
+	var target := 1 - Game.active_weapon if slot < 0 else slot
+	if target == Game.active_weapon or Game.weapons[target] == null:
+		return
+	switch_request = target
+
+
+func _busy(view) -> bool:
+	return view != null and (view.tachi_returning or (view.timeline != null and view.timeline.is_running()))
+
+
+func _do_switch(target: int) -> void:
+	switch_request = -9
+	var old = weapon_models[Game.active_weapon]
+	if not Game.switch_weapon(target):
+		return
+	if old and old.tachi_open:
+		old._tachi_closed()
+	queued_press = [false, false]
+	swap_t = Data.cfg("weapon_swap_s")
+	_show_hands()
+
 
 func _show_hands() -> void:
 	for i in 2:
 		var view = weapon_models[i]
 		if view:
-			view.visible = not _holding_both(weapon_models[1-i])
+			view.visible = i == Game.active_weapon
 
 
 
@@ -252,8 +282,8 @@ func _update_arhats(delta: float) -> void:
 
 # ------------------------------------------------------------------ 攻擊
 func ref_hit() -> float:
-	## 參考單擊傷害：第一把武器的單段傷害（含淬煉）
-	var w = Game.weapons[0] if Game.weapons[0] != null else Game.weapons[1]
+	## 參考單擊傷害：手上那把武器的單段傷害（含淬煉）
+	var w = Game.current_weapon()
 	if w == null:
 		return 20.0
 	return float(Data.weapons[w.id].dmg) * (1.0 + 0.15 * (int(w.lv) - 1))
@@ -261,11 +291,11 @@ func ref_hit() -> float:
 
 func _attack(slot: int) -> void:
 	refresh_weapon_models()
-	var view = weapon_models[slot]
-	var other = weapon_models[1-slot]
-	if view.tachi_returning or _holding_both(other) or (view.needs_support() and other and other.timeline and other.timeline.is_running()):
+	if slot != Game.active_weapon:
 		return
-	next_hand = 1-slot
+	var view = weapon_models[slot]
+	if view == null or view.tachi_returning:
+		return
 	queued_press[slot] = false
 	var w = Game.weapons[slot]
 	var row: Dictionary = Data.weapons[w.id]
@@ -283,9 +313,6 @@ func _attack(slot: int) -> void:
 		if is_instance_valid(view) and weapon_models[slot] == view and hp > 0:
 			return _weapon_impact(slot,row,dmg,beat)
 		return false)
-	if view.needs_support():
-		_show_hands()
-		view.timeline.finished.connect(_show_hands,CONNECT_DEFERRED | CONNECT_ONE_SHOT)
 
 
 func _weapon_impact(slot: int, row: Dictionary, dmg: float, beat: int) -> bool:
@@ -330,14 +357,14 @@ func _weapon_impact(slot: int, row: Dictionary, dmg: float, beat: int) -> bool:
 					if deal(e, dmg, false, _impact_weight(row.weapon_id)):
 						made_contact = true
 		var swing: StringName = MELEE_EFFECTS.get(row["class"], &"sword-slash")
-		var side := -1.0 if slot == 0 else 1.0
+		var side := -1.0   # 武器都握在慣用手
 		var heading := Vector3(fwd.x,0,fwd.z).normalized()
 		var trail_center := origin - Vector3.UP * .62
 		var duration := clampf(cooldowns[slot],.14,.26)
 		var cone: float = SWEEP_DEGREES.get(row["class"],0.0)
 		FX.attack_trail(get_parent(),trail_center,heading,range_m,cone,THRUST_HALF_WIDTH,Color("#d7f8ff"),duration)
 		var strike := trail_center + heading * range_m * .82 + cam.global_basis.x * side * .12
-		FX.play(get_parent(), strike, swing, range_m * (.76 if cone == 0 else 1.12), duration, Color.WHITE, slot == 0)
+		FX.play(get_parent(), strike, swing, range_m * (.76 if cone == 0 else 1.12), duration, Color.WHITE, true)
 		# 劍氣縱橫：近戰與中距離武器射出劍氣
 		if beat == 0 and Game.f("sword_qi_pct") > 0.0:
 			var n := 1 + int(Game.f("sword_qi_count"))
@@ -405,7 +432,7 @@ func _on_attack_effects(primary, base: float, fwd: Vector3) -> void:
 	if primary == null or not is_instance_valid(primary) or primary.dead:
 		return
 	var extra_mult := 1.0 + Game.f("extra_hit_mult") + Game.f("extra_hit_bonus")
-	# 角色・追風劍意（南宮劍）
+	# 角色・追風殘影（南宮逸）
 	var chance := Game.f("extra_hit_chance")
 	if chance > 0.0 and randf() * 100.0 < chance:
 		_extra_hit(primary, base * extra_mult, fwd)
@@ -441,7 +468,7 @@ func _extra_hit(e, dmg: float, fwd: Vector3) -> void:
 		return
 	deal(e, dmg, false)
 	FX.play(get_parent(), e.hit_center(), &"sword-slash", 1.2, 0.18, Color(0.65, 1.0, 0.85))
-	# 劍氣離體：追擊同時射出劍氣
+	# 氣勁離體：追擊同時射出氣勁
 	if Game.f("extra_hit_qi") > 0.0:
 		_shoot(cam.global_position + fwd * 0.6, fwd, dmg * Game.f("extra_hit_qi"), 99, 10.0, Color(0.5, 1.0, 0.8))
 

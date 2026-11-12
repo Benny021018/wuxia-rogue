@@ -6,11 +6,13 @@ const PLAYER := preload("res://scripts/player.gd")
 const HUD := preload("res://scripts/ui/hud.gd")
 const GACHA := preload("res://scripts/ui/gacha_ui.gd")
 const SCREENS := preload("res://scripts/ui/screens.gd")
+const SHOP := preload("res://scripts/ui/shop_ui.gd")
 
 var world
 var player
 var hud
 var gacha
+var shop
 var screens
 var ui_layer: CanvasLayer
 var mode := "menu"          # menu / play / pause / inventory / gacha / end
@@ -18,12 +20,13 @@ var mode := "menu"          # menu / play / pause / inventory / gacha / end
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	get_tree().root.theme = UIKit.make_theme()
+	get_tree().root.theme = UIKit.theme()
 	ui_layer = CanvasLayer.new()
 	ui_layer.layer = 10
 	ui_layer.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(ui_layer)
 	screens = SCREENS.new()
+	screens.theme = UIKit.theme()
 	ui_layer.add_child(screens)
 	screens.start_run.connect(_start)
 	screens.resume.connect(_resume)
@@ -53,13 +56,16 @@ func _to_menu() -> void:
 	if gacha:
 		gacha.queue_free()
 		gacha = null
+	if shop:
+		shop.queue_free()
+		shop = null
 	mode = "menu"
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	screens.show_main()
 
 
-func _start(cid: String) -> void:
-	Game.new_run(cid)
+func _start(cid: String, start_wid := "") -> void:
+	Game.new_run(cid, start_wid)
 	screens.hide_all()
 	world = WORLD.new()
 	world.process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -68,13 +74,20 @@ func _start(cid: String) -> void:
 	world.add_child(player)
 	world.player = player
 	hud = HUD.new()
+	hud.theme = UIKit.theme()
 	ui_layer.add_child(hud)
 	ui_layer.move_child(hud, 0)
 	hud.player = player
 	gacha = GACHA.new()
+	gacha.theme = UIKit.theme()
 	ui_layer.add_child(gacha)
 	gacha.visible = false
 	gacha.closed.connect(_resume)
+	shop = SHOP.new()
+	shop.theme = UIKit.theme()
+	ui_layer.add_child(shop)
+	shop.visible = false
+	shop.closed.connect(_resume)
 	player.died.connect(_on_died)
 	player.interact_pressed.connect(_on_interact)
 	world.zone_locked.connect(_on_zone_locked)
@@ -92,7 +105,7 @@ func _on_map_entered(i: int) -> void:
 	if hud == null:
 		return
 	var m: Dictionary = Data.maps[Data.map_order[i]]
-	hud.show_banner("地圖 %d・%s" % [i + 1, m.name_zh], m.lore)
+	hud.show_banner("地圖 %d・%s" % [i + 1, m.name_zh], m.lore, "map")
 	hud.set_zone(m.name_zh)
 	hud.set_hint("往前走進入第一個區域")
 
@@ -101,10 +114,10 @@ func _on_zone_locked(stage: int, title: String) -> void:
 	if hud == null:
 		return
 	var row: Dictionary = Data.stage_row(stage)
-	hud.set_zone("第%d區　%s" % [stage, title])
+	hud.set_zone("%s・第 %d 區　%s" % [Data.maps[row.map_id].name_zh, stage, row.area_zh])
 	hud.set_hint("")
 	if row.boss == "":
-		hud.show_banner("鎖　陣", "%s・%s　殺光所有敵人以破陣" % [row.area_zh, row.zone_type], UIKit.VERM.lightened(0.3))
+		hud.show_banner("鎖　陣", "%s・%s　殺光所有敵人以破陣" % [row.area_zh, row.zone_type], "lock")
 
 
 func _on_zone_cleared(stage: int) -> void:
@@ -113,16 +126,80 @@ func _on_zone_cleared(stage: int) -> void:
 	hud.set_enemies(0)
 	if stage >= Data.stages.size():
 		return
-	hud.show_banner("破　陣", "悟道碑已浮現，按 E 參悟", UIKit.JADE.lightened(0.3))
+	hud.show_banner("破　陣", "悟道碑已浮現，按 E 參悟", "clear")
 	hud.set_hint("走到悟道碑按［E］參悟　｜　出口已開啟")
 
 
+func _interactable() -> Array:
+	## 目前可互動的目標：[種類, 節點]；掉落武器優先於設施（站在掉落物上表示想撿）
+	if world == null or player == null:
+		return ["", null]
+	var radius := Data.cfg("pickup_radius") * (1.0 + Game.st("pickup_range_pct") / 100.0)
+	var d = world.nearest_drop(radius)
+	if d != null:
+		return ["drop", d]
+	if world.near_shrine():
+		return ["shrine", world.shrine_node]
+	if world.near_smith():
+		return ["smith", world.smith_node]
+	if world.near_merchant():
+		return ["merchant", world.merchant_node]
+	return ["", null]
+
+
+func _process(_delta: float) -> void:
+	if hud == null:
+		return
+	if mode != "play":
+		hud.show_drop_compare(null)
+		hud.set_prompt("")
+		return
+	var t: Array = _interactable()
+	hud.show_drop_compare(t[1].get_meta("item") if t[0] == "drop" else null)
+	var text := ""
+	match t[0]:
+		"drop":
+			var item: Dictionary = t[1].get_meta("item")
+			var wname: String = Data.weapons[item.id].name_zh
+			if Game.weapons[1] == null:
+				text = "［E］撿起 %s（放進副武器）" % wname
+			else:
+				text = "［E］撿起 %s（換掉手上的 %s）" % [wname, Data.weapons[Game.current_weapon().id].name_zh]
+		"smith":
+			text = "［E］鐵匠：強化武器、重鑄詞條"
+		"merchant":
+			text = "［E］商人：購買武學"
+	hud.set_prompt(text)
+
+
 func _on_interact() -> void:
-	if mode == "play" and world and world.near_shrine():
-		mode = "gacha"
-		get_tree().paused = true
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-		gacha.open()
+	if mode != "play":
+		return
+	var t: Array = _interactable()
+	match t[0]:
+		"drop":
+			var item: Dictionary = world.take_drop(t[1])
+			var old = Game.pick_up(item)
+			if old != null:
+				world.spawn_drop(player.global_position + player.global_basis.z * -1.2, old)
+			Game.message.emit("撿起：%s　詞條 %d" % [Data.weapons[item.id].name_zh, item.get("affixes", []).size()])
+		"shrine":
+			mode = "gacha"
+			get_tree().paused = true
+			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+			gacha.open()
+		"smith", "merchant":
+			open_shop(t[0])
+
+
+func open_shop(kind: String) -> void:
+	mode = "shop"
+	get_tree().paused = true
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	if kind == "smith":
+		shop.open_smith()
+	else:
+		shop.open_merchant()
 
 
 func _resume() -> void:
@@ -131,6 +208,8 @@ func _resume() -> void:
 	screens.hide_all()
 	if gacha:
 		gacha.visible = false
+	if shop:
+		shop.visible = false
 	get_tree().paused = false
 	mode = "play"
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -162,6 +241,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				_resume()
 			"gacha":
 				gacha._on_close()
+			"shop":
+				shop._on_close()
 	elif event.is_action_pressed("inventory"):
 		match mode:
 			"play":

@@ -22,3 +22,4 @@ ai_repath_distance,2.0,目標移動幾公尺後立即重算路線
 ai_repath_seconds,0.65,受阻時重算路線的間隔（秒）
 ai_flank_range,7.0,近戰敵人開始找側面空位的距離（公尺）
 ai_flank_spacing,2.5,判斷前方隊友站位的距離（公尺）
+weapon_swap_s,0.3,切換主副武器的收刀出刀時間（秒）；期間不能出招

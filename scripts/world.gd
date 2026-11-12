@@ -26,6 +26,11 @@ const CAMP_ART := {
 const CAMP_CHAIR := preload("res://assets/models/greenwood/throne.glb")
 const CAMP_BRAZIER := preload("res://assets/models/greenwood/brazier.glb")
 const CAMP_STELE := preload("res://assets/models/greenwood/shrine.glb")
+const SMITH_PROP := preload("res://assets/models/npc/Smith.glb")         # tools/build_rest_stops.py
+const MERCHANT_PROP := preload("res://assets/models/npc/Merchant.glb")
+const STALL_SIZE := Vector3(3.2, 2.6, 2.2)
+const DROP_MODELS := {"W001": preload("res://assets/models/weapons/Tachi.glb"),
+	"W007": preload("res://assets/models/weapons/W007.glb"), "W301": preload("res://assets/models/weapons/W301.glb")}
 const CORRIDOR := 14.0
 const WALL_H := 4.0
 const SPAWN_RATE := 0.12
@@ -54,6 +59,9 @@ var hazards: Array = []
 var portal_x := 0.0
 var shrine_node: Node3D
 var shrine_room := -1
+var smith_node: Node3D           # 休息區的鐵匠（stages.csv 的 rest_stop）
+var merchant_node: Node3D        # 休息區的商人
+var drops: Array = []            # 地上的掉落武器（meta "item"）
 
 
 func _ready() -> void:
@@ -331,6 +339,9 @@ func _clear_dynamic() -> void:
 	hazards = []
 	spawn_queue = []
 	shrine_node = null
+	smith_node = null
+	merchant_node = null
+	drops = []
 
 
 # ------------------------------------------------------------------ 區域流程
@@ -354,6 +365,11 @@ func _physics_process(delta: float) -> void:
 					run_won.emit()
 		"fighting":
 			_process_spawns(delta)
+	for d in drops:
+		if is_instance_valid(d):
+			d.get_child(0).rotate_y(delta * 1.2)
+			# 靠近時改看比較面板，名牌收起來免得擋住畫面
+			d.get_meta("label").visible = d.global_position.distance_to(player.global_position) > 3.5
 
 
 func _lock(i: int) -> void:
@@ -362,9 +378,12 @@ func _lock(i: int) -> void:
 	var r: Dictionary = rooms[i]
 	Game.stage = r.stage
 	_set_gate(r.gate_in, true)
-	if shrine_node and is_instance_valid(shrine_node):
-		shrine_node.queue_free()
-		shrine_node = null
+	for n in [shrine_node, smith_node, merchant_node]:
+		if n and is_instance_valid(n):
+			n.queue_free()
+	shrine_node = null
+	smith_node = null
+	merchant_node = null
 	var row: Dictionary = Data.stage_row(r.stage)
 	var rep: Dictionary = Data.report_row(r.stage)
 	var total := int(rep.minions)
@@ -462,6 +481,8 @@ func _clear_zone() -> void:
 		lab.position.y = 3.3
 		shrine_node.add_child(lab)
 		shrine_room = current
+		if String(Data.stage_row(r.stage).get("rest_stop", "0")) == "1":
+			_spawn_rest_stop(r.shrine)
 	for h in hazards:
 		if is_instance_valid(h):
 			h.queue_free()
@@ -470,7 +491,131 @@ func _clear_zone() -> void:
 
 
 func near_shrine() -> bool:
-	return shrine_node != null and is_instance_valid(shrine_node) and shrine_node.global_position.distance_to(player.global_position) < 3.0
+	return _near(shrine_node, 3.0)
+
+
+func near_smith() -> bool:
+	return _near(smith_node, 3.2)
+
+
+func near_merchant() -> bool:
+	return _near(merchant_node, 3.2)
+
+
+func _near(n: Node3D, r: float) -> bool:
+	return n != null and is_instance_valid(n) and n.global_position.distance_to(player.global_position) < r
+
+
+func _spawn_rest_stop(shrine_pos: Vector3) -> void:
+	## 休息區：悟道碑旁邊擺鐵匠與商人，商人重新上架
+	var r: Dictionary = rooms[0]
+	for room in rooms:
+		if shrine_pos.x >= room.x0 and shrine_pos.x <= room.x0 + room.w:
+			r = room
+	var smith_at := _stall_spot(r, shrine_pos, [])
+	smith_node = _rest_npc(SMITH_PROP, smith_at, "鐵匠\n［E］強化／重鑄", Color(1.0, 0.62, 0.3))
+	merchant_node = _rest_npc(MERCHANT_PROP, _stall_spot(r, shrine_pos, [smith_at]), "商人\n［E］購買武學", Color(0.95, 0.85, 0.5))
+	Game.restock_merchant()
+
+
+func _stall_spot(r: Dictionary, near: Vector3, taken: Array) -> Vector3:
+	## 在悟道碑附近找一塊放得下攤位的空地：由近到遠，留在房間內、不擋中央通道，
+	## 不與障礙物、悟道碑或已放的攤位重疊
+	var space := get_world_3d().direct_space_state
+	var probe := PhysicsShapeQueryParameters3D.new()
+	var box := BoxShape3D.new()
+	box.size = STALL_SIZE + Vector3(0.8, -0.4, 0.8)
+	probe.shape = box
+	probe.collision_mask = 1
+	var half_h: float = r.h / 2.0
+	var cands: Array = []
+	for dx in range(-int(r.w), int(r.w) + 1):
+		for dz in range(-10, 11, 2):
+			var p := Vector3(near.x + dx, 0.0, near.z + dz)
+			if p.x - STALL_SIZE.x / 2.0 < r.x0 + 1.0 or p.x + STALL_SIZE.x / 2.0 > r.x0 + r.w - 1.0:
+				continue
+			if absf(p.z) + STALL_SIZE.z / 2.0 > half_h - 0.6 or absf(p.z) - STALL_SIZE.z / 2.0 < 3.5:
+				continue
+			var d := Vector2(p.x - near.x, p.z - near.z).length()
+			if d < 4.0:
+				continue
+			cands.append([d, p])
+	cands.sort_custom(func(a, b): return a[0] < b[0])
+	for c in cands:
+		var p: Vector3 = c[1]
+		if taken.any(func(t): return absf(t.x - p.x) < STALL_SIZE.x + 1.2 and absf(t.z - p.z) < STALL_SIZE.z + 1.0):
+			continue
+		probe.transform = Transform3D(Basis(), p + Vector3.UP * (STALL_SIZE.y / 2.0 + 0.3))
+		if space.intersect_shape(probe, 1).is_empty():
+			return p
+	return near + Vector3(0, 0, -4.0 * signf(near.z if near.z != 0.0 else 1.0))
+
+
+func _rest_npc(model: PackedScene, pos: Vector3, title: String, color: Color) -> Node3D:
+	var n := Node3D.new()
+	add_child(n)
+	n.global_position = pos
+	var prop: Node3D = model.instantiate()
+	n.add_child(prop)
+	prop.rotation.y = PI if pos.z > 0.0 else 0.0   # 模型正面朝 +Z；轉向房間中央
+	var body := StaticBody3D.new()
+	body.collision_layer = 1
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = STALL_SIZE
+	shape.shape = box
+	shape.position.y = STALL_SIZE.y / 2.0
+	body.add_child(shape)
+	n.add_child(body)
+	var lab := FX.label3d(title, 56, color)
+	lab.position.y = 3.4
+	n.add_child(lab)
+	return n
+
+
+# ------------------------------------------------------------------ 掉落武器
+func spawn_drop(pos: Vector3, item: Dictionary) -> Node3D:
+	var row: Dictionary = Data.weapons[item.id]
+	var col := UIKit.TEAL.lerp(UIKit.BONE, 0.3)
+	var d := Node3D.new()
+	add_child(d)
+	d.global_position = Vector3(pos.x, 0.0, pos.z)
+	var spin := Node3D.new()
+	spin.position.y = 0.9
+	d.add_child(spin)
+	if DROP_MODELS.has(item.id):
+		var m: Node3D = DROP_MODELS[item.id].instantiate()
+		m.rotation_degrees = Vector3(0, 0, 70)
+		spin.add_child(m)
+	var beam := FX.cylinder(0.05, 2.4, Color(col, 0.55), 2.0)
+	beam.position.y = 1.2
+	d.add_child(beam)
+	var lab := FX.label3d("%s　詞條 %d" % [row.name_zh, item.get("affixes", []).size()], 40, col)
+	lab.position.y = 2.1
+	d.add_child(lab)
+	d.set_meta("item", item)
+	d.set_meta("label", lab)
+	drops.append(d)
+	return d
+
+
+func nearest_drop(radius: float) -> Node3D:
+	var best: Node3D = null
+	var best_d := radius
+	for d in drops:
+		if is_instance_valid(d):
+			var dist: float = d.global_position.distance_to(player.global_position)
+			if dist <= best_d:
+				best = d
+				best_d = dist
+	return best
+
+
+func take_drop(d: Node3D) -> Dictionary:
+	drops.erase(d)
+	var item: Dictionary = d.get_meta("item")
+	d.queue_free()
+	return item
 
 
 # ------------------------------------------------------------------ 給敵人用的介面
@@ -486,6 +631,9 @@ func boss_spawned(e) -> void:
 
 
 func on_enemy_died(e) -> void:
+	var item := Game.roll_weapon_drop(String(Data.enemies[e.eid].rank))
+	if not item.is_empty():
+		spawn_drop(e.global_position, item)
 	corpses.append(e.global_position)
 	if corpses.size() > 40:
 		corpses.pop_front()
