@@ -141,8 +141,92 @@ def timpani_roll(track, beat0, beats, note, v0, v1):
         track.add([[beat0 + i / 8, 0.2, note, int(v0 + (v1 - v0) * i / max(1, n - 1))]])
 
 
+# ================================================================== 天魔序奏（前 4 小節，Am Bb/A Am Bb/A）
+def intro_v0(s, I):
+    """原版：低銅管奏天魔動機，弦樂顫弓。"""
+    mel(s.tracks["trombones"], DEMON, I, 78, 12)
+    mel(s.tracks["tuba"], DEMON, I, 72)
+    mel(s.tracks["contrabass"], DEMON, I, 70, 12)
+    drums(s.tracks["drums"], I, {"gong": [(0, .85)], "taiko_lo": [(0, .9)]})
+    drums(s.tracks["drums"], I + 2, {"taiko_lo": [(0, .7)]})
+    log = pad(s, s.tracks["tremolo"], I, I + 4, 3, 52, 70, 60, 50)
+    # 停頓：第 4 小節後兩拍全部收掉，只留殘響，再由第 5 小節的鑼聲重新開始
+    for n in s.tracks["tremolo"].notes:
+        if (I + 3) * 4 <= n[0] < (I + 4) * 4:
+            n[1] = min(n[1], 2.0)
+    return log
+
+
+def intro_v1(s, I):
+    """魔音：尺八在空曠的低音持續上獨白，A 上方的 Eb（減五度）與 Bb（小二度）是魔性；
+    心跳般的大太鼓、遠處的合唱空五度。"""
+    sh = s.t("shakuhachi", "gm", 77, pan=0.10, gain=0.95, verb=0.45, expr="shaku")
+    mel(sh, "r:1 E5:2.5 Eb5:.5 | D5:1.5 C5:.5 Bb4:2 | A4:1 C5:1 Eb5:2 | D5:1 Bb4:1 A4:2", I, 82)
+    for k in range(4):
+        s.tracks["contrabass"].add([[(I + k) * 4, 4, midi("A1"), 64]])
+        s.tracks["cello"].add([[(I + k) * 4, 4, midi("A2"), 50]])
+    s.tracks["choir"].add([[I * 4 + 2, 14, midi("A3"), 40], [I * 4 + 2, 14, midi("E4"), 38]])
+    for k in range(4):
+        drums(s.tracks["drums"], I + k, {"taiko_lo": [(0, .75), (3, .45)]})       # 心跳：咚—咚
+    drums(s.tracks["drums"], I, {"gong": [(0, .7)]})
+    return []
+
+
+def intro_v2(s, I):
+    """壓境：低音弦樂頓弓的固定音型把天魔動機藏在節奏裡（A A A Bb｜A A E A），
+    太鼓一小節比一小節密，法國號短促重音，合唱在第 3 小節湧上來；第 5 小節突然收掉讓二胡出來。"""
+    lo = s.t("low_strings", "gm", 48, pan=-0.10, gain=0.85, verb=0.25)
+    pat = "A2:.5 A2:.5 A2:.5 Bb2:.5 A2:.5 A2:.5 E2:.5 A2:.5"
+    for k in range(4):
+        v = 64 + 10 * k
+        for n in parse_melody(pat, (I + k) * 4, v):
+            n[1] = .38
+            lo.add([n])
+            s.tracks["contrabass"].add([[n[0], .38, n[2] - 12, v - 6]])
+    hits = [("A3 C4 E4", 0), ("A3 C4 E4", 1.5), ("Bb3 D4 F4", 4), ("Bb3 D4 F4", 5.5),
+            ("A3 C4 E4", 8), ("A3 C4 E4", 9.5), ("Bb3 D4 F4", 12), ("Bb3 D4 F4", 13.5), ("Bb3 D4 F4", 15)]
+    for ch, pos in hits:
+        for m in ch.split():
+            s.tracks["horns"].add([[I * 4 + pos, .45, midi(m), 70 + int(pos * 2)]])
+    for m in ("A3", "E4", "A4"):
+        s.tracks["choir"].add([[(I + 2) * 4, 8, midi(m), 62]])
+    dr = s.tracks["drums"]
+    drums(dr, I, {"taiko_lo": [(0, .7), (8, .6)]})
+    drums(dr, I + 1, {"taiko_lo": [(0, .75), (8, .65)], "drum": [(4, .4), (12, .45)]})
+    drums(dr, I + 2, {"taiko": [(0, .8), (3, .55), (6, .65), (8, .8), (11, .55), (14, .6)], "taiko_lo": [(0, .8)],
+                      "drum": [(4, .5), (12, .55)]})
+    drums(dr, I + 3, {"taiko": [(0, .85), (3, .6), (6, .7), (8, .85), (11, .6)], "taiko_lo": [(0, .85), (8, .7)],
+                      "drum": [(4, .55)]})
+    roll(dr, (I + 3) * 4 + 3, 1, "drum", .4, .95, rate=8)
+    drums(dr, I, {"gong": [(0, .55)]})
+    return []
+
+
+def intro_v3(s, I):
+    """血月：合唱低聲吟唱（A C Bb A｜E D C Bb），古箏在高處撥下減和弦的碎音，
+    顫弓弦樂與鑼聲鋪底，像祭壇上的儀式。"""
+    mel(s.tracks["choir"], "A3:2 C4:2 | Bb3:3 A3:1 | E4:2 D4:1 C4:1 | Bb3:4", I, 70)
+    mel(s.tracks["choir"], "E3:2 E3:2 | F3:3 E3:1 | A3:2 G3:1 E3:1 | D3:4", I, 58)
+    z = s.tracks["guzheng"]
+    for k in range(4):
+        b = (I + k) * 4 + 2
+        notes = ["A5", "Eb5", "C5", "A4"] if k % 2 == 0 else ["Bb5", "F5", "D5", "Bb4"]
+        for j, m in enumerate(notes):
+            z.add([[b + j * .25, 1.5, midi(m), 52 - j * 5]])
+    for k in range(4):
+        s.tracks["tremolo"].add([[(I + k) * 4, 4, midi("A2"), 52], [(I + k) * 4, 4, midi("E3"), 48]])
+        s.tracks["contrabass"].add([[(I + k) * 4, 4, midi("A1"), 58]])
+    dr = s.tracks["drums"]
+    drums(dr, I, {"gong": [(0, .6)]})
+    drums(dr, I + 2, {"gong": [(0, .45)], "taiko_lo": [(0, .55)]})
+    return []
+
+
+INTROS = {"v0": intro_v0, "v1": intro_v1, "v2": intro_v2, "v3": intro_v3}
+
+
 # ================================================================== 主題曲
-def theme() -> Song:
+def theme(intro: str = "v0") -> Song:
     s = Song("theme", "天魔劫・主題曲", 80,
              "Am Bb/A Am Bb/A Am F G Esus4,E "         # 序：天魔動機 → 英雄動機的影子
              "Am F G Am Am F G E "                       # A：二胡獨奏主題
@@ -173,16 +257,11 @@ def theme() -> Song:
     log = {}
 
     # ---- 序：天魔動機（長號＋大號＋低音提琴），弦樂顫弓持續音；後半二胡遠遠吹出英雄動機的頭
-    mel(bone, DEMON, I, 78, 12)
-    mel(tuba, DEMON, I, 72)
-    mel(cb, DEMON, I, 70, 12)
-    log["序"] = pad(s, trem, I, I + 4, 3, 52, 70, 60, 50)
+    log["序"] = INTROS[intro](s, I)
     pad(s, strings, I + 4, I + 8, 4, 50, 72, 61, 46)
     bassline(s, cb, I + 4, I + 8, 33, 45, 62)
     mel(erhu, "r:2 A4:1.5 C5:.5 | D5:4 | r:2 E5:1 G5:1 | E5:2 D5:2", I + 4, 72)
     arp(s, zheng, I + 4, I + 8, 45, [0, 2, 3, 4], 1.0, 50)
-    drums(dr, I, {"gong": [(0, .85)], "taiko_lo": [(0, .9)]})
-    drums(dr, I + 2, {"taiko_lo": [(0, .7)]})
     drums(dr, I + 4, {"gong": [(0, .6)], "taiko_lo": [(0, .75)]})
     timpani_roll(timp, (I + 7) * 4, 4, midi("E2"), 40, 95)
 

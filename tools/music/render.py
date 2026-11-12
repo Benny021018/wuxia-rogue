@@ -36,6 +36,7 @@ RNG = np.random.default_rng(20261113)
 EXPR = {   # 揉弦深度（半音）、頻率、延遲（秒）、滑音時間（秒）、最大滑音音程
     "erhu": dict(depth=0.30, rate=5.6, delay=0.16, ramp=0.30, glide=0.075, max_slide=7),
     "dizi": dict(depth=0.14, rate=5.0, delay=0.22, ramp=0.35, glide=0.0, max_slide=0),
+    "shaku": dict(depth=0.22, rate=4.4, delay=0.35, ramp=0.5, glide=0.12, max_slide=3),
 }
 
 
