@@ -743,6 +743,29 @@ def chime_up():
     return [sf(n, 1.1) * 1.6]
 
 
+def needle_flick():
+    """短促金屬彈音後接擦身氣聲，連發時保留每一針的起音。"""
+    t = T(.15)
+    sounds = []
+    for i, pitch in enumerate([1800, 2180, 1960]):
+        ring = np.sin(2 * np.pi * pitch * t) + .35 * np.sin(2 * np.pi * pitch * 2.71 * t)
+        air = bp(noise(.15, 601 + i), 1900, 7300)
+        sounds.append(.45 * ring * np.exp(-t * 75) + air * np.exp(-((t - .033) / .024) ** 2))
+    return sounds
+
+
+def wolf_cleave():
+    """先是寬刃破風，再落到低頻撞擊和短鋼鳴。"""
+    t = T(.46)
+    sounds = []
+    for i, pitch in enumerate([95, 107]):
+        air = bp(noise(.46, 620 + i), 220, 2200) * np.exp(-((t - .05) / .035) ** 2)
+        strike = sweep_sine(.34, pitch, 42, 21) * np.exp(-T(.34) * 13)
+        ring = np.sin(2 * np.pi * 354 * T(.34)) * np.exp(-T(.34) * 22)
+        sounds.append(air + at(strike + .2 * ring, .065, .46))
+    return sounds
+
+
 SOUNDS = {k: v for k, v in list(globals().items()) if callable(v) and not k.startswith("_") and k not in {
     "T", "rng", "noise", "lp", "hp", "bp", "reso", "svf_band", "curve", "env_ar", "sweep_sine", "partials", "pad_to",
     "mix", "at", "ks_pluck", "drive", "fade_out", "sf", "M", "Path"} and v.__module__ == __name__ and v.__code__.co_argcount == 0}

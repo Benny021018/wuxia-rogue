@@ -1,5 +1,5 @@
 extends Node
-const FEATURED_WEAPONS := ["W001","W007","W301"]
+const FEATURED_WEAPONS := ["W001","W006","W301"]
 
 ## 一局遊戲的狀態：角色、修為、銀兩、武器、武學、門派傳承，以及參悟（抽獎）邏輯
 

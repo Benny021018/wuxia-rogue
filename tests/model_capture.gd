@@ -24,14 +24,14 @@ func _ready():
 	root.add_child(cam)
 	cam.fov = 40
 	cam.current = true
-	var shots: Array = [["Sword_Idle", 0.5]]
+	var shots: Array = [[m.idle, 0.5]]
 	for mid in Data.moves:
 		var mv: Dictionary = Data.moves[mid]
-		if mv.char_id != cid or mv.hits.is_empty():
+		if mv.char_id != cid:
 			continue
 		var a: Animation = m.anim.get_animation(m.clip(mv.anim))
 		var k: float = (a.length - float(mv.anim_from_s)) / float(mv.duration_s)
-		shots.append([mv.anim, float(mv.anim_from_s) + float(mv.hits[0].time_s) * k, mv.name_zh, mid])
+		shots.append([mv.anim, float(mv.anim_from_s) + (float(mv.duration_s) * .5 if mv.hits.is_empty() else float(mv.hits[0].time_s)) * k, mv.name_zh, mid])
 	var i := 0
 	for s in shots:
 		m.hold(s[0], s[1])
