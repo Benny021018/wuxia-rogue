@@ -38,6 +38,9 @@ func _ready() -> void:
 	lan._record_room("192.0.2.1","duel")
 	_check(lan.rooms_found.item_count == 1 and lan.rooms_found.get_item_text(0).begins_with("擂台單挑"), "列表直接顯示房間並更新玩法")
 	lan.leave()
+	var duel_row: Dictionary = Data.music.get("duel", {})
+	var duel_stream = load(duel_row.file) if not duel_row.is_empty() else null
+	_check(duel_stream is AudioStreamOggVorbis and float(duel_row.loop_offset_s) < duel_stream.get_length(), "問劍坪單挑有自己的配樂，循環點在曲長之內")
 	_check(main.mode == "menu", "離開房間返回主選單")
 	_check_combat_state()
 	for cid in Data.char_order:
