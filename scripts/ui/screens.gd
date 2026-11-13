@@ -8,6 +8,7 @@ signal to_menu
 signal open_lan
 signal quit_game
 
+var network_match := false
 var _selected := "nangong"
 var _weapon_sel := 0
 
@@ -75,17 +76,16 @@ func show_main() -> void:
 	_at(panel, 1060, 360, 470, 420)
 	var first := UIKit.button("踏上江湖", show_select, 34, 380, 78)
 	_at(first, 1100, 400, 380, 78)
-	_at(UIKit.button("操作說明", show_help.bind(false), 28, 380, 66), 1100, 496, 380, 60)
-	_at(UIKit.button("設定", show_settings.bind(false), 28, 380, 60), 1100, 572, 380, 60)
-	_at(UIKit.button("離開遊戲", func(): quit_game.emit(), 28, 380, 60), 1100, 648, 380, 60)
 	var multi := UIKit.button("",func(): open_lan.emit(),28,380,60)
 	multi.accessibility_name = "多人遊玩"
-	_at(multi,1100,710,380,60)
+	_at(multi,1100,496,380,60)
 	var lettering := UIKit.multiplayer_title()
 	multi.add_child(lettering)
 	lettering.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	lettering.offset_top = 4
 	lettering.offset_bottom = -4
+	_at(UIKit.button("設定", show_settings.bind(false), 28, 380, 60), 1100, 572, 380, 60)
+	_at(UIKit.button("離開遊戲", func(): quit_game.emit(), 28, 380, 60), 1100, 648, 380, 60)
 	var sparks := UIKit.fx()
 	sparks.add_embers(Rect2(0, 560, 1600, 340), 70)
 	sparks.drift = 26.0
@@ -94,7 +94,7 @@ func show_main() -> void:
 	_focus_first(first)
 
 
-func show_help(from_pause := false) -> void:
+func show_help() -> void:
 	_clear()
 	_full(UIKit.overlay(0.96))
 	var lines := _fx()
@@ -107,9 +107,12 @@ func show_help(from_pause := false) -> void:
 	grid.add_theme_constant_override("h_separation", 26)
 	grid.add_theme_constant_override("v_separation", 12)
 	keys.add_child(grid)
-	for pair in [["WASD", "移動"], ["滑鼠", "視角"], ["空白鍵", "跳躍"], ["Shift", "閃避（短暫無敵）"],
-			["左鍵", "普攻，連按接連段"], ["右鍵 Q E R 1 2 3", "七個技能"], ["V", "大招（怒氣滿）"], ["F", "參悟、鐵匠、商人"], ["K", "經脈"],
-			["Tab", "武學與門派"], ["Esc", "暫停"]]:
+	var bindings := [["WASD", "移動"], ["滑鼠", "視角"], ["空白鍵", "跳躍"], ["Shift", "閃避（短暫無敵）"],
+			["左鍵", "普攻，連按接連段"], ["右鍵 Q E R 1 2 3", "七個技能"], ["V", "大招（怒氣滿）"]]
+	if not network_match:
+		bindings.append_array([["F", "參悟、鐵匠、商人"], ["K", "經脈"], ["Tab", "武學與門派"]])
+	bindings.append(["Esc", "開啟選單" if network_match else "暫停"])
+	for pair in bindings:
 		var row := HBoxContainer.new()
 		var k := UIKit.box("chip", "", 4)
 		k.fill = UIKit.INK
@@ -124,13 +127,15 @@ func show_help(from_pause := false) -> void:
 		row.add_child(what)
 		row.custom_minimum_size.x = 260
 		grid.add_child(row)
-	_at(UIKit.box_text("narration",
-		"進入區域會「鎖陣」封住退路，殺光所有敵人後「破陣」。\n" +
+	var guide := ("進入區域會「鎖陣」封住退路，殺光所有敵人後「破陣」。\n" +
 		"破陣後悟道碑浮現，轉天機輪參悟三選一，武學強化自身。\n" +
 		"敵人會被打出硬直、挑上半空、打倒在地；精英與首領有霸體，要用破霸體的招式打斷。\n" +
 		"重複參悟同一門武學會升級，Lv3 小成、Lv5 圓滿各有特殊效果。\n" +
-		"同門派武學達 2／4／5 門啟動門派傳承。擊敗敵人吸納真氣，按 K 衝擊奇經八脈的穴位，打通越多境界越高。", 21, "", HORIZONTAL_ALIGNMENT_LEFT), 210, 400, 1180, 250)
-	var back := UIKit.button("返回", show_pause if from_pause else show_main, 22, 200, 50)
+		"同門派武學達 2／4／5 門啟動門派傳承。擊敗敵人吸納真氣，按 K 衝擊奇經八脈的穴位，打通越多境界越高。")
+	if network_match:
+		guide = "擂台單挑：雙方各有三條命。每次擊倒後重新開局，先耗盡命數者落敗。\n合作闖關：與隊友破陣後各自參悟；隊友倒下可在破陣時復起。\n開啟選單時對局會繼續進行。"
+	_at(UIKit.box_text("narration",guide, 21, "", HORIZONTAL_ALIGNMENT_LEFT), 210, 400, 1180, 250)
+	var back := UIKit.button("返回", show_pause, 22, 200, 50)
 	_at(back, 700, 700, 200, 50)
 	_focus_first(back)
 
@@ -374,17 +379,19 @@ func show_pause() -> void:
 	var lines := _fx()
 	lines.add_speed_lines(Vector2(420, 450), 330, 1200, 90, Color(UIKit.INK, 0.7), 51, 1.6)
 	lines.add_slash(Vector2(-40, 900), Vector2(900, -40), 20)
-	_at(UIKit.title("暫停", 150, UIKit.BONE, 14, false, -5), 170, 220, 500, 170)
+	_at(UIKit.title("對局選單" if network_match else "暫停", 100 if network_match else 150, UIKit.BONE, 14, false, -5), 170, 220, 500, 170)
 	_at(UIKit.box_text("narration", "%s　%s\n第 %d 區　銀兩 %d　已參悟 %d 次" % [Data.characters[Game.char_id].name_zh, Game.realm_name(), Game.stage, int(Game.gold), Game.total_draws], 21), 170, 410, 500, 110)
 	var panel := UIKit.box("slant")
 	panel.slant = 30
 	_at(panel, 900, 250, 520, 420)
 	var first := UIKit.button("繼續", func(): resume.emit(), 32, 400, 72)
 	_at(first, 960, 300, 400, 72)
-	_at(UIKit.button("武學與門派", show_inventory.bind(true), 26, 400, 64), 960, 404, 400, 64)
-	_at(UIKit.button("操作說明", show_help.bind(true), 26, 400, 56), 960, 488, 400, 56)
-	_at(UIKit.button("設定", show_settings.bind(true), 26, 400, 56), 960, 556, 400, 56)
-	_at(UIKit.button("放棄本局", _confirm_quit, 22, 400, 50), 960, 626, 400, 50)
+	if not network_match:
+		_at(UIKit.button("武學與門派", show_inventory.bind(true), 26, 400, 64), 960, 404, 400, 64)
+	_at(UIKit.button("操作說明", show_help, 26, 400, 56), 960, 404 if network_match else 488, 400, 56)
+	if not network_match:
+		_at(UIKit.button("設定", show_settings.bind(true), 26, 400, 56), 960, 556, 400, 56)
+	_at(UIKit.button("離開房間" if network_match else "放棄本局", _confirm_quit, 22, 400, 50), 960, 488 if network_match else 626, 400, 50)
 	_at(UIKit.label("Esc 繼續", 16, UIKit.GREY, HORIZONTAL_ALIGNMENT_CENTER), 960, 694, 400, 26)
 	_focus_first(first)
 
@@ -397,12 +404,12 @@ func _confirm_quit() -> void:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 26)
 	b.add_child(v)
-	v.add_child(UIKit.label("確定放棄？本局進度不會保留。", 24, UIKit.BLOOD, HORIZONTAL_ALIGNMENT_CENTER, true))
+	v.add_child(UIKit.label("離開將結束雙方的對局。確定離開？" if network_match else "確定放棄？本局進度不會保留。", 24, UIKit.BLOOD, HORIZONTAL_ALIGNMENT_CENTER, true))
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 30)
 	v.add_child(row)
-	row.add_child(UIKit.button("放棄", func(): to_menu.emit(), 22, 170, 52))
+	row.add_child(UIKit.button("離開" if network_match else "放棄", func(): to_menu.emit(), 22, 170, 52))
 	var keep := UIKit.button("取消", show_pause, 22, 170, 52)
 	row.add_child(keep)
 	_focus_first(keep)

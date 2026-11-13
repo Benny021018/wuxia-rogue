@@ -54,6 +54,7 @@ var reward_choices := [[],[]]
 var reward_buttons := VBoxContainer.new()
 var waiting_rewards := false
 var round_active := false
+var match_menu = preload("res://scripts/ui/screens.gd").new()
 
 func _ready() -> void:
 	add_child(reward_buttons)
@@ -62,6 +63,12 @@ func _ready() -> void:
 	rest_panel.theme = UIKit.theme()
 	add_child(layer)
 	layer.layer = 18
+	layer.add_child(match_menu)
+	match_menu.hide()
+	match_menu.theme = UIKit.theme()
+	match_menu.network_match = true
+	match_menu.resume.connect(_close_match_menu)
+	match_menu.to_menu.connect(leave)
 	panel.theme = UIKit.theme()
 	backdrop = UIKit.backdrop("res://assets/ui/greenwood_pass.webp")
 	layer.add_child(backdrop)
@@ -441,8 +448,7 @@ func _choose(slot: int,index: int) -> void:
 func _continue() -> void:
 	waiting_rewards = false
 	world.set_physics_process(local_slot == 0)
-	fighters[local_slot].input_enabled = true
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	_sync_local_controls()
 
 func _process(delta: float) -> void:
 	if ended:
@@ -504,7 +510,7 @@ func _physics_process(delta: float) -> void:
 		countdown = maxf(countdown-delta,0)
 		if countdown == 0:
 			round_active = true
-			fighters[local_slot].input_enabled = true
+			_sync_local_controls()
 	if local_slot == 0:
 		if match_mode == "coop":
 			world.player = fighters[0]
@@ -525,20 +531,35 @@ func _physics_process(delta: float) -> void:
 		predicted_positions[tick] = p.position
 		if predicted_positions.size() > 180:
 			predicted_positions.erase(predicted_positions.keys()[0])
-		_motion.rpc_id(1,epoch,tick,Input.get_vector("move_left","move_right","move_forward","move_back"),p.yaw,p.pitch)
+		var axis := Vector2.ZERO if match_menu.visible else Input.get_vector("move_left","move_right","move_forward","move_back")
+		_motion.rpc_id(1,epoch,tick,axis,p.yaw,p.pitch)
 
 func _input(event: InputEvent) -> void:
 	if world == null or ended:
 		return
 	if event.is_action_pressed("pause"):
-		leave()
+		if match_menu.visible:
+			_close_match_menu()
+		else:
+			layer.move_child(match_menu,-1)
+			match_menu.show_pause()
+			_sync_local_controls()
+		get_viewport().set_input_as_handled()
 		return
-	if local_slot != 1 or not round_active or waiting_rewards:
+	if match_menu.visible or local_slot != 1 or not round_active or waiting_rewards:
 		return
 	for action in PLAYER.ACTIONS + ["dash","jump"]:
 		if event.is_action_pressed(action):
 			sent_action += 1
 			_action.rpc_id(1,epoch,sent_action,action,fighters[1].yaw,fighters[1].pitch)
+
+func _close_match_menu() -> void:
+	match_menu.hide_all()
+	_sync_local_controls()
+
+func _sync_local_controls() -> void:
+	fighters[local_slot].input_enabled = round_active and not waiting_rewards and not match_menu.visible
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if waiting_rewards or match_menu.visible else Input.MOUSE_MODE_CAPTURED
 
 func _guest_input(round_id: int) -> bool:
 	return world != null and multiplayer.is_server() and multiplayer.get_remote_sender_id() == remote_id and round_id == epoch and round_active and not ended and not waiting_rewards and not fighters[1].dead
@@ -727,6 +748,7 @@ func _end_match(message: String) -> void:
 @rpc("authority","call_local","reliable")
 func _finish(message: String) -> void:
 	ended = true
+	match_menu.hide_all()
 	if world:
 		world.process_mode = Node.PROCESS_MODE_DISABLED
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE

@@ -5,6 +5,7 @@ var session
 var attempts := 0
 var checkpoint := 0
 var maps_seen := 0
+var checked_menu := false
 var guest := false
 var coop := false
 
@@ -58,6 +59,24 @@ func _physics_process(_delta: float) -> bool:
 		return false
 	if not session.round_active:
 		return false
+	if not checked_menu:
+		var esc := InputEventAction.new()
+		esc.action = "pause"
+		esc.pressed = true
+		session._input(esc)
+		var buttons = session.match_menu.find_children("*","Button",true,false)
+		var guides = buttons.filter(func(b): return b.text == "操作說明")
+		if guides.size() != 1 or session.fighters[session.local_slot].input_enabled or paused:
+			push_error("多人對局選單狀態錯誤")
+			quit(1)
+			return false
+		guides[0].pressed.emit()
+		session._input(esc)
+		if session.match_menu.visible or not session.fighters[session.local_slot].input_enabled:
+			push_error("操作說明無法返回對局")
+			quit(1)
+			return false
+		checked_menu = true
 	if guest:
 		if checkpoint == 0 or (not coop and frames % 15 == 0):
 			var event := InputEventAction.new()
