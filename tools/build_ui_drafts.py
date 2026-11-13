@@ -453,7 +453,6 @@ def s01_menu():
     b.append(button(1100, 496, 380, 60, "操作說明", "normal", 28))
     b.append(button(1100, 572, 380, 60, "設定", "normal", 28))
     b.append(button(1100, 648, 380, 60, "離開遊戲", "normal", 28))
-    b.append(text(1290, 735, "滑鼠點選　Enter 確認", 16, GREY, SANS, 700, "middle"))
     b.append(embers(0, 600, 1600, 900, 70, 9))
     b.append(text(1570, 880, "武俠 Roguelike・灰盒原型", 14, GREY, SANS, 500, "end"))
     b.append(note(30, 800, ["稿註：標題獨立不加印章與副標；類型資訊縮到右下角小字。"]))

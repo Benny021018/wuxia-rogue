@@ -77,7 +77,6 @@ func show_main() -> void:
 	_at(UIKit.button("操作說明", show_help.bind(false), 28, 380, 66), 1100, 496, 380, 60)
 	_at(UIKit.button("設定", show_settings.bind(false), 28, 380, 60), 1100, 572, 380, 60)
 	_at(UIKit.button("離開遊戲", func(): quit_game.emit(), 28, 380, 60), 1100, 648, 380, 60)
-	_at(UIKit.label("滑鼠點選　Enter 確認", 16, UIKit.GREY, HORIZONTAL_ALIGNMENT_CENTER), 1100, 720, 380, 30)
 	var sparks := UIKit.fx()
 	sparks.add_embers(Rect2(0, 560, 1600, 340), 70)
 	sparks.drift = 26.0
