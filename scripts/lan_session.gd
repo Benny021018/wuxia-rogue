@@ -8,7 +8,7 @@ const PLAYER := preload("res://scripts/player.gd")
 const WORLD := preload("res://scripts/world.gd")
 const BUILD := preload("res://scripts/game.gd")
 var layer := CanvasLayer.new()
-var panel := VBoxContainer.new()
+var panel := Control.new()
 var backdrop: Control
 var address := LineEdit.new()
 var rooms_found := OptionButton.new()
@@ -68,36 +68,48 @@ func _ready() -> void:
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	layer.add_child(panel)
 	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	panel.position -= Vector2(230,250)
-	panel.custom_minimum_size.x = 460
-	var heading := UIKit.title("局域網連線", 48)
-	heading.custom_minimum_size.y = 76
-	panel.add_child(heading)
+	panel.offset_left = -600
+	panel.offset_top = -320
+	panel.offset_right = 600
+	panel.offset_bottom = 320
+	var frame := TextureRect.new()
+	frame.texture = preload("res://assets/ui/lan-room.svg")
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	panel.add_child(frame)
+	_room_control(UIKit.title("局域網連線",48,UIKit.BONE,6,false,0,HORIZONTAL_ALIGNMENT_LEFT),68,34,720,76)
+	_room_control(UIKit.label("玩法與角色",25),48,174,500,50)
+	_room_control(UIKit.label("加入房間",25),638,174,508,50)
 	modes.add_item("合作闖關")
 	modes.add_item("擂台單挑・三命")
-	panel.add_child(modes)
+	_room_control(modes,48,235,500,56)
 	for id in Data.char_order:
 		heroes.add_item(Data.characters[id].name_zh)
-	panel.add_child(heroes)
+	_room_control(heroes,48,313,500,56)
 	address.placeholder_text = "房主區網 IP（可自動搜尋）"
-	panel.add_child(rooms_found)
+	_room_control(rooms_found,638,235,508,56)
 	rooms_found.add_item("區網房間列表")
 	rooms_found.item_selected.connect(func(i):
 		if i > 0:
 			address.text = str(rooms_found.get_item_metadata(i)))
-	panel.add_child(address)
-	panel.add_child(UIKit.button("建立房間", host))
-	panel.add_child(UIKit.button("加入房間", join_room))
-	ready_button = UIKit.button("準備", ready_up)
-	panel.add_child(ready_button)
-	status = UIKit.label("選擇角色後建立或加入房間")
-	panel.add_child(status)
-	panel.add_child(UIKit.button("返回主選單", leave))
+	_room_control(address,638,313,508,56)
+	_room_control(UIKit.button("建立房間",host),48,397,500,64)
+	_room_control(UIKit.button("加入房間",join_room),638,397,508,64)
+	ready_button = UIKit.button("準備",ready_up,24,232,62)
+	_room_control(ready_button,664,532,232,62)
+	status = UIKit.label("選擇角色後建立或加入房間",22)
+	_room_control(status,48,504,590,114)
+	_room_control(UIKit.button("返回主選單",leave,24,220,62),926,532,220,62)
 	discover.bind(DISCOVERY)
 	multiplayer.peer_connected.connect(_connected)
 	multiplayer.peer_disconnected.connect(_disconnected)
 	multiplayer.server_disconnected.connect(_server_lost)
 	multiplayer.connection_failed.connect(_failed)
+
+func _room_control(control: Control, x: float, y: float, width: float, height: float) -> void:
+	panel.add_child(control)
+	control.position = Vector2(x,y)
+	control.size = Vector2(width,height)
 
 func host() -> void:
 	if multiplayer.multiplayer_peer != null and not multiplayer.multiplayer_peer is OfflineMultiplayerPeer:
@@ -683,6 +695,7 @@ func _finish(message: String) -> void:
 	backdrop.show()
 	for c in panel.get_children():
 		c.hide()
+	panel.get_child(0).show()
 	status.show()
 	status.text = message
 	panel.get_child(-1).show()
