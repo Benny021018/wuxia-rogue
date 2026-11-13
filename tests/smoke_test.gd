@@ -222,7 +222,7 @@ func _run_character(cid: String) -> void:
 	var labels: Array = []
 	for b in main.gacha.cards_root.find_children("*", "Button", true, false):
 		labels.append(b.text)
-	_check(labels.has("替換主武器：青鞘太刀") and labels.has("替換副武器：竹弓"), "參悟卡以主副武器替換")
+	_check(labels.has("替換主武器：太刀") and labels.has("替換副武器：竹弓"), "參悟卡以主副武器替換")
 	main.gacha._on_close()
 	main.mode = "play"
 	main.hud.show_banner("鎖　陣", "測試", "lock")

@@ -94,8 +94,8 @@
 <text x="422" y="708" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="17" font-weight="700" fill="#16c6cc" text-anchor="start" >◆ 飲血　吸血+2.4%</text>
 <rect x="820" y="558" width="116" height="26" fill="#8d8790"/>
 <text x="830" y="577" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="900" fill="#0b0a0d" text-anchor="start" >手上・主武器</text>
-<text x="820" y="622" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="30" font-weight="900" fill="#f3ede4" text-anchor="start" >青鞘太刀</text>
-<text x="956" y="620" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="900" fill="#ff4a17" text-anchor="start" >淬煉+3　刀・近戰</text>
+<text x="820" y="622" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="30" font-weight="900" fill="#f3ede4" text-anchor="start" >太刀</text>
+<text x="894" y="620" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="900" fill="#ff4a17" text-anchor="start" >淬煉+3　刀・近戰</text>
 <text x="822" y="656" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="17" font-weight="700" fill="#c9c2cb" text-anchor="start" >◆ 鋒利　傷害+9%</text>
 <path d="M790,560 L778,716" stroke="#8d8790" stroke-width="2"/>
 <text x="784" y="644" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="30" font-weight="900" fill="#f3ede4" text-anchor="middle" >⇄</text>
@@ -104,7 +104,7 @@
 <path d="M1075,761 V747 H1061" fill="none" stroke="#16c6cc" stroke-width="3"/>
 <path d="M525,791 V805 H539" fill="none" stroke="#16c6cc" stroke-width="3"/>
 <path d="M1075,791 V805 H1061" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<text x="800.0" y="782.48" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="18" font-weight="700" fill="#f3ede4" text-anchor="middle" >［E］撿起竹弓，換下手上的青鞘太刀</text>
+<text x="800.0" y="782.48" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="18" font-weight="700" fill="#f3ede4" text-anchor="middle" >［E］撿起竹弓，換下手上的太刀</text>
 <text x="800" y="830" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="700" fill="#f3ede4" text-anchor="middle" stroke="#0b0a0d" stroke-width="4" paint-order="stroke">換下的兵器會掉在原地，可以再撿回來；副武器格空著時直接放進副武器</text>
 <rect x="1190" y="26" width="380" height="64" fill="#0b0a0d" stroke="#f3ede4" stroke-width="3"/>
 <rect x="1196" y="32" width="368" height="52" fill="none" stroke="#f3ede4" stroke-width="1" opacity=".55"/>
