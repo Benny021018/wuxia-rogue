@@ -68,10 +68,7 @@ func show_main() -> void:
 	cut.add_slash(Vector2(-60, 690), Vector2(1680, 170), 34)
 	cut.add_splatter(Vector2(800, 330), 70, 70, UIKit.BLOOD, 5, 12)
 	_at(UIKit.title("天魔劫", 200, UIKit.EMBER, 16, true, -3), 140, 220, 840, 230)
-	var s := UIKit.seal("武俠", UIKit.BLOOD, 40, 6)
-	_at(s, 858, 178, s.size.x, s.size.y)
-	_at(UIKit.box_text("system", "武俠 Roguelike・第一人稱", 20), 330, 450, 460, 50)
-	_at(UIKit.box_text("narration", "十年前，天魔神教血洗中原。如今天魔復活，\n綠林、暗月樓、屍門盡成爪牙。\n一路殺上天魔神教總壇，了結這場劫數。", 21), 200, 560, 720, 124)
+	_at(UIKit.box_text("narration", "十年前，天魔神教血洗中原。如今天魔復活，\n綠林、暗月樓、屍門盡成爪牙。\n一路殺上天魔神教總壇，了結這場劫數。", 21), 200, 500, 720, 124)
 	var panel := UIKit.box("slant")
 	panel.slant = 30
 	_at(panel, 1060, 360, 470, 420)
@@ -85,7 +82,7 @@ func show_main() -> void:
 	sparks.add_embers(Rect2(0, 560, 1600, 340), 70)
 	sparks.drift = 26.0
 	add_child(sparks)
-	_at(UIKit.label("灰盒原型", 14, UIKit.GREY, HORIZONTAL_ALIGNMENT_RIGHT), 1370, 866, 200, 24, 1, 1)
+	_at(UIKit.label("武俠 Roguelike・灰盒原型", 14, UIKit.GREY, HORIZONTAL_ALIGNMENT_RIGHT), 1270, 866, 300, 24, 1, 1)
 	_focus_first(first)
 
 
@@ -215,7 +212,6 @@ func show_weapon_pick() -> void:
 	var lines := _fx()
 	lines.add_speed_lines(Vector2(800, 470), 420, 1200, 90, UIKit.VIOLET, 23, 1.5)
 	_at(UIKit.title("選擇起手兵器", 64, UIKit.BONE, 9, false, -2), 450, 40, 700, 90)
-	_at(UIKit.label("所有兵器同一品質，差別只在打法；起手兵器沒有詞條，打怪掉落的兵器才有。之後可以到鐵匠處強化", 16, UIKit.GREY, HORIZONTAL_ALIGNMENT_CENTER), 300, 118, 1000, 26)
 	var c: Dictionary = Data.characters[_selected]
 	var face := PackedVector2Array([Vector2(10, 6), Vector2(146, 6), Vector2(128, 126), Vector2(10, 126)])
 	_at(UIKit.clipped(UIKit.portrait_crop(_selected, 150.0 / 130.0, 0.6, 0.5), face, UIKit.BONE, 3.0), 30, 24, 150, 130, 0, 0)
@@ -228,7 +224,6 @@ func show_weapon_pick() -> void:
 	for i in starters.size():
 		_weapon_card(starters[i], i, x0 + i * gap)
 	set_meta("picking_weapon", true)
-	_at(UIKit.label("← → 切換　Enter 入江湖　Esc 返回角色", 16, UIKit.GREY, HORIZONTAL_ALIGNMENT_CENTER), 550, 850, 500, 26)
 	_at(UIKit.button("返回", show_select, 22, 200, 50), 1330, 836, 200, 50)
 
 

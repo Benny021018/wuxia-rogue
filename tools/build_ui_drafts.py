@@ -446,17 +446,17 @@ def s01_menu():
     b.append(splatter(800, 330, 70, 70, BLOOD, 5, 12))
     # 標題
     b.append(brush_title(560, 400, "天魔劫", 220, EMBER, INK, 16, "middle", -3, outline_white=True))
-    b.append(seal(900, 205, "武俠", 40, BLOOD, 6))
-    b.append(system_box(330, 450, 460, 50, ["武俠 Roguelike・第一人稱"], 20, align="middle"))
-    b.append(narration(200, 560, 720, 120, ["十年前，天魔神教血洗中原。如今天魔復活，", "綠林、暗月樓、屍門盡成爪牙。", "一路殺上天魔神教總壇，了結這場劫數。"], 21))
+    b.append(narration(200, 500, 720, 120, ["十年前，天魔神教血洗中原。如今天魔復活，", "綠林、暗月樓、屍門盡成爪牙。", "一路殺上天魔神教總壇，了結這場劫數。"], 21))
     # 選單
     b.append(slant(1060, 360, 470, 420, 30, INK, BONE, 3, 'opacity=".82"'))
     b.append(button(1100, 400, 380, 78, "踏上江湖", "normal", 34))
-    b.append(button(1100, 510, 380, 66, "操作說明", "normal", 28))
-    b.append(button(1100, 606, 380, 66, "離開遊戲", "normal", 28))
+    b.append(button(1100, 496, 380, 60, "操作說明", "normal", 28))
+    b.append(button(1100, 572, 380, 60, "設定", "normal", 28))
+    b.append(button(1100, 648, 380, 60, "離開遊戲", "normal", 28))
     b.append(text(1290, 735, "滑鼠點選　Enter 確認", 16, GREY, SANS, 700, "middle"))
     b.append(embers(0, 600, 1600, 900, 70, 9))
-    b.append(text(1570, 880, "灰盒原型　v0.x", 14, GREY, SANS, 500, "end"))
+    b.append(text(1570, 880, "武俠 Roguelike・灰盒原型", 14, GREY, SANS, 500, "end"))
+    b.append(note(30, 800, ["稿註：標題獨立不加印章與副標；類型資訊縮到右下角小字。"]))
     return doc("\n".join(b), "01 主選單")
 
 
@@ -911,7 +911,6 @@ def s08_start_weapon():
         if on:
             b.append(button(x + 50, y + ch + 20, cw - 100, 58, "持此兵器入江湖", "normal", 26))
     b.append(button(1330, 836, 200, 50, "返回", "normal", 22))
-    b.append(text(800, 868, "← → 切換　Enter 入江湖　Esc 返回角色", 16, GREY, SANS, 700, "middle"))
     b.append(note(1210, 24, ["稿註：兵器不分品質，差別只在打法；", "可選的起手兵器由 weapons.csv 的 starter 欄決定。"]))
     return doc("\n".join(b), "08 起手兵器")
 
