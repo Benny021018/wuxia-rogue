@@ -952,6 +952,17 @@ func _check_hit_reactions(world) -> void:
 	e.queue_free()
 
 
+# 取動畫與所有父節點變換後的世界頭部朝向。
+func _face_points_up(skeleton: Skeleton3D, rest_forward: Vector3) -> bool:
+	var head := skeleton.find_bone("Head")
+	if head < 0:
+		return false
+	var rest := skeleton.get_bone_global_rest(head).basis.orthonormalized()
+	var posed := skeleton.get_bone_global_pose(head).basis.orthonormalized()
+	var face := (skeleton.global_basis * posed * rest.inverse() * rest_forward).normalized()
+	return face.dot(Vector3.UP) > cos(deg_to_rad(35.0))
+
+
 func _check_third_person(world, player) -> void:
 	var S := CombatState.S
 	_check(player.model != null and player.model.has("Sword_Regular_A") and player.model.has("Sword_Idle"), "角色模型載入兩個動作庫")
@@ -1013,7 +1024,7 @@ func _check_third_person(world, player) -> void:
 		if e.cs.state() == S.AIR and e.global_position.y > 0.5:
 			launched = true
 			break
-	_check(launched and is_equal_approx(e._pose.rotation_degrees.x, 20.0), "挑月浮空時，敵人從直立向天空後仰二十度")
+	_check(launched and _face_points_up(e._visual.find_children("*", "Skeleton3D", true, false)[0], Vector3.FORWARD), "挑月浮空時，敵人頭部朝向天空")
 	# 浮空追打
 	var hp0: float = e.hp
 	player.deal(e, 10.0, false, 1.0, Vector3.INF, {"hitstun_s": 0.2, "launch": 0})
@@ -1060,7 +1071,7 @@ func _check_third_person(world, player) -> void:
 	player.take_damage(1.0, null, false, {"hitstun_s": 0.3, "launch": 1, "launch_h_m": 1.2})
 	_check(player.cs.state() == S.AIR and player.velocity.y > 0.0, "玩家被範圍攻擊打浮空")
 	player._animate(1.0 / 60.0)
-	_check(is_equal_approx(player.model.rotation_degrees.x, 20.0), "玩家浮空時向天空後仰二十度")
+	_check(_face_points_up(player.model.skeleton, Vector3.BACK), "玩家浮空時頭部朝向天空")
 	var up := false
 	for i in 240:
 		await get_tree().physics_frame

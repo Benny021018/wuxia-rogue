@@ -31,6 +31,11 @@ static func cfg(key: String) -> float:
 	return float(Data.combat_state.get(key, 0.0))
 
 
+## 臉的正前方為 -Z；仰躺時與天頂夾二十度。
+static func airborne_pitch() -> float:
+	return PI / 2.0 - deg_to_rad(cfg("air_tilt_deg"))
+
+
 func has_armor() -> bool:
 	return armor_t > 0.0 or (armor_always and armor_broken_t <= 0.0)
 

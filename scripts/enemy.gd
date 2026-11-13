@@ -234,7 +234,11 @@ func _physics_process(delta: float) -> void:
 	var lying := cs.base == CombatState.S.DOWN
 	if _pose:
 		if cs.base == CombatState.S.AIR:
-			_pose.rotation.x = deg_to_rad(CombatState.cfg("air_tilt_deg"))
+			_pose.rotation.x = CombatState.airborne_pitch()
+			if _anim and (_anim.assigned_animation != &"Idle" or _anim.is_playing()):
+				_anim.play(&"Idle", 0)
+				_anim.seek(0, true)
+				_anim.pause()
 		else:
 			_pose.rotation.x = lerp_angle(_pose.rotation.x, -PI / 2.0 if lying else 0.0, minf(1.0, delta * 16.0))
 		_pose.position.y = lerpf(_pose.position.y, 0.35 * size if lying else 0.0, minf(1.0, delta * 16.0))
@@ -266,7 +270,7 @@ func _physics_process(delta: float) -> void:
 	if _anim and _draw < 0.0 and _anim.current_animation not in [&"Slash", &"Shoot"]:
 		var moving := Vector2(velocity.x, velocity.z).length() > 0.15
 		var clip := &"Walk" if moving else &"Idle"
-		if _anim.current_animation != clip:
+		if _anim.current_animation != clip or not _anim.is_playing():
 			_anim.play(clip, 0.10)
 	_apply_knock(delta)
 	_apply_gravity(delta)
@@ -1151,12 +1155,17 @@ func _death_fling() -> void:
 	var dur := float(Data.feel.death_fling_s)
 	var dist := float(Data.feel.death_fling_m) * _knock_mass() ** 0.5
 	var local_away := global_basis.inverse() * _away
-	var tilt := Vector3(-local_away.z, 0, local_away.x).normalized() * 1.25
+	# 擊殺也會打飛。飛行方向只控制位移，仰面角度由外觀節點統一負責。
+	if _anim:
+		_anim.play(&"Idle", 0)
+		_anim.seek(0, true)
+		_anim.pause()
 	var t := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 	t.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	t.tween_property(_impact_pivot, "scale", Vector3(1.25, .7, 1.25), .05)
 	t.tween_property(_impact_pivot, "position", local_away * dist + Vector3.UP * .35, dur)
-	t.parallel().tween_property(_impact_pivot, "rotation", tilt, dur)
+	t.parallel().tween_property(_impact_pivot, "rotation", Vector3.ZERO, .05)
+	t.parallel().tween_property(_pose, "rotation:x", CombatState.airborne_pitch(), dur * .35).set_ease(Tween.EASE_OUT)
 	t.parallel().tween_property(_impact_pivot, "scale", Vector3.ONE * .15, dur).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 	t.parallel().tween_property(_flash, "albedo_color", Color(.1, 0, 0, .8), dur)
 	t.tween_callback(queue_free)
