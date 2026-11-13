@@ -35,3 +35,6 @@ tang_cloud_s,5,毒霧停留時間
 tang_trap_s,12,絲網機關待機時間
 han_rage_cost_pct,10,血怒生命消耗百分比
 han_rage_bonus_pct,20,血怒傷害加成百分比
+air_tilt_deg,20,浮空時從直立向後仰的角度
+attack_fx_span_mult,1.55,近戰與飛行招式特效寬度倍率
+area_fx_span_mult,1.35,範圍招式內層特效寬度倍率
