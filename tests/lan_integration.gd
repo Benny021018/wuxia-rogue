@@ -19,13 +19,13 @@ func _start() -> void:
 	root.add_child(main)
 	main._open_lan()
 	session = main.get_node("LanSession")
-	session.heroes.select(1 if guest else 0)
-	session.modes.select(0 if coop else 1)
 	if guest:
 		session.address.text = "127.0.0.1"
 		session.join_room()
 	else:
 		session.host()
+		session.modes.select(0 if coop else 1)
+		session._mode_selected(session.modes.selected)
 
 func _physics_process(_delta: float) -> bool:
 	frames += 1
@@ -36,6 +36,11 @@ func _physics_process(_delta: float) -> bool:
 	if session == null:
 		return false
 	if session.remote_id and not session.prepared and session.match_mode != "":
+		if session.browser.is_visible_in_tree() or not session.heroes.is_visible_in_tree():
+			push_error("進房後應可選角")
+			quit(1)
+			return false
+		session.heroes.select(1 if guest else 0)
 		session.ready_up()
 	if session.world == null:
 		return false

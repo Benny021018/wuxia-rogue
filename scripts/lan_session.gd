@@ -11,7 +11,10 @@ var layer := CanvasLayer.new()
 var panel := Control.new()
 var backdrop: Control
 var address := LineEdit.new()
-var rooms_found := OptionButton.new()
+var rooms_found := ItemList.new()
+var browser := Control.new()
+var room := Control.new()
+var empty_rooms: Label
 var last_seen := {}
 var modes := OptionButton.new()
 var heroes := OptionButton.new()
@@ -77,28 +80,40 @@ func _ready() -> void:
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	panel.add_child(frame)
-	_room_control(UIKit.title("局域網連線",48,UIKit.BONE,6,false,0,HORIZONTAL_ALIGNMENT_LEFT),68,34,720,76)
-	_room_control(UIKit.label("玩法與角色",25),48,174,500,50)
-	_room_control(UIKit.label("加入房間",25),638,174,508,50)
+	_room_control(UIKit.multiplayer_title(),52,23,350,86)
+	panel.add_child(browser)
+	panel.add_child(room)
+	browser.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	room.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	room.hide()
+	_room_control(UIKit.label("區網房間列表",30),48,172,640,52,browser)
+	_room_control(rooms_found,48,232,654,239,browser)
+	rooms_found.fixed_icon_size = Vector2i(24,24)
+	rooms_found.add_theme_font_size_override("font_size",24)
+	rooms_found.item_selected.connect(func(i): address.text = rooms_found.get_item_metadata(i))
+	rooms_found.item_activated.connect(func(i):
+		address.text = rooms_found.get_item_metadata(i)
+		join_room())
+	empty_rooms = UIKit.label("尚未找到房間",23,UIKit.GREY,HORIZONTAL_ALIGNMENT_CENTER)
+	empty_rooms.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_room_control(empty_rooms,64,300,620,78,browser)
+	_room_control(UIKit.button("建立房間",host),738,184,410,62,browser)
+	address.placeholder_text = "房主區網 IP"
+	_room_control(address,738,284,410,58,browser)
+	_room_control(UIKit.button("加入房間",join_room),738,370,410,62,browser)
+	_room_control(UIKit.label("房間玩法",26),48,174,500,52,room)
+	_room_control(UIKit.label("選擇角色",26),738,174,410,52,room)
 	modes.add_item("合作闖關")
 	modes.add_item("擂台單挑・三命")
-	_room_control(modes,48,235,500,56)
+	_room_control(modes,48,245,654,64,room)
+	modes.item_selected.connect(_mode_selected)
 	for id in Data.char_order:
 		heroes.add_item(Data.characters[id].name_zh)
-	_room_control(heroes,48,313,500,56)
-	address.placeholder_text = "房主區網 IP（可自動搜尋）"
-	_room_control(rooms_found,638,235,508,56)
-	rooms_found.add_item("區網房間列表")
-	rooms_found.item_selected.connect(func(i):
-		if i > 0:
-			address.text = str(rooms_found.get_item_metadata(i)))
-	_room_control(address,638,313,508,56)
-	_room_control(UIKit.button("建立房間",host),48,397,500,64)
-	_room_control(UIKit.button("加入房間",join_room),638,397,508,64)
-	ready_button = UIKit.button("準備",ready_up,24,232,62)
-	_room_control(ready_button,664,532,232,62)
-	status = UIKit.label("選擇角色後建立或加入房間",22)
-	_room_control(status,48,504,590,114)
+	_room_control(heroes,738,245,410,64,room)
+	ready_button = UIKit.button("準備",ready_up)
+	_room_control(ready_button,738,370,410,62,room)
+	status = UIKit.label("正在搜尋同一區網內的房間",22)
+	_room_control(status,48,504,830,114)
 	_room_control(UIKit.button("返回主選單",leave,24,220,62),926,532,220,62)
 	discover.bind(DISCOVERY)
 	multiplayer.peer_connected.connect(_connected)
@@ -106,10 +121,22 @@ func _ready() -> void:
 	multiplayer.server_disconnected.connect(_server_lost)
 	multiplayer.connection_failed.connect(_failed)
 
-func _room_control(control: Control, x: float, y: float, width: float, height: float) -> void:
-	panel.add_child(control)
+func _room_control(control: Control, x: float, y: float, width: float, height: float, parent: Control = null) -> void:
+	(parent if parent else panel).add_child(control)
 	control.position = Vector2(x,y)
 	control.size = Vector2(width,height)
+
+func _mode_selected(index: int) -> void:
+	if local_slot == 0 and not prepared:
+		match_mode = "coop" if index == 0 else "duel"
+		if remote_id:
+			_room.rpc_id(remote_id,match_mode,PROTOCOL)
+
+func _enter_room() -> void:
+	browser.hide()
+	room.show()
+	modes.disabled = local_slot == 1 or prepared
+	ready_button.disabled = remote_id == 0 or prepared
 
 func host() -> void:
 	if multiplayer.multiplayer_peer != null and not multiplayer.multiplayer_peer is OfflineMultiplayerPeer:
@@ -120,7 +147,7 @@ func host() -> void:
 		return
 	multiplayer.multiplayer_peer = peer
 	match_mode = "coop" if modes.selected == 0 else "duel"
-	modes.disabled = true
+	_enter_room()
 	discover.close()
 	discover.set_broadcast_enabled(true)
 	status.text = "等待另一名玩家加入　" + str(Array(IP.get_local_addresses()).filter(func(ip): return "." in ip and ip != "127.0.0.1"))
@@ -142,6 +169,7 @@ func join_room() -> void:
 func _connected(id: int) -> void:
 	remote_id = id
 	if multiplayer.is_server():
+		_enter_room()
 		_room.rpc_id(id, match_mode, PROTOCOL)
 	status.text = "已連線，選擇角色後按準備"
 
@@ -152,13 +180,14 @@ func _room(kind: String, protocol: String) -> void:
 		return
 	match_mode = kind
 	modes.select(0 if kind == "coop" else 1)
-	modes.disabled = true
+	_enter_room()
 
 func ready_up() -> void:
 	if remote_id == 0 or match_mode.is_empty() or prepared or ended:
 		return
 	selection = Data.char_order[heroes.selected]
 	prepared = true
+	modes.disabled = true
 	heroes.disabled = true
 	ready_button.disabled = true
 	status.text = "已準備，等待對方"
@@ -170,6 +199,7 @@ func ready_up() -> void:
 @rpc("any_peer","reliable")
 func _guest_ready(id: String) -> void:
 	if multiplayer.is_server() and multiplayer.get_remote_sender_id() == remote_id and world == null and Data.characters.has(id):
+		modes.disabled = true
 		guest_selection = id
 		_try_start()
 
@@ -427,17 +457,13 @@ func _process(delta: float) -> void:
 			var parts := discover.get_packet().get_string_from_utf8().split("|")
 			var ip := discover.get_packet_ip()
 			if parts.size() == 2 and parts[0] == PROTOCOL and parts[1] in ["coop","duel"]:
-				if not last_seen.has(ip):
-					rooms_found.add_item(("%s　" % ip) + ("合作闖關" if parts[1] == "coop" else "擂台單挑"))
-					rooms_found.set_item_metadata(rooms_found.item_count-1,ip)
-				last_seen[ip] = Time.get_ticks_msec()
-				if address.text.is_empty() and not address.has_focus():
-					address.text = ip
-		for i in range(rooms_found.item_count-1,0,-1):
+				_record_room(ip,parts[1])
+		for i in range(rooms_found.item_count-1,-1,-1):
 			var ip: String = rooms_found.get_item_metadata(i)
 			if Time.get_ticks_msec()-int(last_seen[ip]) > 4000:
 				last_seen.erase(ip)
 				rooms_found.remove_item(i)
+		empty_rooms.visible = rooms_found.item_count == 0
 		return
 	var p = fighters[local_slot]
 	var other = fighters[1-local_slot]
@@ -453,6 +479,19 @@ func _process(delta: float) -> void:
 		hud.text += "　開戰倒數 %d" % ceili(countdown)
 	elif p.dead:
 		hud.text += "　觀戰中"
+
+func _record_room(ip: String, kind: String) -> void:
+	var caption := "%s    ·    %s" % ["合作闖關" if kind == "coop" else "擂台單挑",ip]
+	if last_seen.has(ip):
+		for i in rooms_found.item_count:
+			if rooms_found.get_item_metadata(i) == ip:
+				rooms_found.set_item_text(i,caption)
+				break
+	else:
+		rooms_found.add_item(caption)
+		rooms_found.set_item_metadata(rooms_found.item_count-1,ip)
+	last_seen[ip] = Time.get_ticks_msec()
+	empty_rooms.hide()
 
 func _physics_process(delta: float) -> void:
 	if world == null or ended:

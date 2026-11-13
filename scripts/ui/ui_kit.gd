@@ -411,3 +411,13 @@ static func set_kbd_nav(on: bool, vp: Viewport) -> void:
 		f._on_focus(true)
 	elif f:
 		f.queue_redraw()
+
+
+## 題字採用遊戲隨附的思源宋體輪廓，配合墨痕與朱印。
+static func multiplayer_title() -> TextureRect:
+	var art := TextureRect.new()
+	art.texture = preload("res://assets/ui/multiplayer-title.svg")
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return art
