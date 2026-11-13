@@ -259,7 +259,7 @@ func _animate(delta: float) -> void:
 	var S := CombatState.S
 	var lean := -deg_to_rad(CombatState.cfg("dodge_lean_deg")) if dash_t > 0.0 and hp > 0.0 else 0.0
 	if cs.base == S.AIR and hp > 0.0:
-		model.rotation.x = deg_to_rad(CombatState.cfg("air_tilt_deg"))
+		model.rotation.x = CombatState.airborne_pitch()
 	else:
 		model.rotation.x = lerpf(model.rotation.x, lean, minf(1.0, delta * 22.0))
 	if hp <= 0.0:
