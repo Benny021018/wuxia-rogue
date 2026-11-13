@@ -98,8 +98,8 @@ func show_help(from_pause := false) -> void:
 	grid.add_theme_constant_override("h_separation", 26)
 	grid.add_theme_constant_override("v_separation", 12)
 	keys.add_child(grid)
-	for pair in [["WASD", "移動"], ["滑鼠", "視角"], ["空白鍵", "跳躍"], ["Shift", "衝刺（短暫無敵）"],
-			["左鍵", "用手上的武器出招"], ["Q／滾輪", "切換主武器、副武器"], ["1／2", "直接拿主武器／副武器"], ["E", "在悟道碑參悟"],
+	for pair in [["WASD", "移動"], ["滑鼠", "視角"], ["空白鍵", "跳躍"], ["Shift", "閃避（短暫無敵）"],
+			["左鍵", "普攻，連按接連段"], ["右鍵 Q E R 1 2 3", "七個技能"], ["V", "大招（怒氣滿）"], ["F", "參悟、鐵匠、商人"], ["K", "經脈"],
 			["Tab", "武學與門派"], ["Esc", "暫停"]]:
 		var row := HBoxContainer.new()
 		var k := UIKit.box("chip", "", 4)
@@ -117,8 +117,8 @@ func show_help(from_pause := false) -> void:
 		grid.add_child(row)
 	_at(UIKit.box_text("narration",
 		"進入區域會「鎖陣」封住退路，殺光所有敵人後「破陣」。\n" +
-		"破陣後悟道碑浮現，花銀兩參悟三選一：武器決定攻擊方式，武學強化自身。\n" +
-		"武器分主武器與副武器，同時只用一把，可隨時切換。\n" +
+		"破陣後悟道碑浮現，轉天機輪參悟三選一，武學強化自身。\n" +
+		"敵人會被打出硬直、挑上半空、打倒在地；精英與首領有霸體，要用破霸體的招式打斷。\n" +
 		"重複參悟同一門武學會升級，Lv3 小成、Lv5 圓滿各有特殊效果。\n" +
 		"同門派武學達 2／4／5 門啟動門派傳承。擊敗敵人吸納真氣，按 K 衝擊奇經八脈的穴位，打通越多境界越高。", 21, "", HORIZONTAL_ALIGNMENT_LEFT), 210, 400, 1180, 250)
 	var back := UIKit.button("返回", show_pause if from_pause else show_main, 22, 200, 50)
@@ -198,68 +198,8 @@ func _char_card(cid: String, i: int) -> void:
 			line.mouse_filter = Control.MOUSE_FILTER_PASS
 			realms.add_child(line)
 	if on:
-		var go := UIKit.button("選定此人", show_weapon_pick, 26, 300, 58)
+		var go := UIKit.button("選定此人", func(): start_run.emit(_selected, ""), 26, 300, 58)
 		_at(go, x + 60, y + h + 18, 300, 58)
-		_focus_first(go)
-
-
-# ------------------------------------------------------------------ 起手兵器
-func show_weapon_pick() -> void:
-	## 選角之後挑一把起手兵器（weapons.csv 的 starter）；起手兵器沒有詞條
-	_clear()
-	_full(UIKit.overlay(1.0))
-	var lines := _fx()
-	lines.add_speed_lines(Vector2(800, 470), 420, 1200, 90, UIKit.VIOLET, 23, 1.5)
-	_at(UIKit.title("選擇起手兵器", 64, UIKit.BONE, 9, false, -2), 450, 40, 700, 90)
-	var c: Dictionary = Data.characters[_selected]
-	var face := PackedVector2Array([Vector2(10, 6), Vector2(146, 6), Vector2(128, 126), Vector2(10, 126)])
-	_at(UIKit.clipped(UIKit.portrait_crop(_selected, 150.0 / 130.0, 0.6, 0.5), face, UIKit.BONE, 3.0), 30, 24, 150, 130, 0, 0)
-	_at(UIKit.label(c.name_zh, 30, UIKit.BONE, HORIZONTAL_ALIGNMENT_LEFT, true), 196, 46, 260, 40, 0, 0)
-	_at(UIKit.label("%s・%s" % [c.title, Data.sects[c.origin_sect].name_zh], 16, UIKit.EMBER, HORIZONTAL_ALIGNMENT_LEFT, true), 196, 90, 300, 26, 0, 0)
-	var starters := Game.starter_weapons()
-	_weapon_sel = clampi(_weapon_sel, 0, starters.size() - 1)
-	var gap := 470.0
-	var x0 := 800.0 - (starters.size() - 1) * gap / 2.0 - 200.0
-	for i in starters.size():
-		_weapon_card(starters[i], i, x0 + i * gap)
-	set_meta("picking_weapon", true)
-	_at(UIKit.button("返回", show_select, 22, 200, 50), 1330, 836, 200, 50)
-
-
-func _weapon_card(wid: String, i: int, x: float) -> void:
-	var w: Dictionary = Data.weapons[wid]
-	var on := i == _weapon_sel
-	var y := 180.0
-	var cw := 400.0
-	var ch := 560.0
-	var k := 28.0
-	var outline := PackedVector2Array([Vector2(0, 0), Vector2(cw - k, 0), Vector2(cw, k), Vector2(cw, ch), Vector2(k, ch), Vector2(0, ch - k)])
-	var card := ComicFX.new()
-	if on:
-		for g in 4:
-			var grow := 4.0 + g * 5.0
-			card.add_poly(PackedVector2Array([Vector2(-grow, -grow), Vector2(cw - k + grow * 0.4, -grow), Vector2(cw + grow, k - grow * 0.4), Vector2(cw + grow, ch + grow), Vector2(k - grow * 0.4, ch + grow), Vector2(-grow, ch - k + grow * 0.4)]), Color(UIKit.EMBER, 0.14 - g * 0.03))
-	card.add_poly(outline, Color("#0f0d12") if on else UIKit.INK2)
-	card.add_outline(outline, UIKit.BLOOD if on else Color("#3a363e"), 4.0 if on else 3.0)
-	card.mouse_filter = Control.MOUSE_FILTER_STOP
-	card.gui_input.connect(_on_weapon_card_input.bind(wid, i))
-	_at(card, x, y, cw, ch)
-	var glow := UIKit.bloom(UIKit.TEAL, 0.9)
-	glow.modulate.a = 0.6 if on else 0.18
-	_at(glow, x + 20, y + 20, cw - 40, 300)
-	_weapon_badge(x + 90, y + 40, 220, String(w["class"]), UIKit.BONE if on else UIKit.GREY)
-	var s := UIKit.seal(String(w["class"]), UIKit.BLOOD if on else Color("#4a2a2e"), 24, 6)
-	_at(s, x + cw - 60 - s.size.x / 2.0, y + 40, s.size.x, s.size.y)
-	_at(UIKit.title(w.name_zh, 50, UIKit.BONE if on else Color("#b9b3bb"), 8, false, -2), x, y + 286, cw, 70)
-	_at(UIKit.label("%s・%s" % [w["class"], {"melee": "近戰", "mid": "中距離", "ranged": "遠程"}[w.range_type]], 18, UIKit.EMBER if on else UIKit.GREY, HORIZONTAL_ALIGNMENT_CENTER, true), x, y + 350, cw, 28)
-	var stats := UIKit.box_text("system" if on else "system_dark", "%s\n傷害 %s × %s 段\n間隔 %s 秒　射程 %s m" % [w.pattern_desc, w.dmg, w.hits, w.interval_s, w.range_m], 16, "", HORIZONTAL_ALIGNMENT_LEFT)
-	stats.set_padding(10, 20)
-	if not on:
-		stats.accent = Color("#3b4a4c")
-	_at(stats, x + 30, y + 392, cw - 60, 100)
-	if on:
-		var go := UIKit.button("持此兵器入江湖", func(): start_run.emit(_selected, wid), 26, cw - 100, 58)
-		_at(go, x + 50, y + ch + 20, cw - 100, 58)
 		_focus_first(go)
 
 
@@ -270,15 +210,6 @@ func _weapon_badge(x: float, y: float, size: float, weapon_class: String, color:
 	f.add_weapon_icon(Vector2(size, size) / 2.0, weapon_class, size / 110.0, color)
 	f.add_outline(sq, color, 2.0)
 	_at(f, x, y, size, size)
-
-
-func _on_weapon_card_input(event: InputEvent, wid: String, i: int) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		if i == _weapon_sel:
-			start_run.emit(_selected, wid)
-		else:
-			_weapon_sel = i
-			show_weapon_pick()
 
 
 func _tagged_line(tag: String, text: String, tag_color: Color, color: Color) -> Control:
@@ -303,7 +234,7 @@ func _tagged_line(tag: String, text: String, tag_color: Color, color: Color) -> 
 func _on_card_input(event: InputEvent, cid: String) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		if cid == _selected:
-			show_weapon_pick()
+			start_run.emit(_selected, "")
 		else:
 			_selected = cid
 			show_select()
@@ -319,20 +250,6 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	var keycode := ke.physical_keycode
 	if has_meta("settings_from") and keycode == KEY_ESCAPE:
 		_settings_back()
-		get_viewport().set_input_as_handled()
-		return
-	if get_meta("picking_weapon", false):
-		var n := Game.starter_weapons().size()
-		if keycode == KEY_LEFT or keycode == KEY_A:
-			_weapon_sel = (_weapon_sel + n - 1) % n
-		elif keycode == KEY_RIGHT or keycode == KEY_D:
-			_weapon_sel = (_weapon_sel + 1) % n
-		elif keycode == KEY_ESCAPE:
-			show_select()
-			return
-		else:
-			return
-		show_weapon_pick()
 		get_viewport().set_input_as_handled()
 		return
 	if not get_meta("selecting", false):

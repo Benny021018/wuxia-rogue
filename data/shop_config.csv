@@ -1,7 +1,7 @@
 key,value,note
-drop_chance_minion,0.012,小怪掉落武器的機率（每局約14把，原0.04約45把太氾濫）
-drop_chance_elite,0.6,精英掉落武器的機率
-drop_chance_boss,1.0,首領必掉武器
+drop_chance_minion,0,第三人稱改版後不再掉落武器（角色固定兵器）
+drop_chance_elite,0,第三人稱改版後不再掉落武器
+drop_chance_boss,0,第三人稱改版後不再掉落武器
 drop_luck_scale,0.5,每點幸運使掉落機率乘上(1+幸運×此值)
 affix_weights_minion,50|35|12|3,小怪掉落武器有1/2/3/4條詞條的權重
 affix_weights_elite,0|50|38|12,精英掉落至少2條詞條

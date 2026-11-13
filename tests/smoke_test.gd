@@ -64,14 +64,13 @@ func _run_character(cid: String) -> void:
 	player.invuln_t = 1.0e9
 	if cid == Data.char_order[0]:
 		_check_music(Data.map_order[0])
-		await _check_weapon_views(player)
 		await _check_loot_and_shops(world, player)
 		_check_meridians_and_shrine(player)
 		_check_wheel()
-		await _check_bow(player)
 		await _check_cover_tactics(world, player)
 		await _check_hit_reactions(world)
 		await _check_game_feel(world, player)
+		await _check_third_person(world, player)
 		var gate = world.rooms[0].gate_out
 		var meshes := (gate as Node).find_children("*", "MeshInstance3D", true, false)
 		_check(meshes.size() == 1, "山寨門只有一個可見模型")
@@ -127,8 +126,7 @@ func _run_character(cid: String) -> void:
 				guard += 1
 				await get_tree().physics_frame
 				if guard % 20 == 0:
-					player.cooldowns[0] = 0.0
-					player._attack(0)
+					player.use(["attack", "skill1", "skill3", "skill7"][(guard / 20) % 4])
 				for e in get_tree().get_nodes_in_group("enemies"):
 					if guard % 30 == 0:
 						player.deal(e, 1.0e7, false)
@@ -189,11 +187,8 @@ func _run_character(cid: String) -> void:
 		Game.weapons = [{"id": wid, "lv": 5}, {"id": wids[0], "lv": 5}]
 		Game.recompute()
 		for k in 3:
-			player.cooldowns = [0.0, 0.0]
-			player._attack(Game.active_weapon)
+			player.use("attack")
 			await _frames(2)
-			player._do_switch(-1)
-			player.swap_t = 0.0
 	player.invuln_t = 0.0
 	for k in 30:
 		player.take_damage(5.0, null)
@@ -211,12 +206,6 @@ func _run_character(cid: String) -> void:
 	Game.weapons = [{"id": "W001", "lv": 2}, {"id": "W007", "lv": 1}]
 	Game.active_weapon = 0
 	Game.recompute()
-	main.hud._process(0.0)
-	_check(main.hud.weapon_cards[0].line.visible and not main.hud.weapon_cards[1].line.visible, "HUD 標出手上的主武器")
-	Game.switch_weapon()
-	main.hud._process(0.0)
-	_check(main.hud.weapon_cards[1].line.visible and main.hud.weapon_cards[1].name.text == "竹弓", "HUD 跟著切換到副武器")
-	Game.switch_weapon(0)
 	main.gacha.open()
 	main.gacha.current = [{"kind": "W", "id": "W301", "rarity": "legendary"}]
 	main.gacha._set_state("cards")
@@ -241,17 +230,7 @@ func _run_character(cid: String) -> void:
 	main.hud.push_message("器靈覺醒：測試")
 	await _frames(2)
 	_check(main.hud.banner_burst.visible and main.hud.msg_box.get_child_count() > 0, "鎖陣橫幅與系統訊息")
-	# 起手兵器、掉落比較、鐵匠、商人
-	main.screens.show_weapon_pick()
-	_check(main.screens.get_meta("picking_weapon", false), "選角後進入起手兵器")
-	var picked: Array = []
-	var record := func(_c, w): picked.append(w)
-	main.screens.start_run.disconnect(main._start)
-	main.screens.start_run.connect(record)
-	main.screens._on_weapon_card_input(_click(), "W301", main.screens._weapon_sel)
-	main.screens.start_run.disconnect(record)
-	main.screens.start_run.connect(main._start)
-	_check(picked == ["W301"], "點選起手兵器入江湖")
+	# 掉落比較、鐵匠、商人
 	main.hud.show_drop_compare(Game.make_weapon("W007", 2))
 	_check(main.hud.drop_panel.visible and main.hud.drop_panel.get_child_count() > 3, "掉落兵器比較面板")
 	main.hud.show_drop_compare(null)
@@ -301,17 +280,6 @@ func _run_character(cid: String) -> void:
 	Game.acu_open = keep_acu
 	Game.zhenqi = keep_zq
 	Game.recompute()
-	# 弓的紅圈準星
-	Game.weapons = [Game.make_weapon("W007", 0), Game.make_weapon("W001", 0)]
-	Game.active_weapon = 0
-	Game.recompute()
-	main.player.refresh_weapon_models()
-	await _frames(3)
-	_check(main.hud.reticle.visible and not main.hud.crosshair.visible and main.hud.reticle_r > 4.0, "拿弓時改用紅圈準星")
-	Game.switch_weapon(1)
-	main.player.refresh_weapon_models()
-	await _frames(3)
-	_check(not main.hud.reticle.visible and main.hud.crosshair.visible, "換回刀時恢復一般準星")
 	main.screens.show_pause()
 	main.screens.show_inventory(true)
 	main.screens.show_end(true)
@@ -529,48 +497,6 @@ func _check_wheel_budget(th: Dictionary) -> void:
 	Game.recompute()
 
 
-func _check_bow(player) -> void:
-	var keep: Array = Game.weapons.duplicate(true)
-	var keep_slot := Game.active_weapon
-	Game.weapons = [Game.make_weapon("W007", 0), null]
-	Game.active_weapon = 0
-	Game.recompute()
-	player.refresh_weapon_models()
-	player.cooldowns = [0.0, 0.0]
-	await _frames(2)
-	_check(player.is_bow(), "弓走拉弓流程")
-	var shots: int = player.attack_count
-	Input.action_press("aim")
-	Input.action_press("attack_1")
-	await _frames(50)
-	_check(player.bow_held and player.bow_draw() > 0.5, "按住左鍵拉弓")
-	_check(player.cam.fov < 60.0, "右鍵瞄準視角放大")
-	_check(player.attack_count == shots, "拉弓中還沒射出")
-	var sp_full: float = player.bow_spread_deg(1.0)
-	_check(player.bow_spread_deg(0.0) > sp_full * 3.0 and sp_full > 0.0, "拉越滿散射越小")
-	var dir: Vector3 = player._spread_dir(Vector3.FORWARD, 5.0)
-	_check(rad_to_deg(dir.angle_to(Vector3.FORWARD)) <= 5.01, "箭落在散射圈內")
-	Input.action_release("attack_1")
-	await _frames(2)
-	_check(player.attack_count == shots + 1 and not player.bow_held, "放開左鍵射出")
-	Input.action_release("aim")
-	await _frames(20)
-	_check(player.cam.fov > 79.0, "放開右鍵視角恢復")
-	# 拉不夠就放開：不射
-	player.cooldowns = [0.0, 0.0]
-	await _frames(30)
-	Input.action_press("attack_1")
-	await _frames(3)
-	Input.action_release("attack_1")
-	await _frames(2)
-	_check(player.attack_count == shots + 1, "拉弓不足就放開不會射出")
-	await _frames(20)
-	Game.weapons = keep
-	Game.active_weapon = keep_slot
-	Game.recompute()
-	player.refresh_weapon_models()
-
-
 func _check_loot_and_shops(world, player) -> void:
 	var old_weapons: Array = Game.weapons.duplicate(true)
 	var old_gold: float = Game.gold
@@ -602,10 +528,10 @@ func _check_loot_and_shops(world, player) -> void:
 	var keep_w: Array = Game.weapons.duplicate(true)
 	Game.weapons = [Game.make_weapon("W001", 0), null]
 	var pw: Array = Game._pool(Data.weapons["W001"].rarity, "W", {})
-	_check(not ("W001" in pw[0]) and "W007" in pw[0], "悟道碑武器候選不含已持有的武器")
+	_check(pw[0].is_empty(), "角色固定兵器：悟道碑不再出武器候選")
 	Game.weapons = keep_w
 	var boss_drop: Dictionary = Game.roll_weapon_drop("boss")
-	_check(not boss_drop.is_empty() and boss_drop.affixes.size() >= 3 and boss_drop.id in Game.FEATURED_WEAPONS, "首領必掉至少 3 條詞條的武器")
+	_check(boss_drop.is_empty(), "不再掉落武器（首領也不掉）")
 	# 手上那把的詞條才生效
 	Game.weapons = [Game.make_weapon("W001", 0), {"id": "W007", "lv": 1, "affixes": [{"id": "A01", "v": 10.0}], "reforges": 0}]
 	Game.active_weapon = 0
@@ -980,84 +906,6 @@ func _check_cover_tactics(world, player) -> void:
 	world.set_physics_process(true)
 	await _frames(2)
 
-func _check_weapon_views(player) -> void:
-	var allowed: Array = []
-	var held: Array = Game.weapons.duplicate(true)
-	Game.weapons = [null, null]  # 已持有的武器不會出現在悟道碑，先清空再看整個池
-	for rarity in Data.rarity_order:
-		allowed.append_array(Game._pool(rarity,"W",{})[0])
-	Game.weapons = held
-	allowed.sort()
-	_check(allowed==["W001","W007","W301"],"此版本只開放太刀、弓、大劍")
-	var old: Array = Game.weapons.duplicate(true)
-	Game.weapons[0] = {"id":"W007","lv":1}
-	Game.weapons[1] = {"id":"W301","lv":1}
-	Game.active_weapon = 0
-	Game.recompute()
-	var bow = player.weapon_models[0]
-	var greatsword = player.weapon_models[1]
-	_check(bow.visible and not greatsword.visible, "同時只拿主武器，副武器收起")
-	var events: Array = []
-	bow.attack(.8,1,func(i): events.append("bow%d"%i))
-	await _frames(8)
-	_check(events.is_empty() and bow.arrow.visible,"蓄力尚未放箭")
-	_check(bow.loader.visible and bow.loader.position.distance_to(bow.arrow.position)<.001,"搭箭時副手夾住箭尾")
-	Game.recompute()
-	_check(player.weapon_models[0] == bow,"刷新屬性保留進行中的動作")
-	player.request_switch()
-	await _frames(2)
-	_check(Game.active_weapon == 0 and bow.visible, "出招途中按切換，等動作做完")
-	await _frames(19)
-	_check(bow.flex_mesh.get_blend_shape_value(0)>.95 and bow.arrow.visible and bow.loader.position.distance_to(bow.arrow.position)<.001,"滿弓時弓身變形且箭尾仍在指間")
-	await _frames(28)
-	_check(events.count("bow0")==1 and events.size()==1,"一箭只觸發一次")
-	for i in 60:
-		if Game.active_weapon == 1:
-			break
-		await get_tree().physics_frame
-	_check(Game.active_weapon == 1 and greatsword.visible and not bow.visible, "動作結束後換成副武器")
-	_check(player.swap_t > 0.0, "切換後有收出時間")
-	var count: int = player.attack_count
-	player._attack(0)
-	_check(player.attack_count == count, "收起的主武器不能出招")
-	player.cooldowns = [0.0, 0.0]
-	player.set_physics_process(true)
-	Input.action_press("attack_1")
-	await _frames(2)
-	_check(player.attack_count == count, "收出時間內按攻擊不出招")
-	await _frames(int(Data.cfg("weapon_swap_s") * 60.0) + 2)
-	Input.action_release("attack_1")
-	_check(player.attack_count == count + 1, "收出時間過後副武器出招")
-	await _frames(90)
-	Game.weapons[1] = null
-	Game.active_weapon = 0
-	Game.recompute()
-	player.request_switch(1)
-	_check(player.switch_request == -9 and not Game.switch_weapon(1), "副武器格是空的不能切換")
-	Game.weapons[0] = {"id":"W001","lv":1}
-	Game.recompute()
-	var tachi = player.weapon_models[0]
-	_check(not tachi.blade.visible, "太刀待機入鞘")
-	var strokes: Array = []
-	tachi.attack(.8,1,func(i): strokes.append([i,tachi.blade.scale.z]))
-	await _frames(10)
-	_check(tachi.saya_hand.visible and tachi.blade.visible and strokes.is_empty(), "扶鞘拔刀尚未命中")
-	await _frames(46)
-	_check(strokes.size()==1 and strokes[0][1]>.99 and tachi.blade.visible and tachi.tachi_open, "出鞘後命中一次並回到持刀架勢")
-	await _frames(115)
-	_check(not tachi.blade.visible,"停手後納刀")
-	player.set_physics_process(false)
-	Input.action_press(tachi.attack_action)
-	for strike in 3:
-		tachi.attack(.30,1,func(i): strokes.append([i,tachi.blade.scale.z]); return true)
-		await _frames(21)
-		_check(tachi.tachi_open and tachi.tachi_chain==strike, "第%d刀保持出鞘連段" % (strike+1))
-	Input.action_release(tachi.attack_action)
-	await _frames(115)
-	_check(strokes.size()==4 and not tachi.blade.visible and not tachi.tachi_returning, "三連斬各一次傷害，鬆鍵收刀")
-	player.set_physics_process(true)
-	Game.weapons = old
-	Game.recompute()
 
 func _check_hit_reactions(world) -> void:
 	var e = world.spawn_enemy("H03", Vector3(-10, 0, 0), false)
@@ -1085,3 +933,115 @@ func _check_hit_reactions(world) -> void:
 	_check(e._flash_meshes[0].material_overlay == null, "泛紅結束還原原本外觀")
 	_check(e._impact_pivot.transform.is_equal_approx(Transform3D.IDENTITY) and e.global_position.is_equal_approx(origin), "連擊後完全回正，碰撞位置不漂移")
 	e.queue_free()
+
+
+func _check_third_person(world, player) -> void:
+	var S := CombatState.S
+	_check(player.model != null and player.model.has("Sword_Regular_A") and player.model.has("Sword_Idle"), "角色模型載入兩個動作庫")
+	_check(player.cam.get_parent() == player.pivot and player.cam.position.z > 2.0, "第三人稱鏡頭在角色後方")
+	_check(Game.weapons[1] == null and Game.current_weapon().id == String(Data.characters[Game.char_id].weapon_id), "角色使用固定兵器，沒有副武器")
+	Settings.values["hitstop"] = 0.0
+	player.runner.setup(player, Game.char_id)
+	player.cs.reset()
+	player.yaw = 0.0
+	player.rotation.y = 0.0
+	var e = world.spawn_enemy("H01", player.global_position + Vector3(0, 0, -2.0), false)
+	e.max_hp = 1.0e7
+	e.hp = 1.0e7
+	e.set_physics_process(false)
+	await _frames(2)
+	# 普攻：第一段打中，敵人進入受擊
+	player.use("attack")
+	_check(player.runner.busy() and player.runner.move.slot == "normal1", "左鍵出普攻第一段")
+	await _frames(20)
+	_check(e.hp < 1.0e7 and e.cs.state() == S.HIT, "普攻命中讓敵人受擊硬直")
+	# 連段：預輸入接第二段
+	player.use("attack")
+	await _frames(30)
+	_check(player.runner.combo >= 1, "連按接下一段普攻")
+	await _frames(60)
+	# 挑月：浮空
+	e.cs.reset()
+	e.set_physics_process(true)
+	player.use("skill1")
+	_check(player.runner.cd_left("skill1") > 0.0, "技能進入冷卻")
+	var launched := false
+	for i in 40:
+		await get_tree().physics_frame
+		if e.cs.state() == S.AIR and e.global_position.y > 0.5:
+			launched = true
+			break
+	_check(launched, "挑月把敵人挑上半空")
+	# 浮空追打
+	var hp0: float = e.hp
+	player.deal(e, 10.0, false, 1.0, Vector3.INF, {"hitstun_s": 0.2, "launch": 0})
+	_check(e.hp < hp0 and e.cs.state() == S.AIR and e.velocity.y > 0.0, "浮空中追打會再彈起")
+	var landed := false
+	for i in 240:
+		await get_tree().physics_frame
+		if e.cs.base == S.NORMAL:
+			landed = true
+			break
+	_check(landed and not e.cs.hittable(), "敵人落地後起身無敵")
+	hp0 = e.hp
+	player.deal(e, 10.0, false)
+	_check(is_equal_approx(e.hp, hp0), "起身無敵期間打不到")
+	e.queue_free()
+	# 精英霸體：普通招式打不出硬直，破霸體才行
+	var elite_id := ""
+	for id in Data.enemies:
+		if Data.enemies[id].rank == "elite":
+			elite_id = id
+			break
+	var el = world.spawn_enemy(elite_id, player.global_position + Vector3(0, 0, -2.0), false)
+	el.max_hp = 1.0e7
+	el.hp = 1.0e7
+	el.set_physics_process(false)
+	player.deal(el, 10.0, false, 1.0, Vector3.INF, {"hitstun_s": 0.4})
+	_check(el.cs.state() == S.ARMOR, "精英霸體吃招不硬直")
+	player.deal(el, 10.0, false, 1.0, Vector3.INF, {"hitstun_s": 0.4, "break_armor": 1})
+	_check(el.cs.state() == S.HIT, "破霸體的招式打出硬直")
+	el.queue_free()
+	# 玩家被打：硬直；範圍攻擊：浮空；落地起身無敵
+	var keep_inv: float = player.invuln_t
+	player.invuln_t = 0.0
+	player.hp = Game.max_hp()
+	player.hit_guard = 0.0
+	player.take_damage(1.0, null, false, {"hitstun_s": 0.3})
+	_check(player.cs.state() == S.HIT and not player.cs.can_act(), "玩家被打進入受擊")
+	player.use("attack")
+	_check(not player.runner.busy(), "受擊中不能出招")
+	await _frames(30)
+	_check(player.cs.can_act(), "硬直結束恢復操控")
+	player.take_damage(1.0, null, false, {"hitstun_s": 0.3})
+	_check(player.cs.can_act(), "受擊保護期間只受傷不硬直")
+	player.take_damage(1.0, null, false, {"hitstun_s": 0.3, "launch": 1, "launch_h_m": 1.2})
+	_check(player.cs.state() == S.AIR and player.velocity.y > 0.0, "玩家被範圍攻擊打浮空")
+	var up := false
+	for i in 240:
+		await get_tree().physics_frame
+		if player.cs.base == S.NORMAL:
+			up = true
+			break
+	_check(up and not player.cs.hittable(), "玩家落地後起身無敵")
+	# 閃避無敵
+	player.cs.reset()
+	player.cs.give_invincible(0.3)
+	var hp1: float = player.hp
+	player.take_damage(5.0, null, false, {"hitstun_s": 0.3})
+	_check(is_equal_approx(player.hp, hp1), "無敵時不受傷")
+	# 大招要怒氣
+	player.cs.reset()
+	player.runner.interrupt()
+	player.runner.rage = 0.0
+	player.use("ult")
+	_check(not player.runner.busy(), "怒氣不足不能放大招")
+	player.runner.rage = CombatState.cfg("rage_max")
+	player.use("ult")
+	_check(player.runner.busy() and player.runner.move.slot == "ult" and player.cs.state() == S.INVINCIBLE and player.runner.rage == 0.0, "怒氣滿放大招，全程無敵")
+	player.runner.interrupt()
+	player.cs.reset()
+	_check(main.hud.skill_ui.size() == 8 and main.hud.skill_ui[0].name.text != "", "HUD 顯示七技能與大招")
+	player.invuln_t = keep_inv
+	player.hp = Game.max_hp()
+	Settings.values["hitstop"] = 1.0

@@ -1496,6 +1496,31 @@ def s15_settings():
     return doc("\n".join(b), "15 設定")
 
 
+def s16_skill_bar():
+    b = []
+    _dim_scene(b, 0.25)
+    keys = ["右鍵", "Q", "E", "R", "1", "2", "3", "V"]
+    names = ["挑月", "疾風步", "追風連斬", "落雁斬", "拔刀・一閃", "殘影", "劍氣縱橫", "萬象歸一"]
+    cds = [0, 3.2, 0, 0, 9.0, 0, 0, None]
+    x0, y, w, gap = 566, 800, 60, 6
+    b.append(text(x0, y - 14, "怒氣", 13, GREY, SANS, 900))
+    b.append(bar(x0 + 40, y - 26, 8 * w + 7 * gap - 40, 12, 0.62, "url(#bloodFill)", segs=10, cut=5))
+    for i in range(8):
+        x = x0 + i * (w + gap)
+        ult = i == 7
+        col = EMBER if ult else BONE
+        b.append(f'<rect x="{x}" y="{y}" width="{w}" height="{w}" fill="{INK}" stroke="{col}" stroke-width="{3 if ult else 2}"/>')
+        if cds[i]:
+            h = w * cds[i] / 12
+            b.append(f'<rect x="{x+1}" y="{y+1}" width="{w-2}" height="{h:.0f}" fill="{BONE}" opacity=".28"/>')
+            b.append(text(x + w / 2, y + 40, f"{cds[i]:.0f}", 24, BONE, SANS, 900, "middle"))
+        b.append(f'<rect x="{x}" y="{y}" width="{28 if len(keys[i]) < 2 else 40}" height="18" fill="{col}"/>')
+        b.append(text(x + 4, y + 14, keys[i], 13, INK, SANS, 900))
+        b.append(text(x + w / 2, y + w + 16, names[i][:4], 12, GREY if cds[i] else BONE, SANS, 700, "middle"))
+    b.append(note(30, 30, ["稿註：第三人稱技能列，放在畫面下方中央（生命條與兵器卡之間）。", "七個技能＋大招；冷卻時由上往下蓋灰並顯示剩餘秒數；怒氣滿時大招框轉橘紅。"]))
+    return doc("\n".join(b), "16 技能列")
+
+
 def build(only=None):
     os.makedirs(OUT, exist_ok=True)
     screens = {k: v for k, v in globals().items() if k.startswith("s") and k[1:3].isdigit()}
@@ -1504,7 +1529,7 @@ def build(only=None):
             continue
         slug = {"s00": "00-style", "s01": "01-main-menu", "s02": "02-character-select", "s03": "03-hud",
                 "s04": "04-shrine", "s05": "05-martial-panel", "s06": "06-pause", "s07": "07-result",
-                "s08": "08-start-weapon", "s09": "09-drop-compare", "s10": "10-smith", "s11": "11-merchant", "s12c": "12c-meridian-pose", "s12d": "12d-meridian-poses", "s13": "13-bow-aim", "s14": "14-tianji-wheel", "s15": "15-settings"}[name.split("_")[0]]
+                "s08": "08-start-weapon", "s09": "09-drop-compare", "s10": "10-smith", "s11": "11-merchant", "s12c": "12c-meridian-pose", "s12d": "12d-meridian-poses", "s13": "13-bow-aim", "s14": "14-tianji-wheel", "s15": "15-settings", "s16": "16-skill-bar"}[name.split("_")[0]]
         path = os.path.join(OUT, slug + ".svg")
         with open(path, "w", encoding="utf-8") as f:
             f.write(fn())

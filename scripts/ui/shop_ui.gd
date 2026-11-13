@@ -78,8 +78,11 @@ func _refresh() -> void:
 		UIKit.set_title(title_node, "鐵匠・強化與重鑄")
 		coin_label.text = "持有 %d 銀兩" % int(Game.gold)
 		clang.visible = true
-		for i in 2:
-			_smith_slot(i, 170.0 + i * 660.0)
+		if Game.weapons[1] == null:
+			_smith_slot(0, 500.0)          # 角色固定一把兵器：置中顯示
+		else:
+			for i in 2:
+				_smith_slot(i, 170.0 + i * 660.0)
 	else:
 		UIKit.set_title(title_node, "商人・武學")
 		coin_label.text = "持有 %d 銀兩　｜　武學 %d / %d" % [int(Game.gold), Game.martial.size(), Game.martial_slots()]

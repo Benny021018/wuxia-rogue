@@ -84,6 +84,8 @@ var _stuck_t := 0.0
 # 打擊感
 var _knock := Vector3.ZERO          # 擊退速度（逐幀衰減）
 var _away := Vector3.FORWARD        # 最後一次被打的方向（玩家 → 敵人）
+var cs := CombatState.new()         # 六種狀態（與玩家共用，見 docs/combat-design.md）
+var _pose: Node3D                   # 倒地／浮空時把整個外觀放平
 var last_hit_metal := false         # 最後一擊打在盾牌／鎧甲上（音效用金屬層）
 
 
@@ -91,6 +93,8 @@ func setup(id: String, stg: int, w, pos: Vector3) -> void:
 	eid = id
 	row = Data.enemies[id]
 	rank = row.rank
+	cs.armor_always = rank != "minion"
+	cs.hitstun_mult = 1.0 if rank == "minion" else CombatState.cfg("hitstun_elite_mult" if rank == "elite" else "hitstun_boss_mult")
 	stage = stg
 	world = w
 	max_hp = Data.enemy_hp(id, stg)
@@ -132,7 +136,9 @@ func _ready() -> void:
 	col.position.y = 0.9 * size
 	add_child(col)
 	_visual = Node3D.new()
-	add_child(_impact_pivot)
+	_pose = Node3D.new()
+	add_child(_pose)
+	_pose.add_child(_impact_pivot)
 	_impact_pivot.add_child(_visual)
 	if BANDIT_MODELS.has(eid):
 		var model: Node3D = BANDIT_MODELS[eid].instantiate()
@@ -224,6 +230,17 @@ func _physics_process(delta: float) -> void:
 		return
 	_route_retry -= delta
 	_tick_status(delta)
+	cs.tick(delta, is_on_floor())
+	var lying := cs.base == CombatState.S.AIR or cs.base == CombatState.S.DOWN
+	if _pose:
+		_pose.rotation.x = lerp_angle(_pose.rotation.x, -PI / 2.0 if lying else 0.0, minf(1.0, delta * 16.0))
+		_pose.position.y = lerpf(_pose.position.y, 0.35 * size if lying else 0.0, minf(1.0, delta * 16.0))
+	if not cs.can_act():
+		# 受擊、浮空、倒地：不能行動，招式被打斷
+		_stun_t = maxf(_stun_t, delta)
+		_windup = 0.0
+		_state = ""
+		_body_mat.emission_enabled = false
 	if _stun_t > 0.0:
 		if _rstate == "aim" or _rstate == "recover":
 			_ranged_cancel(0.6)
@@ -270,6 +287,9 @@ func _knock_mass() -> float:
 
 
 func _apply_gravity(delta: float) -> void:
+	if cs.base == CombatState.S.AIR:
+		velocity.y -= CombatState.cfg("air_gravity") * delta
+		return
 	if _flying:
 		return
 	if not is_on_floor():
@@ -421,7 +441,7 @@ func _hit_player(amount: float) -> void:
 		_first_strike = false
 	if eid == "H07" and hp < max_hp * 0.3:
 		hp = minf(max_hp, hp + amount * 0.3)
-	player.take_damage(amount, self)
+	player.take_damage(amount, self, false, {"hitstun_s": CombatState.cfg("enemy_hitstun_s" if rank == "minion" else ("enemy_hitstun_elite_s" if rank == "elite" else "enemy_hitstun_boss_s"))})
 
 
 func _cancel_draw() -> void:
@@ -619,7 +639,7 @@ func _aoe_after(center: Vector3, r: float, delay: float, amount: float) -> void:
 	Sfx.play("aoe_boom", center)
 	Feel.shake(float(Data.feel.shake_boom) * clampf(1.0 - d / (r * 3.0), 0.2, 1.0))
 	if d <= r:
-		player.take_damage(amount, self)
+		player.take_damage(amount, self, false, {"hitstun_s": 0.4, "launch": 1, "launch_h_m": CombatState.cfg("enemy_aoe_launch_h_m")})
 
 
 func _summon(id: String, n: int, cap: int) -> void:
@@ -1009,8 +1029,8 @@ func _react_to_hit(away: Vector3, weight: float, guard: bool) -> void:
 
 
 ## 被玩家擊中：回傳實際造成的傷害
-func take_hit(amount: float, from_pos: Vector3, crit: bool, weight := 1.0) -> float:
-	if dead:
+func take_hit(amount: float, from_pos: Vector3, crit: bool, weight := 1.0, hit := {}) -> float:
+	if dead or not cs.hittable():
 		return 0.0
 	var dmg_in := amount * (1.0 + _vuln / 100.0)
 	var to_attacker := Vector3(from_pos.x - global_position.x, 0, from_pos.z - global_position.z).normalized()
@@ -1045,6 +1065,16 @@ func take_hit(amount: float, from_pos: Vector3, crit: bool, weight := 1.0) -> fl
 		_react_to_hit(-to_attacker, weight * (1.5 if crit else 1.0), eid == "H03" and front)
 		var kv := float(Data.feel.knock_speed) * clampf(weight, .5, 2.0) * (float(Data.feel.knock_crit_mult) if crit else 1.0)
 		_knock += _away * kv * _knock_mass() * (.4 if last_hit_metal else 1.0)
+		if not hit.is_empty():
+			# 狀態屬性：硬直、浮空、破霸體、擊倒；招式另外指定的推開距離加在擊退上
+			var res: Dictionary = cs.apply_hit(hit)
+			if float(res.launch_v) > 0.0:
+				velocity.y = float(res.launch_v)
+				_knock *= 0.3
+			elif res.absorbed:
+				_knock *= 0.2
+			else:
+				_knock += _away * float(hit.get("push_m", 0.0)) * 3.0 * _knock_mass()
 	return dealt
 
 

@@ -45,6 +45,7 @@ func _ready() -> void:
 	_build_crosshair()
 	_build_vitals()
 	_build_weapons()
+	_build_skills()
 	_build_zone()
 	_build_boss()
 	_build_banner()
@@ -175,6 +176,75 @@ func _build_vitals() -> void:
 	_at(free_chip, 340, 856, 10, 22, 0, 1)
 
 
+# ------------------------------------------------------------------ 技能列（docs/ui-drafts/16-skill-bar.svg）
+const SKILL_SLOTS := ["skill1", "skill2", "skill3", "skill4", "skill5", "skill6", "skill7", "ult"]
+const SKILL_KEYS := ["右鍵", "Q", "E", "R", "1", "2", "3", "V"]
+var skill_ui: Array = []           # 每格 {frame, cd, num, name}
+var rage_bar: ComicBar
+var _skill_char := ""
+
+
+func _build_skills() -> void:
+	var x0 := 566.0
+	var y := 800.0
+	var w := 60.0
+	var gap := 6.0
+	_at(UIKit.label("怒氣", 13, UIKit.GREY), x0, y - 30, 40, 18, 0.5, 1)
+	rage_bar = UIKit.bar(UIKit.BLOOD, UIKit.EMBER, 10, 5.0)
+	_at(rage_bar, x0 + 40, y - 26, 8 * w + 7 * gap - 40, 12, 0.5, 1)
+	for i in 8:
+		var x := x0 + i * (w + gap)
+		var ult := i == 7
+		var frame := UIKit.box("chip", "", 0)
+		frame.fill = UIKit.INK
+		frame.border = UIKit.EMBER if ult else UIKit.BONE
+		_at(frame, x, y, w, w, 0.5, 1)
+		var cd := ColorRect.new()
+		cd.color = Color(UIKit.BONE, 0.28)
+		cd.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_at(cd, x + 1, y + 1, w - 2, 0, 0.5, 1)
+		var num := UIKit.label("", 24, UIKit.BONE, HORIZONTAL_ALIGNMENT_CENTER)
+		_at(num, x, y + 16, w, 30, 0.5, 1)
+		var key := UIKit.box("chip", "", 0)
+		key.fill = frame.border
+		key.border = frame.border
+		var kl := UIKit.label(SKILL_KEYS[i], 13, UIKit.INK, HORIZONTAL_ALIGNMENT_CENTER)
+		kl.autowrap_mode = TextServer.AUTOWRAP_OFF
+		key.add_child(kl)
+		_at(key, x, y, 40 if SKILL_KEYS[i].length() > 1 else 24, 18, 0.5, 1)
+		var nm := UIKit.label("", 12, UIKit.BONE, HORIZONTAL_ALIGNMENT_CENTER)
+		nm.autowrap_mode = TextServer.AUTOWRAP_OFF
+		nm.clip_text = true
+		_at(nm, x - 4, y + w + 2, w + 8, 18, 0.5, 1)
+		skill_ui.append({"frame": frame, "cd": cd, "num": num, "name": nm, "h": w - 2})
+
+
+func _refresh_skills() -> void:
+	var r = player.runner
+	if _skill_char != r.char_id:
+		_skill_char = r.char_id
+		for i in 8:
+			var mid: String = r.slots.get(SKILL_SLOTS[i], "")
+			var full: String = Data.moves[mid].name_zh if mid != "" else ""
+			skill_ui[i].name.text = full.get_slice("・", full.get_slice_count("・") - 1)
+			skill_ui[i].name.tooltip_text = full
+	rage_bar.max_value = CombatState.cfg("rage_max")
+	rage_bar.value = r.rage
+	for i in 8:
+		var u: Dictionary = skill_ui[i]
+		var slot: String = SKILL_SLOTS[i]
+		var left: float = r.cd_left(slot)
+		var mid: String = r.slots.get(slot, "")
+		var total: float = float(Data.moves[mid].cooldown_s) if mid != "" else 0.0
+		var frac := clampf(left / total, 0.0, 1.0) if total > 0.0 else 0.0
+		if slot == "ult":
+			frac = 1.0 - clampf(r.rage / CombatState.cfg("rage_max"), 0.0, 1.0)
+			u.frame.border = UIKit.EMBER if frac <= 0.0 else UIKit.DIM
+		u.cd.size.y = float(u.h) * frac
+		u.num.text = str(int(ceil(left))) if left > 0.05 else ""
+		u.name.modulate.a = 0.5 if frac > 0.0 else 1.0
+
+
 func _build_weapons() -> void:
 	for i in 2:
 		var x := 1110.0 + i * 240.0
@@ -278,6 +348,7 @@ func _process(_delta: float) -> void:
 	hp_bar.value = player.hp
 	hp_bar.overlay = player.shield
 	hp_bar.text = "%d / %d" % [int(player.hp), int(mh)]
+	_refresh_skills()
 	var need := float(Game.break_cost())
 	xw_bar.max_value = maxf(1.0, need)
 	xw_bar.value = minf(Game.zhenqi, need)
@@ -317,6 +388,7 @@ func _refresh_weapons() -> void:
 		var c: Dictionary = weapon_cards[i]
 		var w = Game.weapons[i]
 		var on := i == Game.active_weapon
+		c.root.visible = w != null or i == 0      # 角色固定一把兵器：空的副武器格不顯示
 		c.root.modulate = Color(1, 1, 1, 1.0 if on else 0.6)
 		c.line.visible = on
 		c.tag.fill = UIKit.BONE if on else UIKit.GREY
