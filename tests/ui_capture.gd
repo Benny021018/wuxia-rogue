@@ -97,7 +97,7 @@ func _ready() -> void:
 	main.gacha._skip()
 	await _shot("14-tianji-wheel", 4)
 	main.gacha.auto_advance = true
-	main.gacha.current = [{"kind": "W", "id": "W001", "rarity": "common"}, {"kind": "W", "id": "W301", "rarity": "legendary"}, {"kind": "M", "id": "M007", "rarity": "common"}]
+	main.gacha.current = [{"kind": "W", "id": "W001", "rarity": "common"}, {"kind": "W", "id": "W301", "rarity": "legendary", "affixes": [{"id": "A02", "v": 26}, {"id": "A03", "v": 29}, {"id": "A04", "v": 40}]}, {"kind": "M", "id": "M007", "rarity": "common"}]
 	main.gacha._set_state("cards")
 	await _shot("04-shrine")
 	main.gacha.visible = false

@@ -416,19 +416,21 @@ func _card(c: Dictionary, cx: float) -> void:
 	UIKit.place(body, 0, 0, 22, 236, cw - 44, 112)
 	root.add_child(body)
 	var extra := UIKit.label(d.extra, 15, UIKit.TEAL)
-	UIKit.place(extra, 0, 0, 24, 368, cw - 48, 70)
+	# 詞條或覺醒說明夾在數值框與按鈕之間，最多三行
+	UIKit.place(extra, 0, 0, 24, 358, cw - 48, ch - 84 - 8 - 358)
 	root.add_child(extra)
-	var buttons: Array = []
 	if d.needs_slot:
+		# 替換主／副武器左右並排，上方詞條才不會被蓋住（docs/ui-drafts/04-shrine.svg）
+		var bw := (cw - 72.0) / 2.0
 		for i in 2:
 			var cur: Dictionary = Game.weapons[i]
-			buttons.append(UIKit.button("替換%s：%s" % [Game.slot_name(i), Data.weapons[cur.id].name_zh], _on_pick.bind(c, i), 19, cw - 60, 48))
+			var b := UIKit.button("替換%s\n%s" % [Game.slot_name(i), Data.weapons[cur.id].name_zh], _on_pick.bind(c, i), 18, bw, 60)
+			UIKit.place(b, 0, 0, 30 + i * (bw + 12.0), ch - 84, bw, 60)
+			root.add_child(b)
 	else:
-		buttons.append(UIKit.button("領悟", _on_pick.bind(c, -1), 24, cw - 60, 48))
-	var by := ch - 24 - 58 * buttons.size()
-	for j in buttons.size():
-		UIKit.place(buttons[j], 0, 0, 30, by + j * 58, cw - 60, 48)
-		root.add_child(buttons[j])
+		var b := UIKit.button("領悟", _on_pick.bind(c, -1), 24, cw - 60, 48)
+		UIKit.place(b, 0, 0, 30, ch - 76, cw - 60, 48)
+		root.add_child(b)
 	cards_root.add_child(root)
 
 

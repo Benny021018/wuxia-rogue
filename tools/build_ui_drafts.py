@@ -698,9 +698,19 @@ def s04_shrine():
         b.append(system_box(x + 22, y + 236, cw - 44, 112, c["body"], 17))
         for j, r in enumerate(wrap(c["extra"], 21)[:3]):
             b.append(text(x + 24, y + 384 + j * 22, r, 15, TEAL, SANS, 700))
-        by = y + ch - 24 - 58 * len(c["btns"])
-        for j, (lab, st) in enumerate(c["btns"]):
-            b.append(button(x + 30, by + j * 58, cw - 60, 48, lab, st, 20 if len(lab) > 4 else 24))
+        if len(c["btns"]) == 2:
+            # 替換主／副武器左右並排，讓上方詞條完整露出
+            bw = (cw - 72) / 2
+            for j, (lab, st) in enumerate(c["btns"]):
+                top, name = lab.split("：")
+                bx = x + 30 + j * (bw + 12)
+                b.append(button(bx, y + ch - 92, bw, 64, "", st, 18))
+                b.append(text(bx + bw / 2, y + ch - 66, top, 18, BONE, SERIF, 900, "middle"))
+                b.append(text(bx + bw / 2, y + ch - 42, name, 15, EMBER if st == "hover" else GREY, SANS, 900, "middle"))
+        else:
+            by = y + ch - 24 - 58 * len(c["btns"])
+            for j, (lab, st) in enumerate(c["btns"]):
+                b.append(button(x + 30, by + j * 58, cw - 60, 48, lab, st, 20 if len(lab) > 4 else 24))
     if True:
         b.append(embers(540, 220, 1060, 860, 40, 13, RARITY["legendary"][1]))
     b.append(button(470, 836, 200, 50, "參悟", "disabled", 22))
@@ -1006,38 +1016,40 @@ def s11_merchant():
     sects = _csv("sects", "sect_id")
     b = []
     _shop_frame(b, "商人・武學", "持有 236 銀兩　｜　武學 3 / 8")
-    stock = [("M006", 1, False, 28), ("M002", 0, False, 28), ("M104", 0, True, 55), ("M205", 0, False, 110)]
+    stock = [("M006", 1, False, 28), ("M002", 0, False, 28), ("M104", 0, True, 55), ("M205", 0, False, 110),
+             ("M007", 2, False, 28), ("M003", 0, False, 28)]
+    cw, ch, gap = 460, 290, 22
+    x0 = (W - (3 * cw + 2 * gap)) / 2
     for i, (mid, lv, sold, price) in enumerate(stock):
         m = martial[mid]
         name, col = RARITY[m["rarity"]]
         sc = SECT_COL[m["sect"]]
-        x, y, cw, ch = 80 + i * 370, 200, 330, 540
-        k = 24
+        x, y = x0 + (i % 3) * (cw + gap), 200 + (i // 3) * (ch + 18)
+        k = 22
         outline = f"M{x},{y} H{x+cw-k} L{x+cw},{y+k} V{y+ch} H{x+k} L{x},{y+ch-k} Z"
         b.append(f'<g opacity="{.45 if sold else 1}">')
         b.append(f'<path d="{outline}" fill="#0f0d12" stroke="{col}" stroke-width="3"/>')
-        b.append(f'<path d="M{x},{y} H{x+cw-k} L{x+cw},{y+k} V{y+40} L{x},{y+72} Z" fill="{col}" opacity=".95"/>')
-        b.append(text(x + 18, y + 28, f'武學・{sects[m["sect"]]["name_zh"]}・{m["school"]}', 15, INK, SANS, 900))
-        b.append(seal(x + cw - 50, y + 64, name, 20, BLOOD if m["rarity"] != "legendary" else INK, 5))
-        b.append(f'<rect x="{x+20}" y="{y+90}" width="64" height="64" fill="{sc}"/>')
-        b.append(text(x + 52, y + 135, sects[m["sect"]]["name_zh"][0], 36, INK, SERIF, 900, "middle"))
-        b.append(brush_title(x + 98, y + 138, m["name_zh"], 36 if len(m["name_zh"]) <= 4 else 30, BONE, INK, 7, "start", -2))
+        b.append(f'<path d="M{x},{y} H{x+cw-k} L{x+cw},{y+k} V{y+34} L{x},{y+46} Z" fill="{col}" opacity=".95"/>')
+        b.append(text(x + 16, y + 25, f'武學・{sects[m["sect"]]["name_zh"]}・{m["school"]}', 14, INK, SANS, 900))
+        b.append(seal(x + cw - 46, y + 52, name, 18, BLOOD if m["rarity"] != "legendary" else INK, 5))
+        b.append(f'<rect x="{x+16}" y="{y+58}" width="52" height="52" fill="{sc}"/>')
+        b.append(text(x + 42, y + 96, sects[m["sect"]]["name_zh"][0], 30, INK, SERIF, 900, "middle"))
+        b.append(brush_title(x + 82, y + 96, m["name_zh"], 30 if len(m["name_zh"]) <= 4 else 26, BONE, INK, 6, "start", -2))
         lvtxt = "新習得・入門" if lv == 0 else f'{["", "入門", "熟練", "小成", "大成", "圓滿"][lv]} → {["", "入門", "熟練", "小成", "大成", "圓滿"][lv+1]}'
-        b.append(text(x + 22, y + 192, lvtxt, 17, EMBER, SANS, 900))
-        b.append(pips(x + 190, y + 186, lv, 5, 9))
+        b.append(text(x + 18, y + 136, lvtxt, 15, EMBER, SANS, 900))
+        b.append(pips(x + cw - 120, y + 130, lv, 5, 8))
         eff = m["effect_template"].replace("{v}", martial_value(m, lv + 1))
-        b.append(system_box(x + 20, y + 214, cw - 40, 90, wrap(eff, 17)[:2], 16))
-        for j, r in enumerate(wrap("小成：" + m["lv3_desc"], 17)[:3]):
-            b.append(text(x + 22, y + 336 + j * 22, r, 14, TEAL, SANS, 700))
+        b.append(system_box(x + 16, y + 150, cw - 32, 50, wrap(eff, 26)[:1], 15))
+        b.append(text(x + 18, y + 226, wrap("小成：" + m["lv3_desc"], 26)[0], 13, TEAL, SANS, 700))
         b.append("</g>")
         if sold:
-            b.append(seal(x + cw / 2, y + 300, "已售出", 40, BLOOD, -12))
+            b.append(seal(x + cw / 2, y + ch / 2 + 10, "已售出", 34, BLOOD, -12))
         else:
-            b.append(button(x + 30, y + ch - 76, cw - 60, 52, f"購買（{price} 銀兩）", "hover" if i == 0 else "normal", 20))
+            b.append(button(x + cw - 226, y + ch - 56, 206, 42, f"購買（{price} 銀兩）", "hover" if i == 0 else "normal", 18))
     b.append(button(580, 836, 220, 50, "重新上架（8）", "normal", 20))
     b.append(button(820, 836, 200, 50, "離開", "normal", 22))
     b.append(text(1580, 890, "已習得的武學再買會升級；武學格滿時只上架已習得的武學", 13, GREY, SANS, 700, "end"))
-    b.append(note(20, 20, ["稿註：每到休息區重新上架 4 門；", "價格依稀有度與區域成長，CSV 可調。"]))
+    b.append(note(20, 20, ["稿註：3 欄網格，6 門一次看完（shop_config.csv 的 merchant_slots）；", "價格依稀有度與區域成長，CSV 可調。"]))
     return doc("\n".join(b), "11 商人")
 
 

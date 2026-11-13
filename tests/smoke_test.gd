@@ -219,10 +219,21 @@ func _run_character(cid: String) -> void:
 	main.gacha.open()
 	main.gacha.current = [{"kind": "W", "id": "W301", "rarity": "legendary"}]
 	main.gacha._set_state("cards")
+	await _frames(2)
 	var labels: Array = []
-	for b in main.gacha.cards_root.find_children("*", "Button", true, false):
+	var btns: Array = main.gacha.cards_root.find_children("*", "Button", true, false)
+	for b in btns:
 		labels.append(b.text)
-	_check(labels.has("替換主武器：太刀") and labels.has("替換副武器：竹弓"), "參悟卡以主副武器替換")
+	_check(labels.has("替換主武器\n太刀") and labels.has("替換副武器\n竹弓"), "參悟卡以主副武器替換：%s" % str(labels))
+	if btns.size() == 2:
+		var br0: Rect2 = btns[0].get_global_rect()
+		var br1: Rect2 = btns[1].get_global_rect()
+		_check(absf(br0.position.y - br1.position.y) < 1.0 and br0.end.x <= br1.position.x, "替換主／副武器按鈕左右並排")
+		var extra_bottom := 0.0
+		for l in main.gacha.cards_root.find_children("*", "Label", true, false):
+			if l.text.begins_with("器靈覺醒") or l.text.begins_with("詞條"):
+				extra_bottom = maxf(extra_bottom, l.get_global_rect().end.y)
+		_check(extra_bottom < br0.position.y, "按鈕不蓋住詞條與覺醒說明")
 	main.gacha._on_close()
 	main.mode = "play"
 	main.hud.show_banner("鎖　陣", "測試", "lock")
@@ -258,6 +269,14 @@ func _run_character(cid: String) -> void:
 	Game.restock_merchant()
 	main.shop._refresh()
 	await _frames(2)
+	var cards: Array = main.shop.body.find_children("MerchantCard*", "", false, false)
+	var inside := cards.size() == Game.merchant_stock.size()
+	for c in cards:
+		var rr: Rect2 = c.get_global_rect()
+		var vp := get_viewport().get_visible_rect().size
+		if rr.position.x < 0 or rr.end.x > vp.x * 1.001 or rr.end.y > vp.y * 0.93:
+			inside = false
+	_check(inside, "商人 %d 門武學全部在畫面內（網格）" % cards.size())
 	main.shop._on_buy(0)
 	var stamps: int = main.shop.body.find_children("*", "ComicSeal", true, false).filter(func(n): return n.text == "已售出").size()
 	_check(Game.merchant_stock.is_empty() or (Game.merchant_stock[0].sold and stamps == 1), "商人賣出後蓋已售出印章")
