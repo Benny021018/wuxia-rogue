@@ -21,6 +21,7 @@ var counter_done := false
 var speed := 1.0
 var dir := Vector3.FORWARD    # 這一招的方向（出招瞬間的鏡頭水平方向）
 var next_crit := false
+var blood_rage_left := 0.0
 
 
 func setup(player, cid: String) -> void:
@@ -93,7 +94,6 @@ func _start(slot: String) -> void:
 		Feel.shake(0.3)
 	elif not slot.begins_with("normal"):
 		cds[slot] = float(move.cooldown_s) * (1.0 - minf(Game.st("cdr_pct"), 60.0) / 100.0)
-		Sfx.play("qi_burst")
 	if slot.begins_with("normal"):
 		combo = (combo + 1) % normals()
 		p.attack_count += 1
@@ -108,7 +108,15 @@ func _start(slot: String) -> void:
 	if a:
 		aspeed = clampf((a.length - from) / dur, 0.4, 4.0) * speed
 	p.model.play(move.anim, aspeed, from, 0.06, true)
-	p.swing_sound(move)
+	if move.kind == "buff":
+		blood_rage_left = float(move.self_to_s)
+		p.hp = maxf(1, p.hp - Game.max_hp() * CombatState.cfg("han_rage_cost_pct") / 100)
+		p.hp_changed.emit()
+	elif move.move_id == "tang_s7":
+		next_crit = true
+	if move.hits.is_empty() or move.kind == "counter":
+		_cue(p.global_position + Vector3.UP, 2.3, false)
+
 
 
 func _self_state(st: String, sec: float) -> void:
@@ -126,6 +134,7 @@ func interrupt() -> void:
 
 ## 回傳這一幀的位移速度（公尺／秒，水平），沒有就回傳 Vector3.ZERO
 func update(delta: float) -> Vector3:
+	blood_rage_left = maxf(0, blood_rage_left - delta)
 	for k in cds.keys():
 		cds[k] = maxf(0.0, float(cds[k]) - delta)
 	if move.is_empty():
@@ -190,14 +199,32 @@ func _fire(h: Dictionary) -> void:
 	var shape := String(h.shape)
 	if shape == "proj":
 		var aim: Vector3 = p.aim_dir(origin)
-		p.shoot(origin + aim * 0.6, aim, base, int(h.pierce), float(h.range_m), Color(0.6, 0.9, 1.0), h)
+		_cue(origin + aim, .85, false)
+		if next_crit:
+			h = h.duplicate()
+			h["forced_crit"] = true
+			next_crit = false
+		p.shoot(origin + aim * 0.6, aim, base, int(h.pierce), float(h.range_m), Color(move.fx_tint), h)
 		return
 	var center: Vector3 = p.global_position
 	var r := float(h.range_m)
+	if move.move_id == "tang_s3" or move.kind == "trap":
+		var trap: bool = move.kind == "trap"
+		if not trap:
+			center = p.aim_point(r)
+			center.y = minf(center.y, p.global_position.y + .1)
+			r = CombatState.cfg("tang_cloud_radius_m")
+		var field := preload("res://scripts/hidden_weapon_field.gd").new()
+		p.get_parent().level_root.add_child(field)
+		field.global_position = center
+		field.setup(p, h, r, base, trap)
+		_cue(center + Vector3.UP * .35, r, false)
+		return
 	if shape == "target":
 		center = p.aim_point(r)
 		r = 4.0
-		FX.impact_wave(p.get_parent(), center, r, 0.2, Color(0.7, 0.9, 1.0))
+		if char_id == "tang":
+			_needle_rain(center, r)
 	var targets: Array = []
 	var cosv := cos(deg_to_rad(float(h.arc_deg) / 2.0))
 	for e in p.get_tree().get_nodes_in_group("enemies"):
@@ -211,24 +238,49 @@ func _fire(h: Dictionary) -> void:
 		if shape in ["arc", "line"] and to.length() > 0.6 and to.normalized().dot(dir) < cosv:
 			continue
 		targets.append(e)
-	if shape == "circle":
-		FX.impact_wave(p.get_parent(), center, r, 0.2, Color(1.0, 0.85, 0.6))
+	var tint := Color(move.fx_tint)
+	var finisher: bool = move.slot == "ult" and fired == move.hits.size() - 1
+	if shape in ["circle", "target"]:
+		FX.impact_wave(p.get_parent(), center, r, .22, tint)
+		_cue(center + Vector3.UP * .6, r, finisher)
+	else:
+		FX.attack_trail(p.get_parent(), origin, dir, r, float(h.arc_deg), .2, tint, .2)
+		_cue(origin + dir * minf(r, 3.0) * .6, minf(r, 4.5), finisher)
 	p._imp = {"crit": false, "kill": false, "metal": false}
 	var any := false
 	for e in targets:
-		if next_crit:
-			p.dodge_crit_ready = true
 		if p.deal(e, base, false, _weight(h), Vector3.INF, h):
 			any = true
 			add_rage(CombatState.cfg("rage_per_hit"))
 	if any:
-		next_crit = false
 		p._impact_feedback(_weight(h))
 		if fired == 0 and not targets.is_empty():
 			p._on_attack_effects(targets[0], base, dir)
-	var slash: StringName = &"heavy-cleave" if _weight(h) > 1.4 else &"sword-slash"
-	if shape in ["arc", "line"]:
-		FX.play(p.get_parent(), origin + dir * minf(r, 3.0) * 0.6, slash, minf(r, 3.5) * 0.7, 0.16)
+
+
+## 刀光、毒色與聲音在實際出手時出現；反擊和無判定招以起勢為準。
+func _cue(pos: Vector3, span: float, finisher: bool) -> void:
+	var clip := StringName(move.fx_clip)
+	var sound := String(move.strike_sfx)
+	if finisher:
+		clip = &"ground-slam" if char_id != "nangong" else &"heavy-cleave"
+		sound = "aoe_boom"
+	FX.play(p.get_parent(), pos, clip, span, .24, Color(move.fx_tint), fired % 2 == 1)
+	Sfx.play(sound, pos)
+
+
+## 每一波針雨都在該次判定中心落下，散點固定以免干擾遊戲亂數。
+func _needle_rain(center: Vector3, radius: float) -> void:
+	for i in 5:
+		var angle := TAU * i / 5.0 + fired
+		var offset := Vector3(cos(angle), 0, sin(angle)) * radius * (.25 + .13 * i)
+		var end := center + offset + Vector3.UP * .1
+		var needle := FX.box(Vector3(.025, .68, .025), Color(move.fx_tint), 2)
+		p.get_parent().add_child(needle)
+		needle.global_position = end + Vector3.UP * 2.4
+		var fall := needle.create_tween()
+		fall.tween_property(needle, "global_position", end, .10)
+		fall.tween_callback(needle.queue_free)
 
 
 func _weight(h: Dictionary) -> float:

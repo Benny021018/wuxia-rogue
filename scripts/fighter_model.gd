@@ -19,11 +19,14 @@ var skeleton: Skeleton3D
 var hand: BoneAttachment3D
 var weapon: Node3D
 var current := ""
+var motion_pivot := Node3D.new()
+var idle := "Sword_Idle"
 
 
 func setup(char_id: String, weapon_id: String) -> void:
 	var body := UAL1.instantiate()
-	add_child(body)
+	add_child(motion_pivot)
+	motion_pivot.add_child(body)
 	body.rotation.y = PI          # 模型朝 +Z，轉成朝 -Z（Godot 的前方）
 	anim = body.find_children("*", "AnimationPlayer", true, false)[0]
 	skeleton = body.find_children("*", "Skeleton3D", true, false)[0]
@@ -38,6 +41,11 @@ func setup(char_id: String, weapon_id: String) -> void:
 	for n in LOOPS:
 		if anim.has_animation(n):
 			anim.get_animation(n).loop_mode = Animation.LOOP_LINEAR
+	# 產生獨立招式片段，保留原庫供通用移動及受擊共用。
+	for id in Data.char_moves[char_id].values():
+		var move: Dictionary = Data.moves[id]
+		if move.has("motion") and not lib.has_animation(id):
+			lib.add_animation(id, _compose(move))
 	var mesh: MeshInstance3D = body.find_children("*", "MeshInstance3D", true, false)[0]
 	var tint: Array = TINT.get(char_id, TINT.nangong)
 	for i in mesh.mesh.get_surface_count():
@@ -61,7 +69,94 @@ func setup(char_id: String, weapon_id: String) -> void:
 				sh.visible = false
 		for ap in weapon.find_children("*", "AnimationPlayer", true, false):
 			ap.stop()
-	play("Sword_Idle")
+	elif weapon_id == "W006":
+		weapon = flying_blade()
+		hand.add_child(weapon)
+		weapon.rotation_degrees.x = 75
+		idle = "Crouch_Idle_Loop"
+	play(idle)
+
+
+## 雙脊柳葉刃，掌中與飛行中的模型共用，刃尖朝 -Z。
+static func flying_blade() -> MeshInstance3D:
+	var tool := SurfaceTool.new()
+	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var rim := [Vector3(0,0,-0.31), Vector3(.046,0,-.07), Vector3(0,0,.12), Vector3(-.046,0,-.07)]
+	for side in [-1, 1]:
+		for i in rim.size():
+			tool.add_vertex(Vector3(0, .018 * side, -.065))
+			tool.add_vertex(rim[i])
+			tool.add_vertex(rim[(i + side + rim.size()) % rim.size()])
+	tool.generate_normals()
+	var blade := MeshInstance3D.new()
+	blade.mesh = tool.commit()
+	var metal := FX.mat(Color("#c2a5e5"), .65)
+	metal.cull_mode = BaseMaterial3D.CULL_DISABLED
+	blade.material_override = metal
+	return blade
+
+
+## 逐段取樣 UAL 的預備、伸展、收勢。每個有效判定時間正好落在伸展姿勢。
+func _compose(move: Dictionary) -> Animation:
+	var m: Dictionary = move.motion
+	var source: Animation = anim.get_animation(clip(m.source))
+	var result := Animation.new()
+	result.length = float(move.duration_s)
+	var beats: Array[float] = []
+	for h in move.hits:
+		if float(h.time_s) > 0:
+			beats.append(float(h.time_s))
+	if beats.is_empty():
+		beats.append(result.length * .5)
+	var times: Array[float] = [0.0]
+	var phases: Array[float] = [0.0]
+	for i in beats.size():
+		if i > 0:
+			times.append(lerpf(beats[i-1], beats[i], .48))
+			phases.append(.20)
+		times.append(beats[i])
+		phases.append(float(m.extension))
+	times.append(result.length)
+	phases.append(1.0)
+	for track in source.get_track_count():
+		var type := source.track_get_type(track)
+		if type not in [Animation.TYPE_ROTATION_3D, Animation.TYPE_POSITION_3D, Animation.TYPE_SCALE_3D]:
+			continue
+		var out := result.add_track(type)
+		var path := source.track_get_path(track)
+		result.track_set_path(out, path)
+		var bone := String(path.get_concatenated_subnames())
+		for k in range(1, times.size()):
+			var frames := maxi(1, ceili((times[k] - times[k-1]) * 30))
+			for j in range(0 if k == 1 else 1, frames + 1):
+				var f := float(j) / frames
+				var at := lerpf(times[k-1], times[k], f)
+				var phase := lerpf(phases[k-1], phases[k], smoothstep(0, 1, f))
+				var src := phase * source.length
+				var pose := sin(phase * PI) * (2 * phase - .45)
+				match type:
+					Animation.TYPE_ROTATION_3D:
+						var q := source.rotation_track_interpolate(track, src)
+						if bone == "spine_02":
+							q *= Quaternion(Vector3.UP, deg_to_rad(float(m.spine_deg)) * pose)
+						elif bone == "hand_r":
+							q *= Quaternion(Vector3.FORWARD, deg_to_rad(float(m.wrist_deg)) * pose)
+						result.rotation_track_insert_key(out, at, q.normalized())
+					Animation.TYPE_POSITION_3D:
+						var pos := source.position_track_interpolate(track, src)
+						result.position_track_insert_key(out, at, pos)
+					Animation.TYPE_SCALE_3D:
+						result.scale_track_insert_key(out, at, source.scale_track_interpolate(track, src))
+	# 在世界直立軸旋轉；骨盆本地軸會隨原片姿勢傾斜。
+	var pivot_path := anim.get_node(anim.root_node).get_path_to(motion_pivot)
+	for prop in ["rotation:y", "position:y"]:
+		var out := result.add_track(Animation.TYPE_VALUE)
+		result.track_set_path(out, NodePath("%s:%s" % [pivot_path, prop]))
+		for i in 31:
+			var f := float(i) / 30
+			var value := TAU * float(m.turns) * f if prop == "rotation:y" else float(m.lift_m) * sin(PI * f)
+			result.track_insert_key(out, result.length * f, value)
+	return result
 
 
 ## 動作庫原名（含 _Loop）或匯入後的名稱都可以
@@ -86,6 +181,7 @@ func play(n: String, speed := 1.0, from := 0.0, blend := 0.12, force := false) -
 	if n == current and not force and anim.is_playing():
 		anim.speed_scale = speed
 		return
+	motion_pivot.transform = Transform3D.IDENTITY
 	current = n
 	anim.play(n, blend, speed)
 	if from > 0.0:
@@ -98,6 +194,7 @@ func hold(n: String, at: float) -> void:
 	if n == "":
 		return
 	if current != n + "@hold":
+		motion_pivot.transform = Transform3D.IDENTITY
 		current = n + "@hold"
 		anim.play(n, 0.0)
 	anim.seek(minf(at, anim.get_animation(n).length - 0.01), true)

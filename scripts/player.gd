@@ -178,19 +178,7 @@ func face(d: Vector3) -> void:
 
 func shoot(pos: Vector3, d: Vector3, dmg: float, pierce: int, rng: float, color: Color, hit: Dictionary) -> void:
 	var w := String(Data.characters[Game.char_id].weapon_id)
-	_shoot(pos, d, dmg, pierce, rng, color, w if w == "W007" else "", hit)
-
-
-func swing_sound(move: Dictionary) -> void:
-	if move.hits.is_empty():
-		return
-	var sh := String(move.hits[0].shape)
-	if sh == "proj":
-		Sfx.play("bow_release" if Game.char_id == "tang" else "swing_thrust")
-	elif float(move.hits[0].dmg_pct) >= 140.0:
-		Sfx.play("swing_heavy")
-	else:
-		Sfx.play("swing_light")
+	_shoot(pos, d, dmg, pierce, rng, color, w if w == "W006" else "", hit)
 
 
 func _physics_process(delta: float) -> void:
@@ -302,7 +290,7 @@ func _animate(delta: float) -> void:
 	if speed2 > 0.6:
 		model.play("Jog_Fwd_Loop", clampf(speed2 / 4.2, 0.7, 1.6))
 	else:
-		model.play("Sword_Idle")
+		model.play(model.idle)
 
 
 func is_bow() -> bool:
@@ -498,9 +486,18 @@ func _shoot(pos: Vector3, dir: Vector3, dmg: float, pierce: int, rng: float, col
 		_imp = {"crit": false, "kill": false, "metal": false}
 		if deal(e, d, false, _impact_weight(visual_id), e.global_position - dir, hit):
 			runner.add_rage(CombatState.cfg("rage_per_hit"))
-			Sfx.play("arrow_impact", e.hit_center())
+			Sfx.play("hit_high" if visual_id == "W006" else "arrow_impact", e.hit_center())
 			_impact_feedback(_impact_weight(visual_id) * 0.8)
-	if visual_id in ["W007","W303","W103","W203"]:
+	if visual_id == "W006":
+		var blade := preload("res://scripts/fighter_model.gd").flying_blade()
+		p.add_child(blade)
+		var up := Vector3.RIGHT if absf(p.direction.y) > .98 else Vector3.UP
+		blade.basis = Basis.looking_at(p.direction, up)
+		var trail := FX.sphere(.065, Color(color, .7), 1.5)
+		blade.add_child(trail)
+		trail.scale = Vector3(.35,.35,3.5)
+		trail.position.z = .14
+	elif visual_id in ["W007","W303","W103","W203"]:
 		var missile := preload("res://scripts/archer_bow.gd").make_arrow()
 		var factor := .76 if visual_id=="W007" else (.48 if visual_id=="W303" else .24)
 		p.add_child(missile)
@@ -577,6 +574,8 @@ func deal(e, base: float, _is_dot: bool, weight := 1.0, source := Vector3.INF, h
 	if not is_instance_valid(e) or e.dead:
 		return false
 	var mult := 1.0 + Game.st("dmg_pct") / 100.0
+	if runner.blood_rage_left > 0:
+		mult += CombatState.cfg("han_rage_bonus_pct") / 100
 	var missing10 := (1.0 - hp / Game.max_hp()) * 10.0
 	mult += Game.f("low_hp_dmg_per10") * missing10 / 100.0
 	if Game.f("full_hp_dmg") > 0.0 and hp >= Game.max_hp() - 0.5:
@@ -616,7 +615,7 @@ func deal(e, base: float, _is_dot: bool, weight := 1.0, source := Vector3.INF, h
 		mult *= 1.0 + Game.special("yangqiao", "b") / 100.0
 	# 暴擊
 	var crit_rate := float(Data.gacha.base_crit_rate_pct) + Game.st("crit_rate_pct")
-	var forced := array_t > 0.0 or dodge_crit_ready or du_hit
+	var forced := bool(hit.get("forced_crit", false)) or array_t > 0.0 or dodge_crit_ready or du_hit
 	if Game.f("every3_crit") > 0.0 and attack_count % 3 == 0:
 		forced = true
 	if Game.f("low30_crit_ls") > 0.0 and hp < Game.max_hp() * 0.3:

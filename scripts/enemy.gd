@@ -1078,6 +1078,11 @@ func take_hit(amount: float, from_pos: Vector3, crit: bool, weight := 1.0, hit :
 	return dealt
 
 
+func take_poison_tick(amount: float) -> void:
+	if cs.hittable():
+		_apply_damage(amount, false, true)
+
+
 func _apply_damage(v: float, crit: bool, dot: bool) -> float:
 	if dead:
 		return 0.0

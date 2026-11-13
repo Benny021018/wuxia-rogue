@@ -29,3 +29,9 @@ dodge_invincible_s,0.3,閃避無敵時間
 dodge_cd_s,0.9,閃避冷卻
 dodge_speed_mult,3.0,閃避時的移動速度倍率
 dodge_lean_deg,28,閃避時身體前傾的角度
+tang_cloud_radius_m,3,毒囊破裂半徑
+tang_cloud_tick_s,0.5,毒霧間隔
+tang_cloud_s,5,毒霧停留時間
+tang_trap_s,12,絲網機關待機時間
+han_rage_cost_pct,10,血怒生命消耗百分比
+han_rage_bonus_pct,20,血怒傷害加成百分比

@@ -62,6 +62,23 @@ func _run_character(cid: String) -> void:
 	var world = main.world
 	var player = main.player
 	player.invuln_t = 1.0e9
+	for mid in Data.char_moves[cid].values():
+		var mv: Dictionary = Data.moves[mid]
+		_check(player.model.has(mv.anim), "%s 專屬動作已載入" % mid)
+		if cid != "nangong":
+			var anim: Animation = player.model.anim.get_animation(mid)
+			_check(anim.get_track_count() > 0 and is_equal_approx(anim.length, float(mv.duration_s)), "%s 骨架與時長" % mid)
+	if cid == "tang":
+		_check(Game.current_weapon().id == "W006" and player.model.weapon is MeshInstance3D, "唐七手持柳葉飛刀")
+		for slot in ["skill3", "skill5"]:
+			player.runner.press(slot)
+			player.runner.update(.41)
+			var fields: Array = world.level_root.get_children().filter(func(n): return n.get_script() == preload("res://scripts/hidden_weapon_field.gd"))
+			_check(fields.size() == 1 and fields[0].trap == (slot == "skill5"), "唐七毒區與機關生成於本張地圖")
+			for field in fields:
+				field.free()
+			player.runner.interrupt()
+		player.runner.cds.clear()
 	if cid == Data.char_order[0]:
 		_check_music(Data.map_order[0])
 		await _check_loot_and_shops(world, player)
@@ -503,7 +520,7 @@ func _check_loot_and_shops(world, player) -> void:
 	var old_martial: Dictionary = Game.martial.duplicate()
 	var old_order: Array = Game.martial_order.duplicate()
 	# 起手武器
-	_check(Game.starter_weapons() == ["W001", "W007", "W301"], "起手可選太刀、弓、大劍")
+	_check(Game.starter_weapons() == ["W001", "W006", "W301"], "角色起手太刀、飛刀、大劍")
 	# 詞條
 	var affixes: Array = Game.roll_affixes("W007", 4)
 	var ids := {}
@@ -942,7 +959,11 @@ func _check_third_person(world, player) -> void:
 	_check(Game.weapons[1] == null and Game.current_weapon().id == String(Data.characters[Game.char_id].weapon_id), "角色使用固定兵器，沒有副武器")
 	var missing: Array = []
 	for mid in Data.moves:
-		if not player.model.has(Data.moves[mid].anim):
+		var mv: Dictionary = Data.moves[mid]
+		_check(FX.COMBAT_FRAMES.has_animation(mv.fx_clip) and Data.sfx.has(mv.strike_sfx), "%s 的招式視聽素材" % mid)
+		if mv.char_id != Game.char_id:
+			continue
+		if not player.model.has(mv.anim):
 			missing.append("%s:%s" % [mid, Data.moves[mid].anim])
 	_check(missing.is_empty(), "招式表的動作都在動作庫裡（缺：%s）" % str(missing))
 	_check(player.model.has("Jog_Fwd_Loop") and player.model.has("Jump_Loop") and player.model.has("Sprint_Loop"), "循環動作（跑步、跳躍、衝刺）找得到")

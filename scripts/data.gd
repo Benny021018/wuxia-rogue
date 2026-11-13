@@ -95,6 +95,8 @@ func _ready() -> void:
 		if not char_moves.has(r.char_id):
 			char_moves[r.char_id] = {}
 		char_moves[r.char_id][r.slot] = r.move_id
+	for r in _csv("move_motion"):
+		moves[r.move_id]["motion"] = r
 	for r in _csv("move_hits"):
 		moves[r.move_id].hits.append(r)
 	for r in _csv("meridians"):
