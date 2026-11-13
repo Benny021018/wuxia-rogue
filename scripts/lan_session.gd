@@ -87,7 +87,7 @@ func _ready() -> void:
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	panel.add_child(frame)
-	_room_control(UIKit.multiplayer_title(),52,23,350,86)
+	_room_control(UIKit.menu_lettering(preload("res://assets/ui/multiplayer-title.svg")),52,23,350,86)
 	panel.add_child(browser)
 	panel.add_child(room)
 	browser.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

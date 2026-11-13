@@ -74,16 +74,10 @@ func show_main() -> void:
 	var panel := UIKit.box("slant")
 	panel.slant = 30
 	_at(panel, 1060, 360, 470, 420)
-	var first := UIKit.button("踏上江湖", show_select, 34, 380, 78)
+	var first := UIKit.titled_button("踏上江湖", preload("res://assets/ui/journey-title.svg"), show_select, 78)
 	_at(first, 1100, 400, 380, 78)
-	var multi := UIKit.button("",func(): open_lan.emit(),28,380,60)
-	multi.accessibility_name = "多人遊玩"
-	_at(multi,1100,496,380,60)
-	var lettering := UIKit.multiplayer_title()
-	multi.add_child(lettering)
-	lettering.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	lettering.offset_top = 4
-	lettering.offset_bottom = -4
+	var multi := UIKit.titled_button("多人遊玩", preload("res://assets/ui/multiplayer-title.svg"), func(): open_lan.emit(), 60)
+	_at(multi, 1100, 496, 380, 60)
 	_at(UIKit.button("設定", show_settings.bind(false), 28, 380, 60), 1100, 572, 380, 60)
 	_at(UIKit.button("離開遊戲", func(): quit_game.emit(), 28, 380, 60), 1100, 648, 380, 60)
 	var sparks := UIKit.fx()

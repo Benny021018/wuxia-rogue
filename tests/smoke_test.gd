@@ -15,7 +15,7 @@ func _ready() -> void:
 	await _frames(5)
 	_check_music("menu")
 	var first_btn = get_viewport().gui_get_focus_owner()
-	_check(first_btn is ComicButton and first_btn.text == "踏上江湖", "主選單焦點在「踏上江湖」（Enter 可直接開始）")
+	_check(first_btn is ComicButton and first_btn.accessibility_name == "踏上江湖" and first_btn.get_child(0).texture.resource_path == "res://assets/ui/journey-title.svg", "主選單焦點在「踏上江湖」（Enter 可直接開始）")
 	UIKit.kbd_nav = false
 	first_btn._on_focus(true)
 	_check(not first_btn.has_theme_stylebox_override("normal"), "滑鼠操作時「踏上江湖」預設不顯示高亮")

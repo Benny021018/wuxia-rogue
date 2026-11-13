@@ -414,10 +414,20 @@ static func set_kbd_nav(on: bool, vp: Viewport) -> void:
 
 
 ## 題字採用遊戲隨附的思源宋體輪廓，配合墨痕與朱印。
-static func multiplayer_title() -> TextureRect:
+static func menu_lettering(texture: Texture2D) -> TextureRect:
 	var art := TextureRect.new()
-	art.texture = preload("res://assets/ui/multiplayer-title.svg")
+	art.texture = texture
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return art
+
+static func titled_button(label_text: String, texture: Texture2D, pressed: Callable, height: float) -> Button:
+	var control := button("", pressed, 28, 380, height)
+	control.accessibility_name = label_text
+	var art := menu_lettering(texture)
+	control.add_child(art)
+	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	art.offset_top = 4
+	art.offset_bottom = -4
+	return control
