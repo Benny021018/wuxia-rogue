@@ -5,6 +5,9 @@ var session
 var attempts := 0
 var checkpoint := 0
 var maps_seen := 0
+var saw_duel_impact := false
+var saw_armor := false
+var saw_invincible := false
 var checked_motion := false
 var initial_remote := Vector3.ZERO
 var motion_frames := 0
@@ -60,7 +63,16 @@ func _physics_process(_delta: float) -> bool:
 		return false
 	if coop:
 		maps_seen = maxi(maps_seen,session.world.map_index+1)
+	if not coop:
+		for p in session.fighters:
+			saw_duel_impact = saw_duel_impact or p.model.flash_left > 0
+			saw_armor = saw_armor or p.model.armored
+			saw_invincible = saw_invincible or p.model.invincible
 	if session.ended:
+		if not coop and not (saw_duel_impact and saw_armor and saw_invincible):
+			push_error("未顯示完整對戰回饋：受擊 %s、霸體 %s、無敵 %s" % [saw_duel_impact, saw_armor, saw_invincible])
+			quit(1)
+			return false
 		var expected := "合作闖關失敗" if coop else "客方勝出"
 		if not checked_motion or expected != session.status.text or checkpoint == 0 or (coop and maps_seen < 4):
 			push_error("局域網結算錯誤：" + session.status.text)
@@ -76,6 +88,9 @@ func _physics_process(_delta: float) -> bool:
 		var remote = session.fighters[1-session.local_slot]
 		if motion_frames == 0:
 			initial_remote = remote.position
+			if not coop and not guest:
+				session.fighters[0].cs.give_armor(0.5)
+				session.fighters[1].cs.give_invincible(0.5)
 			if session.hud.player != session.fighters[session.local_slot] or (not coop and session.hud.hp_bar.max_value != 10000):
 				push_error("多人戰鬥介面或氣血上限錯誤")
 				quit(1)

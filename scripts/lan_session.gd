@@ -3,7 +3,7 @@ extends Node
 signal closed
 const PORT := 28570
 const DISCOVERY := 28571
-const PROTOCOL := "wuxia-lan/2"
+const PROTOCOL := "wuxia-lan/3"
 const PLAYER := preload("res://scripts/player.gd")
 const WORLD := preload("res://scripts/world.gd")
 const BUILD := preload("res://scripts/game.gd")
@@ -254,6 +254,8 @@ func _begin(kind: String, first: String, second: String) -> void:
 		_arena()
 		for i in 2:
 			fighters[i].opponent = fighters[1-i]
+			if local_slot == 0:
+				fighters[i].duel_hit.connect(_broadcast_hit.bind(i))
 			lives[i] = int(CombatState.cfg("lan_lives"))
 	else:
 		world.build_map(0)
@@ -636,13 +638,37 @@ func _action(round_id: int, number: int, action: String, yaw: float, pitch: floa
 	elif action in PLAYER.ACTIONS:
 		p.use(action)
 
+func _broadcast_hit(damage: float, crit: bool, weight: float, slot: int) -> void:
+	_duel_impact.rpc(epoch, slot, damage, crit, weight, fighters[slot].dead)
+
+
+@rpc("authority","call_local","reliable")
+func _duel_impact(round_id: int, slot: int, damage: float, crit: bool, weight: float, killed: bool) -> void:
+	if ended or epoch != round_id:
+		return
+	var target = fighters[slot]
+	var center: Vector3 = target.hit_center() + target.model.global_position - target.global_position
+	var toward: Vector3 = center.direction_to(fighters[1-slot].hit_center())
+	var contact := center + toward * float(target.hit_radius)
+	target.model.flash_hit()
+	FX.play(world, contact, &"crit-hit" if crit else &"hit-spark", 1.55 if crit else 0.76, 0.24 if crit else 0.14)
+	FX.burst(world, contact, (toward + Vector3.UP).normalized(), UIKit.BONE, int(Data.feel.particles_crit if crit else Data.feel.particles_hit))
+	if Settings.on("damage_numbers") and damage > 0:
+		FX.damage_number(world, center + Vector3.UP * 0.6, ceili(damage), crit, UIKit.EMBER if crit else UIKit.BONE)
+	Sfx.hit(weight, crit, killed, damage == 0)
+	Feel.impact(weight, crit, killed)
+	if slot == local_slot and damage > 0:
+		Sfx.play("player_hurt")
+		Feel.player_hurt.emit(clampf(damage / target.build.max_hp() * 5.0, 0.3, 1.0))
+
+
 func _send_snapshot() -> void:
 	var actors := []
 	for p in fighters:
 		actors.append({
 			"pos": p.position, "velocity": p.velocity, "yaw": p.body_yaw,
 			"hp": p.hp, "shield": p.shield, "state": p.cs.base, "state_left": p.cs.t,
-			"rage": p.runner.rage, "clip": p.model.current, "invincible": p.cs.inv_t,
+			"rage": p.runner.rage, "clip": p.model.current, "invincible": p.cs.inv_t, "armor": p.cs.armor_t, "invuln": p.invuln_t, "demon": p.demon_t,
 			"cooldowns": p.runner.cds, "move_id": p.runner.move.get("move_id",""), "time": p.runner.t,
 			"fired": p.runner.fired, "combo": p.runner.combo, "speed": p.runner.speed,
 			"dir": p.runner.dir, "pitch": p.model.rotation.x, "clip_time": p.model.anim.current_animation_position if p.model.anim.is_playing() else 0.0,
@@ -693,7 +719,7 @@ func _snapshot(round_id: int, serial: int, confirmed_action: int, actors: Array,
 			p.model.rotation.x = actor.pitch
 			var clip := String(actor.clip)
 			if clip.ends_with("@hold"):
-				p.model.hold(clip.trim_suffix("@hold"),0)
+				p.model.hold(clip.trim_suffix("@hold"), 0.83 if actor.state == CombatState.S.DOWN else 0.0)
 			elif p.model.has(clip):
 				p.model.play(clip,actor.clip_speed)
 				if absf(p.model.anim.current_animation_position - float(actor.clip_time)) > .12:
@@ -731,6 +757,10 @@ func _snapshot(round_id: int, serial: int, confirmed_action: int, actors: Array,
 		p.cs.base = actor.state
 		p.cs.t = actor.state_left
 		p.cs.inv_t = actor.invincible
+		p.cs.armor_t = actor.armor
+		p.invuln_t = actor.invuln
+		p.demon_t = actor.demon
+		p.model.set_defense(p.cs.state() == CombatState.S.ARMOR, p.damage_immune())
 		p.runner.rage = actor.rage
 		if p.cs.base == CombatState.S.AIR and i == 0:
 			p.model.rotation.x = CombatState.airborne_pitch()

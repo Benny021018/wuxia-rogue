@@ -1,5 +1,5 @@
 key,value,note
-hit_down_time_s,1.2,倒地持續時間；期間沒再被打就起身
+hit_down_time_s,0.2,著地後連續未受追擊才起身的秒數
 getup_invincible_s,0.9,起身無敵時間（倒地結束、浮空落地都會觸發）
 down_hit_launch_h_m,1.0,倒地時被打到的最低浮空高度（招式本身的浮空高度更高就用招式的）
 air_hit_pop_h_m,0.6,浮空中被不帶浮空的招式打到時，往上彈的高度

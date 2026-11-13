@@ -6,7 +6,7 @@ extends RefCounted
 ##   倒地　　無法操控；再被打到就浮空；時間到沒被打 → 起身無敵 → 正常
 ##   霸體　　照樣受傷、吃頓幀，但不進入受擊；可操控。帶「破霸體」的招式才打得斷
 ##   無敵　　可操控，打不到
-##   浮空　　無法操控；被打會再往上彈（逐次衰減）；碰到地板 → 起身無敵 → 正常
+##   浮空　　無法操控；被打會再往上彈（逐次衰減）；碰到地板 → 倒地等待追擊 → 起身無敵 → 正常
 ## 數值在 data/combat_state_config.csv；每一下攻擊的硬直、浮空高度、是否浮空、
 ## 是否破霸體、是否擊倒在 data/move_hits.csv。
 ## 這個類別只管狀態與計時；位移（浮空的垂直速度）由擁有者依 apply_hit() 的結果套用。
@@ -135,13 +135,17 @@ func tick(delta: float, on_floor: bool) -> void:
 			if t <= 0.0:
 				base = S.NORMAL
 		S.DOWN:
+			if not on_floor:
+				t = cfg("hit_down_time_s")
+				return
 			t -= delta
 			if t <= 0.0:
 				_get_up()
 		S.AIR:
 			t += delta
 			if on_floor and t >= cfg("air_min_time_s"):
-				_get_up()
+				base = S.DOWN
+				t = cfg("hit_down_time_s")
 	_emit()
 
 

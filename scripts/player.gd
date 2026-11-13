@@ -57,6 +57,7 @@ var predicted := false
 var net_axis := Vector2.ZERO
 var net_dash := false
 var net_jump := false
+signal duel_hit(damage: float, crit: bool, weight: float)
 var opponent
 var input_enabled := true
 # 弓：按住左鍵拉弓、放開射出；右鍵瞄準
@@ -269,6 +270,7 @@ func _update_camera() -> void:
 
 
 func _animate(delta: float) -> void:
+	model.set_defense(cs.state() == CombatState.S.ARMOR, damage_immune())
 	model.global_position = global_position
 	var m_rot: float = model.rotation.y
 	model.rotation.y = lerp_angle(m_rot, body_yaw, minf(1.0, delta * 18.0))
@@ -598,9 +600,13 @@ func deal(e, base: float, _is_dot: bool, weight := 1.0, source := Vector3.INF, h
 		var power := 1.0 + build.f("low_hp_dmg_per10") * (1.0 - hp / build.max_hp()) / 10
 		if runner.blood_rage_left > 0:
 			power += CombatState.cfg("han_rage_bonus_pct") / 100
-		if bool(hit.get("forced_crit",false)) or randf()*100 < float(Data.gacha.base_crit_rate_pct) + build.st("crit_rate_pct"):
+		var crit := bool(hit.get("forced_crit",false)) or randf()*100 < float(Data.gacha.base_crit_rate_pct) + build.st("crit_rate_pct")
+		if crit:
 			power *= (float(Data.gacha.base_crit_dmg_pct) + build.st("crit_dmg_pct")) / 100
-		e.take_damage(base * power, self, false, hit)
+		var strike := hit.duplicate()
+		strike["crit"] = crit
+		strike["weight"] = weight
+		e.take_damage(base * power, self, _is_dot, strike)
 		if before > e.hp:
 			if not e.dead and (float(hit.get("push_m",0)) > 0 or float(hit.get("launch_h_m",0)) > 0):
 				var away: Vector3 = (e.position-position).slide(Vector3.UP).normalized()
@@ -713,14 +719,16 @@ func on_enemy_killed(e) -> void:
 
 
 # ------------------------------------------------------------------ 受傷
+func damage_immune() -> bool:
+	return invuln_t > 0.0 or not cs.hittable() or (demon_t > 0.0 and (build.f("demon_form") > 0.0 or build.f("blood_demon") > 0.0))
+
+
 func take_damage(amount: float, attacker = null, is_dot := false, hit := {}) -> void:
 	if predicted or hp <= 0.0 or amount <= 0.0:
 		return
 	if not is_dot and runner.try_counter(attacker):      # 殘影反擊
 		return
-	if invuln_t > 0.0 or not cs.hittable():
-		return
-	if demon_t > 0.0 and (build.f("demon_form") > 0.0 or build.f("blood_demon") > 0.0):
+	if damage_immune():
 		return
 	if not is_dot:
 		if randf() * 100.0 < build.st("dodge_pct"):
@@ -761,7 +769,7 @@ func take_damage(amount: float, attacker = null, is_dot := false, hit := {}) -> 
 		runner.add_rage(CombatState.cfg("rage_per_hurt"))
 		# 狀態：硬直、浮空、倒地（受擊保護期間只受傷）
 		var h := hit if not hit.is_empty() else {"hitstun_s": CombatState.cfg("enemy_hitstun_s")}
-		if hit_guard <= 0.0 or int(h.get("launch", 0)) == 1 or int(h.get("knockdown", 0)) == 1:
+		if cs.base in [CombatState.S.DOWN, CombatState.S.AIR] or hit_guard <= 0.0 or int(h.get("launch", 0)) == 1 or int(h.get("knockdown", 0)) == 1:
 			var before := cs.base
 			var res: Dictionary = cs.apply_hit(h)
 			if float(res.launch_v) > 0.0:
@@ -769,7 +777,9 @@ func take_damage(amount: float, attacker = null, is_dot := false, hit := {}) -> 
 			if cs.base != CombatState.S.NORMAL and before == CombatState.S.NORMAL:
 				hit_guard = float(h.get("hitstun_s", 0.0)) + CombatState.cfg("player_hit_guard_s")
 				model.current = ""
-	if dmg > 0.0:
+	if not is_dot and opponent != null and attacker == opponent:
+		duel_hit.emit(maxf(0.0, dmg), bool(hit.get("crit", false)), float(hit.get("weight", 1.0)))
+	elif dmg > 0.0 and not network_driven:
 		var ratio := dmg / build.max_hp()
 		Sfx.play("player_hurt", Vector3.INF, lerpf(-4.0, 2.0, clampf(ratio * 5.0, 0.0, 1.0)))
 		Feel.shake(float(Data.feel.shake_hurt) * clampf(ratio * 5.0, 0.35, 1.0) * (0.4 if is_dot else 1.0))
@@ -889,6 +899,8 @@ func _densest_point(r: float) -> Vector3:
 # ------------------------------------------------------------------ 打擊感與音效
 func _impact_feedback(weight: float) -> void:
 	## 一次出招（或一支箭）命中後：分層音效＋頓幀＋震動
+	if opponent != null:
+		return # 對決由房主確認命中，兩端各播放一次。
 	Sfx.hit(weight, _imp.crit, _imp.kill, _imp.metal)
 	Feel.impact(weight, _imp.crit, _imp.kill)
 
