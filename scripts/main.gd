@@ -30,6 +30,7 @@ func _ready() -> void:
 	screens = SCREENS.new()
 	screens.theme = UIKit.theme()
 	ui_layer.add_child(screens)
+	screens.open_lan.connect(_open_lan)
 	screens.start_run.connect(_start)
 	screens.resume.connect(_resume)
 	screens.to_menu.connect(_to_menu)
@@ -273,6 +274,8 @@ func _on_won() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if mode == "lan":
+		return
 	## 介面的焦點高亮只在鍵盤／手把操作時顯示
 	if event is InputEventMouseMotion and event.relative.length() > 2.0:
 		if UIKit.kbd_nav:
@@ -321,3 +324,15 @@ func _unhandled_input(event: InputEvent) -> void:
 				screens.show_inventory(false)
 			"inventory":
 				_resume()
+
+
+func _open_lan() -> void:
+	mode = "lan"
+	screens.hide_all()
+	var session = preload("res://scripts/lan_session.gd").new()
+	session.name = "LanSession"
+	add_child(session)
+	session.closed.connect(func():
+		remove_child(session)
+		session.queue_free()
+		_to_menu())

@@ -332,7 +332,7 @@ func _set_gate(g: StaticBody3D, closed: bool) -> void:
 
 func _clear_dynamic() -> void:
 	for c in get_children():
-		if c == player or c == env or c is DirectionalLight3D or c == level_root:
+		if c.is_in_group("player") or c == env or c is DirectionalLight3D or c == level_root:
 			continue
 		c.queue_free()
 	corpses = []
@@ -638,7 +638,16 @@ func boss_spawned(e) -> void:
 	boss_appeared.emit(e)
 
 
+signal enemy_defeated(id: String)
+signal telegraph(pos: Vector3, radius: float, duration: float)
+
+func warn_area(pos: Vector3, radius: float, duration: float) -> void:
+	FX.warn_circle(self,pos,radius,duration)
+	telegraph.emit(pos,radius,duration)
+
+
 func on_enemy_died(e) -> void:
+	enemy_defeated.emit(e.eid)
 	var item := Game.roll_weapon_drop(String(Data.enemies[e.eid].rank))
 	if not item.is_empty():
 		spawn_drop(e.global_position, item)

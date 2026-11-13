@@ -11,6 +11,7 @@ var until_tick: float
 
 
 func setup(caster, hit_data: Dictionary, reach: float, power: float, is_trap: bool) -> void:
+	add_to_group("combat_fields")
 	player = caster
 	hit = hit_data
 	radius = reach
@@ -34,9 +35,9 @@ func setup(caster, hit_data: Dictionary, reach: float, power: float, is_trap: bo
 func _physics_process(delta: float) -> void:
 	until_tick -= minf(delta, life)
 	life -= delta
-	if until_tick <= .00001:
+	if until_tick <= .00001 and not player.predicted:
 		var triggered := false
-		for e in get_tree().get_nodes_in_group("enemies"):
+		for e in player.targets():
 			if e.dead or not e.cs.hittable() or global_position.distance_to(e.global_position) > radius + e.hit_radius:
 				continue
 			if trap:

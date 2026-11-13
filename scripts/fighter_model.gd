@@ -18,6 +18,11 @@ var anim: AnimationPlayer
 var skeleton: Skeleton3D
 var hand: BoneAttachment3D
 var weapon: Node3D
+var body_meshes: Array[Node] = []
+var status_material := ShaderMaterial.new()
+var flash_left := 0.0
+var armored := false
+var invincible := false
 var current := ""
 var motion_pivot := Node3D.new()
 var idle := "Sword_Idle"
@@ -46,7 +51,9 @@ func setup(char_id: String, weapon_id: String) -> void:
 		var move: Dictionary = Data.moves[id]
 		if move.has("motion") and not lib.has_animation(id):
 			lib.add_animation(id, _compose(move))
-	var mesh: MeshInstance3D = body.find_children("*", "MeshInstance3D", true, false)[0]
+	body_meshes = body.find_children("*", "MeshInstance3D", true, false)
+	status_material.shader = preload("res://scripts/fighter_status.gdshader")
+	var mesh: MeshInstance3D = body_meshes[0]
 	var tint: Array = TINT.get(char_id, TINT.nangong)
 	for i in mesh.mesh.get_surface_count():
 		var m := StandardMaterial3D.new()
@@ -75,6 +82,35 @@ func setup(char_id: String, weapon_id: String) -> void:
 		weapon.rotation_degrees.x = 75
 		idle = "Crouch_Idle_Loop"
 	play(idle)
+
+
+func set_defense(armor: bool, immune: bool) -> void:
+	if armored == armor and invincible == immune:
+		return
+	armored = armor
+	invincible = immune
+	status_material.set_shader_parameter("armored", armor)
+	status_material.set_shader_parameter("invincible", immune)
+	_refresh_overlay()
+
+
+func flash_hit() -> void:
+	flash_left = float(Data.feel.flash_hold_s) + float(Data.feel.flash_fade_s)
+	status_material.set_shader_parameter("flash", 1.0)
+	_refresh_overlay()
+
+
+func _process(delta: float) -> void:
+	if flash_left > 0:
+		flash_left = maxf(0.0, flash_left - delta)
+		status_material.set_shader_parameter("flash", minf(1.0, flash_left / float(Data.feel.flash_fade_s)))
+		if flash_left == 0:
+			_refresh_overlay()
+
+
+func _refresh_overlay() -> void:
+	for mesh in body_meshes:
+		mesh.material_overlay = status_material if armored or invincible or flash_left > 0 else null
 
 
 ## 雙脊柳葉刃，掌中與飛行中的模型共用，刃尖朝 -Z。

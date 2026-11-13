@@ -1,5 +1,5 @@
 key,value,note
-hit_down_time_s,1.2,倒地持續時間；期間沒再被打就起身
+hit_down_time_s,0.2,著地後連續未受追擊才起身的秒數
 getup_invincible_s,0.9,起身無敵時間（倒地結束、浮空落地都會觸發）
 down_hit_launch_h_m,1.0,倒地時被打到的最低浮空高度（招式本身的浮空高度更高就用招式的）
 air_hit_pop_h_m,0.6,浮空中被不帶浮空的招式打到時，往上彈的高度
@@ -38,3 +38,10 @@ han_rage_bonus_pct,20,血怒傷害加成百分比
 air_tilt_deg,20,仰躺浮空時，臉部正向與天頂的夾角
 attack_fx_span_mult,1.55,近戰與飛行招式特效寬度倍率
 area_fx_span_mult,1.35,範圍招式內層特效寬度倍率
+lan_lives,3,擂台生命數
+lan_round_delay,3,開戰倒數秒數
+lan_arena_half,13,問劍坪半邊長度
+lan_spawn_gap,12,擂台開局間距
+lan_snapshot_hz,20,房主狀態更新頻率
+lan_duel_hp,10000,擂台每條命的氣血上限
+lan_snap_distance_m,4,遠端角色瞬移時直接對齊的距離

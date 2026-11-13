@@ -161,7 +161,7 @@ func _ready() -> void:
 	await _shot("06-pause")
 	main.screens._confirm_quit()
 	await _shot("06b-pause-confirm")
-	main.screens.show_help(true)
+	main.screens.show_help()
 	await _shot("06c-help")
 	Game.stage = 13
 	Game.kills = 214

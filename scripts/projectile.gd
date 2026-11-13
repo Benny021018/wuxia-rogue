@@ -2,6 +2,7 @@ extends Node3D
 ## 投射物：玩家的暗器／箭／劍氣，以及敵人的箭、毒鏢、刀氣
 ## 不用物理引擎，每幀以距離判定命中（灰盒原型夠用且穩定）
 
+var caster
 var from_player := true
 var direction := Vector3.FORWARD
 var speed := 40.0
@@ -33,7 +34,7 @@ func setup(color: Color, size := 0.15) -> void:
 
 func _physics_process(delta: float) -> void:
 	var step := direction * speed * delta
-	if not from_player and not step.is_zero_approx():
+	if (not from_player or (is_instance_valid(caster) and caster.opponent != null)) and not step.is_zero_approx():
 		var query := PhysicsRayQueryParameters3D.create(global_position,global_position+step,1)
 		query.hit_from_inside = true
 		var hit := get_world_3d().direct_space_state.intersect_ray(query)
@@ -56,7 +57,7 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 		return
 	if from_player:
-		for e in get_tree().get_nodes_in_group("enemies"):
+		for e in (caster.targets() if is_instance_valid(caster) else get_tree().get_nodes_in_group("enemies")):
 			if _hit.has(e) or not is_instance_valid(e) or e.dead:
 				continue
 			if e.hit_center().distance_to(global_position) <= radius + e.hit_radius:
@@ -68,10 +69,11 @@ func _physics_process(delta: float) -> void:
 					return
 				pierce -= 1
 	else:
-		var p = get_tree().get_first_node_in_group("player")
-		if p and p.global_position.distance_to(global_position - Vector3(0, 0.9, 0)) <= radius + 0.5:
-			p.take_damage(damage, source, false, {"hitstun_s": CombatState.cfg("enemy_proj_hitstun_s")})
-			queue_free()
+		for p in get_tree().get_nodes_in_group("player"):
+			if p and not p.dead and p.global_position.distance_to(global_position - Vector3(0, 0.9, 0)) <= radius + 0.5:
+				p.take_damage(damage, source, false, {"hitstun_s": CombatState.cfg("enemy_proj_hitstun_s")})
+				queue_free()
+				return
 
 
 func _spawn_cloud() -> void:

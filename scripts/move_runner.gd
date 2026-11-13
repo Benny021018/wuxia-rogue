@@ -93,7 +93,7 @@ func _start(slot: String) -> void:
 		Sfx.play("legend_sting")
 		Feel.shake(0.3)
 	elif not slot.begins_with("normal"):
-		cds[slot] = float(move.cooldown_s) * (1.0 - minf(Game.st("cdr_pct"), 60.0) / 100.0)
+		cds[slot] = float(move.cooldown_s) * (1.0 - minf(p.build.st("cdr_pct"), 60.0) / 100.0)
 	if slot.begins_with("normal"):
 		combo = (combo + 1) % normals()
 		p.attack_count += 1
@@ -110,7 +110,7 @@ func _start(slot: String) -> void:
 	p.model.play(move.anim, aspeed, from, 0.06, true)
 	if move.kind == "buff":
 		blood_rage_left = float(move.self_to_s)
-		p.hp = maxf(1, p.hp - Game.max_hp() * CombatState.cfg("han_rage_cost_pct") / 100)
+		p.hp = maxf(1, p.hp - p.build.max_hp() * CombatState.cfg("han_rage_cost_pct") / 100)
 		p.hp_changed.emit()
 	elif move.move_id == "tang_s7":
 		next_crit = true
@@ -228,7 +228,7 @@ func _fire(h: Dictionary) -> void:
 			_needle_rain(center, r)
 	var targets: Array = []
 	var cosv := cos(deg_to_rad(float(h.arc_deg) / 2.0))
-	for e in p.get_tree().get_nodes_in_group("enemies"):
+	for e in p.targets():
 		if e.dead:
 			continue
 		var to: Vector3 = e.global_position - center
@@ -262,6 +262,7 @@ func _fire(h: Dictionary) -> void:
 
 ## 刀光、毒色與聲音在實際出手時出現；反擊和無判定招以起勢為準。
 func _cue(pos: Vector3, span: float, finisher: bool) -> void:
+	p.skill_cue.emit(move.move_id, pos, span, finisher)
 	var clip := StringName(move.fx_clip)
 	var sound := String(move.strike_sfx)
 	if finisher:

@@ -450,7 +450,7 @@ def s01_menu():
     # 選單
     b.append(slant(1060, 360, 470, 420, 30, INK, BONE, 3, 'opacity=".82"'))
     b.append(button(1100, 400, 380, 78, "踏上江湖", "normal", 34))
-    b.append(button(1100, 496, 380, 60, "操作說明", "normal", 28))
+    b.append(button(1100, 496, 380, 60, "多人遊玩", "normal", 28))
     b.append(button(1100, 572, 380, 60, "設定", "normal", 28))
     b.append(button(1100, 648, 380, 60, "離開遊戲", "normal", 28))
     b.append(embers(0, 600, 1600, 900, 70, 9))

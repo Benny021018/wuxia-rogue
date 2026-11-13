@@ -33,6 +33,7 @@ var active_weapon := 0                 # 目前手上的武器格；同時只用
 var merchant_stock: Array = []         # 商人上架的武學 [{id, rarity, sold}]
 var martial := {}                      # martial_id -> lv
 var martial_order: Array = []
+var duel := false
 var stage := 1
 var draws_this_stage := 0
 var total_draws := 0
@@ -58,7 +59,8 @@ func _process(delta: float) -> void:
 
 
 # ------------------------------------------------------------------ 開局
-func new_run(cid: String, start_wid := "") -> void:
+func new_run(cid: String, start_wid := "", is_duel := false) -> void:
+	duel = is_duel
 	char_id = cid
 	level = 1
 	realm = 0
@@ -289,6 +291,8 @@ func sect_counts() -> Dictionary:
 
 
 func max_hp() -> float:
+	if duel:
+		return CombatState.cfg("lan_duel_hp")
 	return float(Data.characters[char_id].hp) * (1.0 + st("max_hp_pct") / 100.0)
 
 
