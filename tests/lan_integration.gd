@@ -5,6 +5,10 @@ var session
 var attempts := 0
 var checkpoint := 0
 var maps_seen := 0
+var checked_motion := false
+var initial_remote := Vector3.ZERO
+var motion_frames := 0
+var saw_midpoint := false
 var checked_menu := false
 var guest := false
 var coop := false
@@ -28,6 +32,15 @@ func _start() -> void:
 		session.modes.select(0 if coop else 1)
 		session._mode_selected(session.modes.selected)
 
+func _process(_delta: float) -> bool:
+	if session != null and session.round_active and not checked_motion:
+		var distance: float = session.remote_start.distance_to(session.remote_target)
+		if distance > 0.001:
+			var rendered: Vector3 = session.fighters[1-session.local_slot].model.global_position
+			if rendered.distance_to(session.remote_start) < distance and rendered.distance_to(session.remote_target) < distance:
+				saw_midpoint = true
+	return false
+
 func _physics_process(_delta: float) -> bool:
 	frames += 1
 	if frames > 3600:
@@ -49,7 +62,7 @@ func _physics_process(_delta: float) -> bool:
 		maps_seen = maxi(maps_seen,session.world.map_index+1)
 	if session.ended:
 		var expected := "合作闖關失敗" if coop else "客方勝出"
-		if expected != session.status.text or checkpoint == 0 or (coop and maps_seen < 4):
+		if not checked_motion or expected != session.status.text or checkpoint == 0 or (coop and maps_seen < 4):
 			push_error("局域網結算錯誤：" + session.status.text)
 			quit(1)
 			return false
@@ -59,6 +72,23 @@ func _physics_process(_delta: float) -> bool:
 		return false
 	if not session.round_active:
 		return false
+	if not checked_motion:
+		var remote = session.fighters[1-session.local_slot]
+		if motion_frames == 0:
+			initial_remote = remote.position
+			if session.hud.player != session.fighters[session.local_slot] or (not coop and session.hud.hp_bar.max_value != 10000):
+				push_error("多人戰鬥介面或氣血上限錯誤")
+				quit(1)
+				return false
+		motion_frames += 1
+		if motion_frames < 45:
+			Input.action_press("move_right")
+		else:
+			Input.action_release("move_right")
+		if motion_frames >= 45 and saw_midpoint and remote.position.distance_to(initial_remote) > 0.5:
+			checked_motion = true
+		else:
+			return false
 	if not checked_menu:
 		var esc := InputEventAction.new()
 		esc.action = "pause"

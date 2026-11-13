@@ -22,6 +22,8 @@ var enemy_text: Label
 var martial_head: Label
 var martial_list: VBoxContainer
 var boss_box: Control
+var opponent
+var boss_seal: ComicSeal
 var boss_bar: ComicBar
 var boss_name: Control
 var boss
@@ -312,9 +314,9 @@ func _build_boss() -> void:
 	boss_name = UIKit.title("", 44, UIKit.BONE, 8)
 	UIKit.place(boss_name, 0, 0, 100, 0, 500, 60)
 	boss_box.add_child(boss_name)
-	var s := UIKit.seal("首領", UIKit.BLOOD, 20, -6)
-	UIKit.place(s, 0, 0, 150, 18, s.size.x, s.size.y)
-	boss_box.add_child(s)
+	boss_seal = UIKit.seal("首領", UIKit.BLOOD, 20, -6)
+	UIKit.place(boss_seal, 0, 0, 150, 18, boss_seal.size.x, boss_seal.size.y)
+	boss_box.add_child(boss_seal)
 	boss_bar = UIKit.bar(Color("#6e0a10"), UIKit.EMBER, 4, 12.0)
 	UIKit.place(boss_bar, 0, 0, 0, 68, 700, 24)
 	boss_box.add_child(boss_bar)
@@ -369,7 +371,12 @@ func _process(_delta: float) -> void:
 	_update_reticle()
 	_refresh_weapons()
 	_refresh_martial()
-	if boss and is_instance_valid(boss) and not boss.dead:
+	if is_instance_valid(opponent):
+		boss_box.visible = true
+		boss_bar.max_value = opponent.build.max_hp()
+		boss_bar.value = opponent.hp
+		boss_bar.text = "%d / %d" % [ceili(opponent.hp), ceili(boss_bar.max_value)]
+	elif is_instance_valid(boss) and not boss.dead:
 		boss_box.visible = true
 		boss_bar.max_value = boss.max_hp
 		boss_bar.value = boss.hp
@@ -452,6 +459,12 @@ func set_zone(title: String) -> void:
 func set_enemies(n: int) -> void:
 	enemy_box.visible = n > 0
 	enemy_text.text = "剩餘敵人 %d" % n
+
+
+func set_opponent(fighter) -> void:
+	opponent = fighter
+	boss_seal.text = "對手"
+	UIKit.set_title(boss_name, Data.characters[fighter.build.char_id].name_zh)
 
 
 func set_boss(e) -> void:

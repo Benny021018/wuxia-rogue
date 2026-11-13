@@ -3,7 +3,7 @@ extends Node
 signal closed
 const PORT := 28570
 const DISCOVERY := 28571
-const PROTOCOL := "wuxia-lan/1"
+const PROTOCOL := "wuxia-lan/2"
 const PLAYER := preload("res://scripts/player.gd")
 const WORLD := preload("res://scripts/world.gd")
 const BUILD := preload("res://scripts/game.gd")
@@ -46,8 +46,15 @@ var rest_stop := false
 var rest_panel := VBoxContainer.new()
 var snapshot_time := 0.0
 var pending_deaths := [false,false]
-var hud: Label
-var info := ""
+var hud
+var remote_start := Vector3.ZERO
+var remote_target := Vector3.ZERO
+var remote_display := Vector3.ZERO
+var remote_angle := 0.0
+var remote_start_angle := 0.0
+var remote_target_angle := 0.0
+var blend_elapsed := 0.0
+var blend_duration := 0.0
 var guest_build
 var continue_ready := [false,false]
 var reward_choices := [[],[]]
@@ -226,7 +233,7 @@ func _begin(kind: String, first: String, second: String) -> void:
 		var build = Game if i == local_slot else BUILD.new()
 		if build != Game:
 			add_child(build)
-		build.new_run(ids[i])
+		build.new_run(ids[i], "", kind == "duel")
 		var p = PLAYER.new()
 		p.build = build
 		p.network_driven = i != local_slot
@@ -260,9 +267,17 @@ func _begin(kind: String, first: String, second: String) -> void:
 		world.run_won.connect(func(): _end_match("合作通關"))
 		world.map_entered.connect(_map_entered)
 	world.set_physics_process(local_slot == 0 and kind == "coop")
-	hud = UIKit.label("", 22)
+	hud = preload("res://scripts/ui/hud.gd").new()
+	hud.player = fighters[local_slot]
+	hud.theme = UIKit.theme()
 	layer.add_child(hud)
-	hud.position = Vector2(24,20)
+	layer.move_child(hud, 0)
+	if kind == "duel":
+		hud.set_opponent(fighters[1-local_slot])
+	else:
+		if local_slot == 0:
+			world.enemies_changed.connect(hud.set_enemies)
+		world.boss_appeared.connect(hud.set_boss)
 	rest_panel.reparent(layer,false)
 	rest_panel.position = Vector2(500,110)
 	reward_buttons.reparent(layer,false)
@@ -277,6 +292,7 @@ func _map_entered(_index: int) -> void:
 		fighters[i].position = spawn + Vector3.BACK * i
 		fighters[i].yaw = -PI/2
 		fighters[i].rotation.y = -PI/2
+	blend_duration = 0.0
 	predicted_positions.clear()
 
 func _arena() -> void:
@@ -304,6 +320,7 @@ func _round_reset() -> void:
 	round_active = false
 	countdown = CombatState.cfg("lan_round_delay")
 	pending_deaths = [false,false]
+	blend_duration = 0.0
 	predicted_positions.clear()
 	for i in 2:
 		var p = fighters[i]
@@ -473,8 +490,17 @@ func _process(delta: float) -> void:
 		return
 	var p = fighters[local_slot]
 	var other = fighters[1-local_slot]
-	var bar := "問劍坪　命數 %d：%d" % lives if match_mode == "duel" else "合作闖關　第 %d 區" % maxi(Game.stage,1)
-	hud.text = "%s　氣血 %d／%d　%s %d　怒氣 %d\n%s" % [bar,ceili(p.hp),ceili(p.build.max_hp()),"對手" if match_mode=="duel" else "隊友",ceili(other.hp),int(p.runner.rage),info]
+	blend_elapsed += delta
+	if blend_duration > 0.0:
+		var progress := Engine.get_physics_interpolation_fraction() if local_slot == 0 else clampf(blend_elapsed / blend_duration, 0.0, 1.0)
+		remote_display = remote_start.lerp(remote_target, progress)
+		remote_angle = lerp_angle(remote_start_angle, remote_target_angle, progress)
+		other.model.global_position = remote_display
+		other.model.rotation.y = remote_angle
+	if match_mode == "duel":
+		hud.set_zone("問劍坪　命數 %d：%d" % [lives[local_slot], lives[1-local_slot]])
+	else:
+		hud.set_zone("%s・第 %d 區" % [Data.maps[world.map_id].name_zh, maxi(1,world.current+1)])
 	if match_mode == "coop" and p.dead and not other.dead:
 		other.cam.current = true
 		if local_slot == 1:
@@ -482,9 +508,26 @@ func _process(delta: float) -> void:
 	else:
 		p.cam.current = true
 	if countdown > 0:
-		hud.text += "　開戰倒數 %d" % ceili(countdown)
+		hud.set_hint("開戰倒數 %d" % ceili(countdown))
 	elif p.dead:
-		hud.text += "　觀戰中"
+		hud.set_hint("觀戰中")
+	else:
+		hud.set_hint("")
+
+# 碰撞與命中使用模擬位置，模型在畫面更新時移向最新樣本。
+func _remote_sample(pos: Vector3, angle: float, interval: float) -> void:
+	if blend_duration <= 0.0 or remote_target.distance_to(pos) > CombatState.cfg("lan_snap_distance_m"):
+		remote_display = pos
+		remote_angle = angle
+	elif local_slot == 0:
+		remote_display = remote_target
+		remote_angle = remote_target_angle
+	remote_start = remote_display
+	remote_start_angle = remote_angle
+	remote_target = pos
+	remote_target_angle = angle
+	blend_elapsed = 0.0
+	blend_duration = interval
 
 func _record_room(ip: String, kind: String) -> void:
 	var caption := "%s    ·    %s" % ["合作闖關" if kind == "coop" else "擂台單挑",ip]
@@ -512,6 +555,7 @@ func _physics_process(delta: float) -> void:
 			round_active = true
 			_sync_local_controls()
 	if local_slot == 0:
+		_remote_sample(fighters[1].position, fighters[1].body_yaw, delta)
 		if match_mode == "coop":
 			world.player = fighters[0]
 			if fighters[0].dead or (not fighters[1].dead and fighters[1].position.x > fighters[0].position.x):
@@ -597,7 +641,7 @@ func _send_snapshot() -> void:
 	for p in fighters:
 		actors.append({
 			"pos": p.position, "velocity": p.velocity, "yaw": p.body_yaw,
-			"hp": p.hp, "state": p.cs.base, "state_left": p.cs.t,
+			"hp": p.hp, "shield": p.shield, "state": p.cs.base, "state_left": p.cs.t,
 			"rage": p.runner.rage, "clip": p.model.current, "invincible": p.cs.inv_t,
 			"cooldowns": p.runner.cds, "move_id": p.runner.move.get("move_id",""), "time": p.runner.t,
 			"fired": p.runner.fired, "combo": p.runner.combo, "speed": p.runner.speed,
@@ -637,15 +681,15 @@ func _snapshot(round_id: int, serial: int, confirmed_action: int, actors: Array,
 			if r.gate_out.visible != sealed:
 				world._set_gate(r.gate_out, sealed)
 		Game.stage = maxi(1,map*5+room+1)
-		info = "鎖陣" if state == "fighting" else "同行"
+		world.current = room
+		hud.set_enemies(mobs.size())
 	for i in 2:
 		var p = fighters[i]
 		var actor: Dictionary = actors[i]
 		if i == 0:
 			p.position = actor.pos
-			p.model.position = p.position
+			_remote_sample(actor.pos, actor.yaw, 1.0 / CombatState.cfg("lan_snapshot_hz"))
 			p.body_yaw = actor.yaw
-			p.model.rotation.y = actor.yaw
 			p.model.rotation.x = actor.pitch
 			var clip := String(actor.clip)
 			if clip.ends_with("@hold"):
@@ -683,6 +727,7 @@ func _snapshot(round_id: int, serial: int, confirmed_action: int, actors: Array,
 					p.model.play(mv.anim,rate*p.runner.speed,float(mv.anim_from_s)+rate*p.runner.t,0,true)
 			p.runner.combo = actor.combo
 		p.hp = actor.hp
+		p.shield = actor.shield
 		p.cs.base = actor.state
 		p.cs.t = actor.state_left
 		p.cs.inv_t = actor.invincible
@@ -748,6 +793,8 @@ func _end_match(message: String) -> void:
 @rpc("authority","call_local","reliable")
 func _finish(message: String) -> void:
 	ended = true
+	if hud:
+		hud.hide()
 	match_menu.hide_all()
 	if world:
 		world.process_mode = Node.PROCESS_MODE_DISABLED

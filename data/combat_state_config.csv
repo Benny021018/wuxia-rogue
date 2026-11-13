@@ -43,3 +43,5 @@ lan_round_delay,3,開戰倒數秒數
 lan_arena_half,13,問劍坪半邊長度
 lan_spawn_gap,12,擂台開局間距
 lan_snapshot_hz,20,房主狀態更新頻率
+lan_duel_hp,10000,擂台每條命的氣血上限
+lan_snap_distance_m,4,遠端角色瞬移時直接對齊的距離
