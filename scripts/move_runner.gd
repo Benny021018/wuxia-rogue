@@ -102,7 +102,7 @@ func _start(slot: String) -> void:
 	if st != "" and float(move.self_from_s) <= 0.0:
 		_self_state(st, float(move.self_to_s))
 	var dur := float(move.duration_s)
-	var a: Animation = p.model.anim.get_animation(move.anim) if p.model.has(move.anim) else null
+	var a: Animation = p.model.anim.get_animation(p.model.clip(move.anim)) if p.model.has(move.anim) else null
 	var from := float(move.anim_from_s)
 	var aspeed := speed
 	if a:

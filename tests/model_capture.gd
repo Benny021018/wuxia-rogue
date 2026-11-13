@@ -29,7 +29,7 @@ func _ready():
 		var mv: Dictionary = Data.moves[mid]
 		if mv.char_id != cid or mv.hits.is_empty():
 			continue
-		var a: Animation = m.anim.get_animation(mv.anim)
+		var a: Animation = m.anim.get_animation(m.clip(mv.anim))
 		var k: float = (a.length - float(mv.anim_from_s)) / float(mv.duration_s)
 		shots.append([mv.anim, float(mv.anim_from_s) + float(mv.hits[0].time_s) * k, mv.name_zh, mid])
 	var i := 0

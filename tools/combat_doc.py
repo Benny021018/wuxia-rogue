@@ -62,7 +62,31 @@ for cid in ("nangong", "han", "tang"):
         key = KEYS[m["action"]] + (f"（第 {m['slot'][-1]} 段）" if m["slot"].startswith("normal") else "")
         L.append(f"| {key} | {m['name_zh']} | {cd} | {ss} | {dm} | {stun} | {launch} | {br} | {kd} | {m['desc']} |")
     L.append("")
-L += ["## 4. 實作順序", "",
+# ---- 浮空設計
+L += ["## 4. 浮空設計：哪些攻擊會讓敵人浮空", "",
+      "浮空有三個來源：", "",
+      "1. **起手招**（把站著的敵人打上半空）：下表「起手」欄打勾的招式。浮空高度決定後面能接幾下。",
+      f"2. **托空招**（敵人已經在空中時把它托住）：任何攻擊打到浮空的敵人都會讓它再彈起 {f(cfg['air_hit_pop_h_m']['value'])} 公尺；帶浮空屬性的招式用自己的高度。每多打一下高度 ×{f(cfg['juggle_decay']['value'])}。",
+      f"3. **倒地追打**：敵人倒地時被任何攻擊打到，都會彈起至少 {f(cfg['down_hit_launch_h_m']['value'])} 公尺，可以重新起連段。", "",
+      "霸體中的敵人（精英、首領未被破霸體時）不會被打浮空。", "",
+      "| 角色 | 招式 | 按鍵 | 浮空高度 | 起手 | 用途 |", "|---|---|---|---|---|---|"]
+PURPOSE = {"nan_n3": "普攻連段中自然把敵人帶離地面，第四段接著打", "nan_s1": "主要起手，最高，後面可接完整連段",
+           "nan_s3": "空中托住：五下每下都把敵人往上帶，連段中段用", "nan_s6": "反擊成功時挑空，反守為攻",
+           "nan_ult": "八連斬一路把敵人帶上去，最後一劍劈落倒地",
+           "han_s1": "範圍起手：把周圍一圈敵人全部震起", "han_s7": "最高的範圍起手，落點周圍都浮空", "han_ult": "三記橫掃捲上半空，最後一擊劈落倒地",
+           "tang_s1": "近身自保：踢飛貼臉的敵人並後撤", "tang_s6": "箭雨把浮空的敵人釘在半空，遠距離續連", "tang_ult": "十二連射托空，爆裂箭炸落倒地"}
+for m in moves:
+    la = [h for h in by.get(m["move_id"], []) if h["launch"] == "1"]
+    if not la:
+        continue
+    hs = sorted({float(h["launch_h_m"]) for h in la})
+    opener = "✓" if max(hs) >= 1.0 else "托空"
+    key = KEYS[m["action"]] + (f"（第 {m['slot'][-1]} 段）" if m["slot"].startswith("normal") else "")
+    L.append(f"| {chars[m['char_id']]['name_zh']} | {m['name_zh']} | {key} | {'～'.join(f(x) for x in hs)} m{'×' + str(len(la)) if len(la) > 1 else ''} | {opener} | {PURPOSE.get(m['move_id'], '')} |")
+L += ["", "南宮逸的基本連段：左鍵 ×3（第三段上撩小浮空）→ 第四段 → 右鍵挑月（挑高）→ E 追風連斬（托空五下）→ 左鍵追打 → 落地前 R 落雁斬收尾。",
+      "敵人倒地後再補一刀會重新彈起，可以再接挑月。", "",
+      f"敵人打玩家：一般近戰與飛行道具只造成硬直；地上有預警圈的範圍攻擊會把玩家打浮空 {f(cfg['enemy_aoe_launch_h_m']['value'])} 公尺。", ""]
+L += ["## 5. 實作順序", "",
       "1. ✅ 狀態邏輯（`CombatState`）、招式資料與冒煙測試",
       "2. ✅ 第三人稱鏡頭與角色模型（Quaternius 通用假人，CC0）：移動、閃避、跳躍、受擊、浮空、倒地、起身",
       "3. ✅ 南宮逸：普攻四段、七技能、大招（初版動作，等用 MotionStage 逐招修）",
@@ -70,7 +94,7 @@ L += ["## 4. 實作順序", "",
       "5. ✅ 拿掉選兵器／掉落／主副武器；鐵匠只強化固定兵器；HUD 技能列與怒氣",
       "6. 韓天狼、唐七：招式已能依資料執行（判定、位移、霸體／無敵），但動作是借用劍與徒手動作的佔位版，特殊效果（血怒增傷、擒殺抓取、毒霧、陷阱、影遁暴擊、唐七按住拉弓）還沒做",
       "7. 待辦：敵人各招式個別設定五個屬性（目前依階級與攻擊種類給預設值）、鎖定目標、刀鞘與收刀", "",
-      "## 5. 動作來源與預覽", "",
+      "## 6. 動作來源與預覽", "",
       "- 模型與初版動作：Quaternius Universal Animation Library 1、2（CC0）。UE5 假人依 Epic 授權只能在 Unreal 引擎內使用，所以不採用。",
       "- 動作預覽與修改：MotionStage（https://github.com/jbang2004/motion-stage，MIT）。需要在你的電腦上執行（Node.js 22+）：`node skill/scripts/start.mjs --project <遊戲資料夾>`，在瀏覽器裡播放動作、暫停標記問題，再把任務交給我修改。"]
 (ROOT / "docs" / "combat-design.md").write_text("\n".join(L) + "\n", encoding="utf-8")

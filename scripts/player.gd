@@ -216,7 +216,7 @@ func _physics_process(delta: float) -> void:
 			cs.give_invincible(CombatState.cfg("dodge_invincible_s"))
 			_dash_dir = dir if dir != Vector3.ZERO else Vector3(-sin(body_yaw), 0, -cos(body_yaw))
 			face(_dash_dir)
-			model.play("Roll", 1.47 / CombatState.cfg("dodge_time_s") * 0.8, 0.1, 0.05, true)
+			model.play("Sprint_Loop", 1.6, 0.0, 0.05, true)      # 閃避：身體前傾衝一小段（傾角在 _animate）
 		if Input.is_action_just_pressed("jump") and is_on_floor() and not runner.busy() and dash_t <= 0.0:
 			velocity.y = JUMP_V
 			Sfx.play("jump")
@@ -269,7 +269,8 @@ func _animate(delta: float) -> void:
 	var m_rot: float = model.rotation.y
 	model.rotation.y = lerp_angle(m_rot, body_yaw, minf(1.0, delta * 18.0))
 	var S := CombatState.S
-	model.rotation.x = 0.0
+	var lean := -deg_to_rad(CombatState.cfg("dodge_lean_deg")) if dash_t > 0.0 and hp > 0.0 else 0.0
+	model.rotation.x = lerpf(model.rotation.x, lean, minf(1.0, delta * 22.0))
 	if hp <= 0.0:
 		model.play("Death01", 1.0, 0.0, 0.1)
 		return
@@ -295,6 +296,8 @@ func _animate(delta: float) -> void:
 	if not is_on_floor():
 		model.play("Jump_Loop", 1.0, 0.0, 0.1)
 		return
+	if model.current == "Sprint":
+		model.current = ""
 	var speed2 := Vector2(velocity.x, velocity.z).length()
 	if speed2 > 0.6:
 		model.play("Jog_Fwd_Loop", clampf(speed2 / 4.2, 0.7, 1.6))

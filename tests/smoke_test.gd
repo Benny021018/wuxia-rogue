@@ -940,6 +940,27 @@ func _check_third_person(world, player) -> void:
 	_check(player.model != null and player.model.has("Sword_Regular_A") and player.model.has("Sword_Idle"), "角色模型載入兩個動作庫")
 	_check(player.cam.get_parent() == player.pivot and player.cam.position.z > 2.0, "第三人稱鏡頭在角色後方")
 	_check(Game.weapons[1] == null and Game.current_weapon().id == String(Data.characters[Game.char_id].weapon_id), "角色使用固定兵器，沒有副武器")
+	var missing: Array = []
+	for mid in Data.moves:
+		if not player.model.has(Data.moves[mid].anim):
+			missing.append("%s:%s" % [mid, Data.moves[mid].anim])
+	_check(missing.is_empty(), "招式表的動作都在動作庫裡（缺：%s）" % str(missing))
+	_check(player.model.has("Jog_Fwd_Loop") and player.model.has("Jump_Loop") and player.model.has("Sprint_Loop"), "循環動作（跑步、跳躍、衝刺）找得到")
+	# 走路要播跑步動作
+	player.cs.reset()
+	player.runner.interrupt()
+	Input.action_press("move_forward")
+	await _frames(12)
+	_check(player.model.current == "Jog_Fwd" and player.model.anim.is_playing(), "移動時播放跑步動作（目前 %s）" % player.model.current)
+	# 閃避：前傾衝刺，不翻滾，期間無敵
+	player.dash_cd = 0.0
+	Input.action_press("dash")
+	await _frames(4)
+	Input.action_release("dash")
+	_check(player.dash_t > 0.0 and player.model.current == "Sprint" and player.model.rotation.x < -0.15 and not player.cs.hittable(), "閃避時身體前傾並無敵（動作 %s）" % player.model.current)
+	Input.action_release("move_forward")
+	await _frames(40)
+	_check(player.model.current == "Sword_Idle" and absf(player.model.rotation.x) < 0.05, "停下後回到待機、身體回正")
 	Settings.values["hitstop"] = 0.0
 	player.runner.setup(player, Game.char_id)
 	player.cs.reset()

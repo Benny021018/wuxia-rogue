@@ -1,8 +1,8 @@
 move_id,char_id,slot,name_zh,action,cooldown_s,self_state,self_from_s,self_to_s,desc,anim,anim_from_s,duration_s,lunge_m,lunge_from_s,lunge_to_s,kind
 nan_n1,nangong,normal1,斜斬,attack,0,,0,0,普攻第一段,Sword_Regular_A,0,0.42,0.6,0.05,0.2,
 nan_n2,nangong,normal2,橫斬,attack,0,,0,0,普攻第二段,Sword_Regular_B,0,0.46,0.6,0.05,0.2,
-nan_n3,nangong,normal3,上撩,attack,0,,0,0,普攻第三段，對浮空目標可續連,Sword_Regular_C,0,0.55,0.6,0.05,0.2,
-nan_n4,nangong,normal4,縱劈,attack,0,,0,0,普攻收尾，把敵人劈退,Sword_Attack,0.25,0.75,1.0,0.05,0.3,
+nan_n3,nangong,normal3,上撩,attack,0,,0,0,普攻第三段，把敵人撩離地面（小浮空）,Sword_Regular_C,0,0.55,0.6,0.05,0.2,
+nan_n4,nangong,normal4,縱劈,attack,0,,0,0,普攻收尾：打中浮空的敵人會再托高一點並劈退,Sword_Attack,0.25,0.75,1.0,0.05,0.3,
 nan_s1,nangong,skill1,挑月,skill1,4,,0,0,由下往上挑斬，把敵人挑上半空，連段起手,Melee_Hook,0,0.55,0.5,0,0.2,
 nan_s2,nangong,skill2,疾風步,skill2,6,invincible,0.05,0.3,向前突進穿過敵人並斬擊，突進途中無敵,Sword_Dash,0.35,0.6,5.0,0.05,0.3,
 nan_s3,nangong,skill3,追風連斬,skill3,8,,0,0,五連快斬，每一下都能把浮空的敵人托住,Sword_Regular_Combo,0,0.85,0.8,0,0.6,

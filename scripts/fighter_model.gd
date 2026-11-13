@@ -6,7 +6,7 @@ const UAL1 := preload("res://assets/models/character/UAL1.glb")
 const UAL2 := preload("res://assets/models/character/UAL2.glb")
 const WEAPONS := {"W001": preload("res://assets/models/weapons/Tachi.glb"),
 	"W007": preload("res://assets/models/weapons/W007.glb"), "W301": preload("res://assets/models/weapons/W301.glb")}
-const LOOPS := ["Sword_Idle", "Idle_Loop"]
+const LOOPS := ["Sword_Idle"]
 # 兵器在右手骨頭上的擺放（位置、歐拉角、縮放）；用 tests/UICapture 對照調整
 const GRIP := {"W001": [Vector3(0, 0.09, 0.03), Vector3(0, 180, 0), 1.0],
 	"W301": [Vector3(0, 0.09, 0.03), Vector3(0, 180, 0), 1.0],
@@ -34,9 +34,10 @@ func setup(char_id: String, weapon_id: String) -> void:
 		if not lib.has_animation(n):
 			lib.add_animation(n, ap2.get_animation(n))
 	extra.free()
-	for n in anim.get_animation_list():
-		var a := anim.get_animation(n)
-		a.loop_mode = Animation.LOOP_LINEAR if String(n).ends_with("_Loop") or String(n) in LOOPS else Animation.LOOP_NONE
+	# Godot 匯入時會把名稱結尾的 _Loop 去掉並設成循環；這裡只補上沒標記但要循環的待機動作
+	for n in LOOPS:
+		if anim.has_animation(n):
+			anim.get_animation(n).loop_mode = Animation.LOOP_LINEAR
 	var mesh: MeshInstance3D = body.find_children("*", "MeshInstance3D", true, false)[0]
 	var tint: Array = TINT.get(char_id, TINT.nangong)
 	for i in mesh.mesh.get_surface_count():
@@ -63,13 +64,24 @@ func setup(char_id: String, weapon_id: String) -> void:
 	play("Sword_Idle")
 
 
+## 動作庫原名（含 _Loop）或匯入後的名稱都可以
+func clip(n: String) -> String:
+	if anim == null:
+		return ""
+	if anim.has_animation(n):
+		return n
+	var short := n.trim_suffix("_Loop")
+	return short if anim.has_animation(short) else ""
+
+
 func has(n: String) -> bool:
-	return anim != null and anim.has_animation(n)
+	return clip(n) != ""
 
 
 ## 播放動作；同一個循環動作重複呼叫不會重播
 func play(n: String, speed := 1.0, from := 0.0, blend := 0.12, force := false) -> void:
-	if not has(n):
+	n = clip(n)
+	if n == "":
 		return
 	if n == current and not force and anim.is_playing():
 		anim.speed_scale = speed
@@ -82,7 +94,8 @@ func play(n: String, speed := 1.0, from := 0.0, blend := 0.12, force := false) -
 
 ## 停在某個動作的某一格（倒地、浮空的姿勢）
 func hold(n: String, at: float) -> void:
-	if not has(n):
+	n = clip(n)
+	if n == "":
 		return
 	if current != n + "@hold":
 		current = n + "@hold"
