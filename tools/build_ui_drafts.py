@@ -500,7 +500,6 @@ def s02_select():
     b.append(f'<rect width="{W}" height="{H}" fill="{INK}"/>')
     b.append(speed_lines(800, 450, 380, 1100, 80, VIOLET, 0.8, 21, 9))
     b.append(brush_title(800, 92, "選擇角色", 70, BONE, INK, 9, "middle", -2))
-    b.append(text(800, 128, "三人各有被動與境界效果；出身門派影響參悟權重", 16, GREY, SANS, 700, "middle"))
     order = ["nangong", "han", "tang"]
     sel = "nangong"
     k = 46
@@ -550,7 +549,6 @@ def s02_select():
         if on:
             b.append(button(x + 60, y + h + 18, 300, 58, "選定此人", "normal", 26))
     b.append(button(1330, 836, 200, 50, "返回", "normal", 22))
-    b.append(text(800, 868, "← → 切換　Enter 選定　Esc 返回", 16, GREY, SANS, 700, "middle"))
     b.append(note(1270, 20, ["稿註：選中者全彩＋青背光＋血紅外光；", "未選者壓成墨色雙色調。境界效果收合，", "游標停留時展開成系統框。"]))
     return doc("\n".join(b), "02 角色選擇")
 

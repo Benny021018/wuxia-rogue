@@ -137,11 +137,9 @@ func show_select() -> void:
 	var lines := _fx()
 	lines.add_speed_lines(Vector2(800, 450), 380, 1100, 80, UIKit.VIOLET, 21, 1.5)
 	_at(UIKit.title("選擇角色", 70, UIKit.BONE, 9, false, -2), 500, 40, 600, 90)
-	_at(UIKit.label("三人各有被動與境界效果；出身門派影響參悟權重", 16, UIKit.GREY, HORIZONTAL_ALIGNMENT_CENTER), 400, 116, 800, 26)
 	for i in Data.char_order.size():
 		_char_card(Data.char_order[i], i)
 	set_meta("selecting", true)
-	_at(UIKit.label("← → 切換　Enter 選定　Esc 返回", 16, UIKit.GREY, HORIZONTAL_ALIGNMENT_CENTER), 550, 850, 500, 26)
 	_at(UIKit.button("返回", show_main, 22, 200, 50), 1330, 836, 200, 50)
 
 
