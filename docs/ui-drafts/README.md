@@ -18,12 +18,11 @@
 | 09-drop-compare.svg 掉落兵器比較 | `hud.gd` `show_drop_compare` |
 | 10-smith.svg 鐵匠 | `shop_ui.gd` `open_smith` |
 | 11-merchant.svg 商人 | `shop_ui.gd` `open_merchant` |
-| 12-meridian.svg 奇經八脈・衝穴（A 案：正背面人形） | 待定稿（K 鍵） |
-| 12b-meridian-scroll.svg 奇經八脈・衝穴（B 案：古卷打坐圖） | 待定稿 |
 | 12c-meridian-pose.svg 奇經八脈・衝穴（定案：一脈一式剪影＋穴位星圖） | `meridian_ui.gd`、`meridian_chart.gd` |
-| 12d-meridian-poses.svg 八脈八式一覽 | C 案的招式表 |
+| 12d-meridian-poses.svg 八脈八式一覽 | 定案的八脈招式表 |
 | 13-bow-aim.svg 弓・拉弓與瞄準 | `hud.gd` 紅圈準星 |
 | 14-tianji-wheel.svg 悟道碑・天機輪（三軸石輪＋機率公示） | `gacha_ui.gd`、`wheel_reel.gd` |
+| 15-settings.svg 設定（音量、靈敏度、打擊感開關） | `screens.gd` 的 `show_settings()`、`comic_slider.gd` |
 
 ## 語彙
 
@@ -44,3 +43,4 @@ python3 tools/build_ui_drafts.py s03_hud    # 單張
 ```
 
 卡片文字直接讀 `data/*.csv`；立繪與背景從 `assets/` 內嵌。字體依序用 Noto Serif／Sans CJK TC，沒有時退回新細明體與微軟正黑體，所以各機器上字形略有差異。遊戲內改用隨附的裁切字型（`assets/fonts/`，`tools/subset_fonts.py` 產生），各機器字形一致。
+

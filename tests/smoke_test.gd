@@ -8,9 +8,28 @@ var errors := 0
 
 
 func _ready() -> void:
+	Settings.save_enabled = false     # 不寫入玩家的設定檔
+	Settings.values["hitstop"] = 0.0   # 頓幀以真實時間計算，整局流程測試先關掉（_check_game_feel 會單獨測）
 	main = MAIN.new()
 	add_child(main)
 	await _frames(5)
+	_check_music("menu")
+	var first_btn = get_viewport().gui_get_focus_owner()
+	_check(first_btn is ComicButton and first_btn.text == "踏上江湖", "主選單焦點在「踏上江湖」（Enter 可直接開始）")
+	UIKit.kbd_nav = false
+	first_btn._on_focus(true)
+	_check(not first_btn.has_theme_stylebox_override("normal"), "滑鼠操作時「踏上江湖」預設不顯示高亮")
+	var down := InputEventKey.new()
+	down.keycode = KEY_DOWN
+	down.physical_keycode = KEY_DOWN
+	down.pressed = true
+	main._input(down)
+	_check(UIKit.kbd_nav and first_btn.has_theme_stylebox_override("normal") and get_viewport().gui_get_focus_owner() == first_btn, "第一次按方向鍵先亮出目前焦點")
+	var mv := InputEventMouseMotion.new()
+	mv.relative = Vector2(10, 0)
+	main._input(mv)
+	_check(not UIKit.kbd_nav and not first_btn.has_theme_stylebox_override("normal"), "動滑鼠後焦點高亮消失")
+	await _check_audio_settings()
 	for cid in Data.char_order:
 		await _run_character(cid)
 	print("SMOKE_DONE errors=%d" % errors)
@@ -43,6 +62,7 @@ func _run_character(cid: String) -> void:
 	var player = main.player
 	player.invuln_t = 1.0e9
 	if cid == Data.char_order[0]:
+		_check_music(Data.map_order[0])
 		await _check_weapon_views(player)
 		await _check_loot_and_shops(world, player)
 		_check_meridians_and_shrine(player)
@@ -50,6 +70,7 @@ func _run_character(cid: String) -> void:
 		await _check_bow(player)
 		await _check_cover_tactics(world, player)
 		await _check_hit_reactions(world)
+		await _check_game_feel(world, player)
 		var gate = world.rooms[0].gate_out
 		var meshes := (gate as Node).find_children("*", "MeshInstance3D", true, false)
 		_check(meshes.size() == 1, "山寨門只有一個可見模型")
@@ -201,7 +222,7 @@ func _run_character(cid: String) -> void:
 	var labels: Array = []
 	for b in main.gacha.cards_root.find_children("*", "Button", true, false):
 		labels.append(b.text)
-	_check(labels.has("替換主武器：青鞘太刀") and labels.has("替換副武器：竹弓"), "參悟卡以主副武器替換")
+	_check(labels.has("替換主武器：太刀") and labels.has("替換副武器：竹弓"), "參悟卡以主副武器替換")
 	main.gacha._on_close()
 	main.mode = "play"
 	main.hud.show_banner("鎖　陣", "測試", "lock")
@@ -218,7 +239,7 @@ func _run_character(cid: String) -> void:
 	main.screens._on_weapon_card_input(_click(), "W301", main.screens._weapon_sel)
 	main.screens.start_run.disconnect(record)
 	main.screens.start_run.connect(main._start)
-	_check(picked == ["W301"], "點選起手兵器出師")
+	_check(picked == ["W301"], "點選起手兵器入江湖")
 	main.hud.show_drop_compare(Game.make_weapon("W007", 2))
 	_check(main.hud.drop_panel.visible and main.hud.drop_panel.get_child_count() > 3, "掉落兵器比較面板")
 	main.hud.show_drop_compare(null)
@@ -396,12 +417,15 @@ func _check_wheel() -> void:
 	var n := 20000
 	var trig := 0
 	var res := 0
+	var saved_state := Game.rng.state
+	Game.rng.seed = 20261113          # 固定種子：結果可重現，不會有千分之一的隨機失敗
 	for i in n:
 		var r := Game.wheel_eval(Game.wheel_spin())
 		if int(r.scatters) >= 3:
 			trig += 1
 		if r.outcome == "resonance":
 			res += 1
+	Game.rng.state = saved_state
 	var odds2 := Game.wheel_odds()
 	var z1: float = (float(trig) / n - odds2.trigger) / sqrt(odds2.trigger * (1.0 - odds2.trigger) / n)
 	var z2: float = (float(res) / n - odds2.resonance) / sqrt(odds2.resonance * (1.0 - odds2.resonance) / n)
@@ -620,6 +644,132 @@ func _check_loot_and_shops(world, player) -> void:
 	await _frames(2)
 
 
+func _check_audio_settings() -> void:
+	# 預設值：音樂 30%、音效 50%（data/settings_config.csv）
+	_check(is_equal_approx(float(Data.settings_cfg.music_volume.default), 0.3) and is_equal_approx(float(Data.settings_cfg.sfx_volume.default), 0.5), "預設音樂 30%、音效 50%")
+	var mi := AudioServer.get_bus_index("Music")
+	var si := AudioServer.get_bus_index("SFX")
+	_check(mi > 0 and si > 0, "建立 Music／SFX 匯流排")
+	_check(Music.players[0].bus == "Music" and Sfx._p2[0].bus == "SFX" and Sfx._p3[0].bus == "SFX", "配樂與音效走各自的匯流排")
+	var old := Settings.get_value("music_volume")
+	Settings.set_value("music_volume", 0.5)
+	_check(absf(AudioServer.get_bus_volume_db(mi) - linear_to_db(0.5)) < 0.01, "音樂音量套用到匯流排")
+	Settings.set_value("music_volume", 0.0)
+	_check(AudioServer.is_bus_mute(mi), "音樂調到 0 會靜音")
+	Settings.set_value("music_volume", old)
+	_check(not AudioServer.is_bus_mute(mi) or old <= 0.001, "還原音樂音量")
+	# 每個音效都載得到
+	var missing: Array = []
+	for id in Data.sfx:
+		if Sfx.streams(id).is_empty():
+			missing.append(id)
+	_check(missing.is_empty(), "sfx.csv 的音效檔都在（缺：%s）" % str(missing))
+	_check(Data.sfx.size() >= 60, "音效清單至少 60 個（實際 %d）" % Data.sfx.size())
+	Sfx._last_ms.clear()
+	_check(Sfx.play("ui_click") != null and Sfx.play("ui_click") == null, "同一音效最短間隔內不重播")
+	_check(Sfx.play("not_a_sound") == null, "未知音效不會當機")
+	# 設定頁
+	main.screens.show_settings(false)
+	await _frames(2)
+	var sl = main.screens.settings_sliders.get("sfx_volume")
+	_check(sl != null and main.screens.settings_sliders.size() == 5, "設定頁有 5 個滑桿（實際 %d）" % main.screens.settings_sliders.size())
+	if sl:
+		var before := Settings.get_value("sfx_volume")
+		sl.value = 0.8
+		_check(is_equal_approx(Settings.get_value("sfx_volume"), 0.8), "拖滑桿改音效音量")
+		Settings.set_value("sfx_volume", before)
+	var esc := InputEventKey.new()
+	esc.physical_keycode = KEY_ESCAPE
+	esc.pressed = true
+	main.screens._unhandled_key_input(esc)
+	await _frames(1)
+	_check(not main.screens.has_meta("settings_from"), "Esc 離開設定頁")
+	main.screens.show_main()
+
+
+func _check_game_feel(world, player) -> void:
+	# 頓幀：時間變慢，之後自動恢復；關掉設定就沒有
+	Feel.reset()
+	Settings.values["hitstop"] = 1.0
+	Feel.hitstop(0.05)
+	_check(Engine.time_scale < 0.2, "命中頓幀壓低時間")
+	var waited := 0
+	while Engine.time_scale < 1.0 and waited < 2000:
+		await get_tree().process_frame
+		waited += 1
+	_check(Engine.time_scale == 1.0, "頓幀結束恢復正常時間")
+	Settings.values["hitstop"] = 0.0
+	Feel.hitstop(0.05)
+	_check(Engine.time_scale == 1.0, "關閉頓幀設定後不停頓")
+	# 震動
+	Feel.shake(0.6)
+	await get_tree().process_frame
+	_check(Feel.trauma > 0.0 and absf(player.cam.h_offset) + absf(player.cam.v_offset) > 0.0, "畫面震動帶動相機")
+	Settings.values["screen_shake"] = 0.0
+	Feel.reset()
+	Feel.shake(0.6)
+	_check(Feel.trauma == 0.0, "畫面震動設為 0 就不震")
+	Settings.values["screen_shake"] = 1.0
+	Feel.reset()
+	# 一次命中：分層音效、擊退、形變、粒子、跳字
+	Sfx.log_plays = true
+	Sfx.played.clear()
+	Sfx._last_ms.clear()
+	var e = world.spawn_enemy("H01", player.global_position + player.global_basis * Vector3(0, 0, -2.5), false)
+	e.max_hp = 1.0e6
+	e.hp = 1.0e6
+	var before_nodes: Array = world.get_children()
+	player._imp = {"crit": false, "kill": false, "metal": false}
+	_check(player.deal(e, 10.0, false, 1.0), "測試命中成功")
+	player._impact_feedback(1.0)
+	_check(e._knock.length() > 0.5, "命中把敵人往後擊退")
+	_check(Sfx.played.has("hit_low") and Sfx.played.has("hit_mid_flesh") and Sfx.played.has("hit_high"), "命中播三層音效（低頻、中頻、高頻）：%s" % str(Sfx.played))
+	await _frames(2)
+	_check(not e._impact_pivot.scale.is_equal_approx(Vector3.ONE), "受擊形變（擠壓伸展）")
+	var parts := 0
+	var nums := 0
+	for c in world.get_children():
+		if c in before_nodes:
+			continue
+		if c.get_script() == preload("res://scripts/burst.gd"):
+			parts += 1
+		elif c is Label3D:
+			nums += 1
+	_check(parts >= 2 and nums >= 1, "命中噴出粒子與傷害跳字（粒子 %d、跳字 %d）" % [parts, nums])
+	# 擊殺：加層音效、屍身打飛後才消失
+	Sfx.played.clear()
+	Sfx._last_ms.clear()
+	e.hp = 1.0
+	player._imp = {"crit": false, "kill": false, "metal": false}
+	player.deal(e, 50.0, false, 1.8)
+	player._impact_feedback(1.8)
+	_check(e.dead and is_instance_valid(e) and e.collision_layer == 0, "擊殺後屍身先被打飛（無碰撞）")
+	_check(Sfx.played.has("kill_boom") and Sfx.played.has("enemy_death"), "擊殺加層音效")
+	var gone := false
+	for i in 200:
+		await get_tree().physics_frame
+		if not is_instance_valid(e):
+			gone = true
+			break
+	_check(gone, "打飛結束後移除屍身")
+	Sfx.log_plays = false
+	Feel.reset()
+
+
+func _check_music(key: String) -> void:
+	_check(Music.current == key, "目前配樂是 %s（實際 %s）" % [key, Music.current])
+	var row: Dictionary = Data.music.get(key, {})
+	_check(not row.is_empty(), "music.csv 有 %s" % key)
+	if row.is_empty():
+		return
+	var p: AudioStreamPlayer = Music.active_player()
+	var s = p.stream
+	_check(p.playing and s is AudioStreamOggVorbis, "%s 配樂正在播放" % key)
+	if s is AudioStreamOggVorbis:
+		_check(s.loop and absf(s.loop_offset - float(row.loop_offset_s)) < 0.001, "%s 配樂循環點正確" % key)
+		_check(float(row.loop_offset_s) < s.get_length(), "%s 循環點在曲長之內" % key)
+
+
 func _check_draw(enemy, world) -> void:
 	var flat: Vector3 = Vector3.FORWARD * 12
 	var shots: Array = []
@@ -627,30 +777,67 @@ func _check_draw(enemy, world) -> void:
 		if child.get_script() == preload("res://scripts/projectile.gd"):
 			shots.append(child)
 	world.child_entered_tree.connect(capture)
-	enemy._skill_cd = -5.0
+	var ai: Dictionary = enemy.ai
+	_check(ai.windup_s >= 1.0 and ai.lock_s > 0.2 and ai.lock_s < ai.windup_s, "弓手起手至少 1 秒，最後一段才鎖定")
+	_check(ai.cd_min_s >= 2.0 and ai.attack_chance < 1.0, "弓手出手間隔拉長，不會每次輪到就射")
+	ai.attack_chance = 1.0
+	enemy._aim_cd = 0.0
+	enemy._behaviour(.02, Vector3.FORWARD * 2, 2)
+	_check(enemy._rstate == "move" and enemy._draw < 0, "玩家貼身時不起手，先後撤")
+	enemy._aim_cd = 0.0
+	enemy._behaviour(.02, flat, 12)
+	_check(enemy._rstate == "aim" and shots.is_empty(), "舒適距離內起手拉弓")
 	enemy._behaviour(.35, flat, 12)
-	_check(shots.is_empty() and enemy._bow.arrow.visible, "進入射程時先搭箭")
-	enemy._behaviour(.02, flat, 24)
-	_check(enemy._draw < 0 and not enemy._bow.arrow.visible, "離開射程會收弓")
-	enemy._behaviour(.5, flat, 12)
+	_check(shots.is_empty() and enemy._bow.arrow.visible, "拉弓中先搭箭")
+	enemy._behaviour(ai.windup_s - ai.lock_s - .45, flat, 12)
+	_check(shots.is_empty() and not enemy._lock.is_finite(), "鎖定前不出手")
+	enemy._behaviour(.02, Vector3.FORWARD * 2, 2)
+	_check(enemy._rstate == "move" and enemy._draw < 0 and shots.is_empty(), "鎖定前被逼近會收弓後撤")
+	enemy._stun_t = 0.0
+	enemy._aim_cd = 0.0
+	enemy._behaviour(.02, flat, 12)
+	enemy._behaviour(.3, flat, 12)
 	enemy._stun_t = .05
 	enemy._physics_process(.05)
-	_check(enemy._draw < 0 and shots.is_empty(), "暈眩中斷引弓")
-	enemy._behaviour(.25, flat, 12)
+	_check(enemy._rstate == "move" and enemy._draw < 0 and shots.is_empty(), "暈眩中斷引弓")
+	enemy._stun_t = 0.0
+	enemy._aim_cd = 0.0
+	enemy._behaviour(.02, flat, 12)
 	var start_gap: float = enemy._bow.palm(0).distance_to(enemy._bow.palm(1))
-	enemy._behaviour(.88, flat, 12)
+	enemy._behaviour(ai.windup_s - ai.lock_s + .05, flat, 12)
 	var full_gap: float = enemy._bow.palm(0).distance_to(enemy._bow.palm(1))
-	_check(shots.is_empty() and full_gap > start_gap + .28, "滿弓時雙手拉開，箭仍在弦上")
-	var tip: Vector3 = enemy._bow.tip_position()
-	enemy._behaviour(.04, flat, 12)
-	_check(shots.size() == 1 and not enemy._bow.arrow.visible, "放弦只發射一支箭")
-	if shots.size() == 1:
-		_check(tip.distance_to(shots[0].global_position) < .035, "飛箭與弦上箭頭對齊")
-	enemy._behaviour(.65, flat, 12)
-	_check(enemy._draw < 0 and shots.size() == 1, "收勢不會重複發射")
+	_check(shots.is_empty() and enemy._lock.is_finite() and full_gap > start_gap + .2, "鎖定時弓已拉開、方向固定，箭仍在弦上")
+	enemy._behaviour(.02, Vector3.FORWARD * 2, 2)
+	_check(enemy._rstate == "aim", "鎖定後即使被逼近也照樣放箭（給玩家閃避的窗口）")
+	enemy._behaviour(ai.lock_s, flat, 12)
+	_check(shots.size() == 1 and enemy._rstate == "recover", "放弦只發射一支箭")
+	enemy._behaviour(ai.recover_s + .02, flat, 12)
+	_check(enemy._rstate == "move" and enemy._draw < 0 and shots.size() == 1, "收勢不會重複發射")
+	_check(enemy._aim_cd >= ai.cd_min_s - .01, "收勢後至少等 %.1f 秒才再起手" % ai.cd_min_s)
+	# 走位：太近後撤、太遠靠近、舒適距離橫移
+	enemy._reposition(.02, Vector3.FORWARD * 3, 3, false)
+	_check(enemy.velocity.dot(Vector3.FORWARD) < 0, "玩家靠近時拉開距離")
+	enemy._reposition(.02, Vector3.FORWARD * 26, 26, false)
+	_check(enemy.velocity.dot(Vector3.FORWARD) > 0, "超出射程時靠近")
+	enemy._reposition(.02, Vector3.FORWARD * ai.pref_m, ai.pref_m, false)
+	var v: Vector3 = enemy.velocity
+	_check(absf(v.x) > absf(v.z), "在舒適距離繞著玩家橫移")
 	world.child_entered_tree.disconnect(capture)
 	for shot in shots:
 		shot.queue_free()
+	# 同時拉弓的上限
+	var squad: Array = []
+	for i in 3:
+		var e = world.spawn_enemy("H02", Vector3(-10 + i, 0, 2), false)
+		e.ai.attack_chance = 1.0
+		squad.append(e)
+	squad[0]._rstate = "aim"
+	squad[1]._rstate = "aim"
+	squad[2]._aim_cd = 0.0
+	squad[2]._behaviour(.02, flat, 12)
+	_check(squad[2]._rstate == "move", "已有 %d 名遠程在拉弓時，其他人先走位" % int(Data.cfg("ai_ranged_max_aiming")))
+	for e in squad:
+		e.queue_free()
 
 
 func _check_cover_tactics(world, player) -> void:
@@ -661,9 +848,10 @@ func _check_cover_tactics(world, player) -> void:
 	world.current = 0
 	player.global_position = Vector3(33,.1,0)
 	var archer = world.spawn_enemy("H02",Vector3(26,0,0),false)
-	archer._skill_cd = 0
+	archer._aim_cd = 0
+	archer.ai.attack_chance = 1.0
 	await _frames(3)
-	_check(not archer._clear_shot() and archer._draw < 0 and archer.velocity.slide(Vector3.UP).length() > .1, "隔著路障先換位，不原地拉弓")
+	_check(not archer._clear_shot() and archer._rstate == "move" and archer.velocity.slide(Vector3.UP).length() > .1, "隔著路障先換位，不原地拉弓")
 	var bolt = preload("res://scripts/projectile.gd").new()
 	world.add_child(bolt)
 	bolt.global_position = Vector3(26,1,0)
@@ -791,9 +979,10 @@ func _check_hit_reactions(world) -> void:
 	var origin: Vector3 = e.global_position
 	var right: Vector3 = e.player.cam.global_basis.x.slide(Vector3.UP).normalized()
 	e.take_hit(1, origin - right, false, .65)
+	_check(e._flash_meshes[0].material_overlay == e._flash and e._flash.albedo_color.a > .5 and e._flash.albedo_color.g > .9, "受擊立即閃白")
 	await _frames(3)
 	var light: float = e._impact_pivot.position.dot(right)
-	_check(e._flash_meshes[0].material_overlay == e._flash and e._flash.albedo_color.a > .5, "受擊立即泛紅")
+	_check(e._flash.albedo_color.a > .3, "閃白後轉紅淡出")
 	await _frames(4)
 	_check(light > 0 and e._impact_pivot.position.dot(right) < 0, "單次受擊在畫面左右兩側擺動")
 	e.take_hit(1, origin + right, false, 1.8)

@@ -132,6 +132,7 @@ func _put(c: Control, x: float, y: float, w: float, h: float) -> Control:
 
 
 func open() -> void:
+	Sfx.play("ui_open")
 	visible = true
 	# 預設停在正在衝的經脈（有進度、還沒全通的那條）
 	var pick := mid
@@ -275,7 +276,15 @@ func _on_break() -> void:
 	var before := Game.realm
 	var res := Game.try_break(mid)
 	if res < 0:
+		Sfx.play("ui_error")
 		return
+	if Game.realm > before:
+		Sfx.play("realm_break")
+		Feel.shake(0.3)
+	elif res == 1 and Game.acu_level(mid) >= Data.meridian_len(mid):
+		Sfx.play("meridian_full")
+	else:
+		Sfx.play("acu_success" if res == 1 else "acu_fail")
 	chart.show_meridian(mid)
 	chart.selected = mini(Game.acu_level(mid), Data.meridian_len(mid) - 1)
 	chart._layout()
@@ -335,5 +344,6 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _on_close() -> void:
+	Sfx.play("ui_close")
 	visible = false
 	closed.emit()

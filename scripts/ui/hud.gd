@@ -69,6 +69,23 @@ func _ready() -> void:
 	Game.bond_activated.connect(func(sid, tier, nm): show_banner("門派傳承：%s" % nm, "%s 第%d階" % [Data.sects[sid].name_zh, tier], "break"))
 	Game.realm_broken.connect(func(lv, rn, eff): show_banner("突破・%s" % rn, eff, "break"))
 	Game.weapon_switched.connect(func(_slot): _weapon_key = "")
+	# 受傷：畫面邊緣紅光（強度依傷害比例）
+	hurt_vignette = UIKit.vignette(1.0)
+	hurt_vignette.modulate = Color(UIKit.BLOOD, 0.0)
+	add_child(hurt_vignette)
+	Feel.player_hurt.connect(_on_hurt)
+
+
+var hurt_vignette: TextureRect
+var _hurt_tw: Tween
+
+
+func _on_hurt(strength: float) -> void:
+	if _hurt_tw:
+		_hurt_tw.kill()
+	hurt_vignette.modulate = Color(1.0, 0.08, 0.1, clampf(0.35 + 0.55 * strength, 0.0, 0.9))
+	_hurt_tw = create_tween()
+	_hurt_tw.tween_property(hurt_vignette, "modulate:a", 0.0, 0.45).set_delay(0.06)
 
 
 func _at(c: Control, x: float, y: float, w: float, h: float, ax := 0.5, ay := 0.5) -> Control:

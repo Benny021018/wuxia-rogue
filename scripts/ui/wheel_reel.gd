@@ -26,9 +26,16 @@ func symbol_at(k: int) -> String:
 	return strip[((k % n) + n) % n]
 
 
+var _tick := -1
+
+
 func _process(_delta: float) -> void:
 	if not stopped or flash > 0.0:
 		queue_redraw()
+	var k := int(floor(pos))
+	if not stopped and k != _tick and is_visible_in_tree():
+		Sfx.play("wheel_tick")
+	_tick = k
 
 
 func _draw() -> void:

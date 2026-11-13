@@ -71,6 +71,20 @@ var _route := PackedVector2Array()
 var _route_target := Vector2.INF
 var _route_retry := 0.0
 var _armor := 0.0
+# 遠程 AI（ranged_ai.csv）：走位 → 起手（可讀的蓄力）→ 鎖定 → 出手 → 收勢
+var ai := {}                        # 數值副本，測試可個別調整
+var _rstate := ""                   # "move", "aim", "recover"
+var _rt := 0.0
+var _aim_cd := 0.0
+var _strafe := 1.0
+var _strafe_t := 0.0
+var _lock := Vector3.INF
+var _last_pos := Vector3.ZERO
+var _stuck_t := 0.0
+# 打擊感
+var _knock := Vector3.ZERO          # 擊退速度（逐幀衰減）
+var _away := Vector3.FORWARD        # 最後一次被打的方向（玩家 → 敵人）
+var last_hit_metal := false         # 最後一擊打在盾牌／鎧甲上（音效用金屬層）
 
 
 func setup(id: String, stg: int, w, pos: Vector3) -> void:
@@ -94,6 +108,15 @@ func setup(id: String, stg: int, w, pos: Vector3) -> void:
 		_armor = 15.0 * pow(Data.cfg("enemy_hp_growth"), stg - 1)
 	hit_radius = 0.45 * size
 	position = pos
+	if Data.ranged_ai.has(id):
+		var r: Dictionary = Data.ranged_ai[id]
+		for k in r:
+			if k != "enemy_id" and k != "note":
+				ai[k] = float(r[k])
+		_rstate = "move"
+		_aim_cd = ai.first_delay_s + randf() * 0.8
+		_strafe = 1.0 if randf() < 0.5 else -1.0
+		_strafe_t = randf_range(0.5, 1.0) * ai.strafe_s
 
 
 func _ready() -> void:
@@ -202,19 +225,21 @@ func _physics_process(delta: float) -> void:
 	_route_retry -= delta
 	_tick_status(delta)
 	if _stun_t > 0.0:
+		if _rstate == "aim" or _rstate == "recover":
+			_ranged_cancel(0.6)
 		if _bow:
-			_cancel_draw()
 			_bow.pose(-1, player.global_position + Vector3.UP)
 		_stun_t -= delta
 		velocity.x = 0
 		velocity.z = 0
+		_apply_knock(delta)
 		_apply_gravity(delta)
 		move_and_slide()
 		return
 	var to_p: Vector3 = player.global_position - global_position
 	var flat := Vector3(to_p.x, 0, to_p.z)
 	var dist := flat.length()
-	if _state == "" and _windup <= 0:
+	if _state == "" and _windup <= 0 and not _lock.is_finite():
 		if dist > 0.05:
 			rotation.y = atan2(-flat.x, -flat.z)
 	_behaviour(delta, flat, dist)
@@ -223,8 +248,25 @@ func _physics_process(delta: float) -> void:
 		var clip := &"Walk" if moving else &"Idle"
 		if _anim.current_animation != clip:
 			_anim.play(clip, 0.10)
+	_apply_knock(delta)
 	_apply_gravity(delta)
 	move_and_slide()
+
+
+func _apply_knock(delta: float) -> void:
+	if _knock.length_squared() < 0.0004:
+		_knock = Vector3.ZERO
+		return
+	velocity.x += _knock.x
+	velocity.z += _knock.z
+	_knock *= exp(-float(Data.feel.knock_decay) * delta)
+
+
+func _knock_mass() -> float:
+	match rank:
+		"elite": return float(Data.feel.knock_mass_elite)
+		"boss": return float(Data.feel.knock_mass_boss)
+	return 1.0
 
 
 func _apply_gravity(delta: float) -> void:
@@ -345,6 +387,7 @@ func _melee(delta: float, dist: float, mult := 1.0) -> void:
 			_body_mat.emission_enabled = false
 			var impact_reach := reach + 0.8 + hit_radius
 			FX.attack_trail(world,hit_center(),_swing_dir,impact_reach,180,0,Color("#ffa071"),.20)
+			Sfx.play("enemy_swing", hit_center())
 			if _anim:
 				FX.play(world,hit_center()+_swing_dir*impact_reach*.7,&"sword-slash",impact_reach*.8,.20)
 			var toward: Vector3 = player.global_position-global_position
@@ -358,6 +401,7 @@ func _melee(delta: float, dist: float, mult := 1.0) -> void:
 		velocity.z = 0
 		_windup = 0.35
 		_atk_cd = 1.3
+		Sfx.play("enemy_windup", hit_center())
 		_body_mat.emission_enabled = true
 		_body_mat.emission = Color(1, 0.3, 0.2)
 		if _anim:
@@ -386,40 +430,159 @@ func _cancel_draw() -> void:
 		_body_mat.emission_enabled = false
 		_anim.play(&"Idle", .10)
 
-func _archery(delta: float, flat: Vector3, dist: float) -> void:
+# ------------------------------------------------------------------ 遠程 AI
+func _ranged_cancel(retry: float) -> void:
+	_cancel_draw()
+	_body_mat.emission_enabled = false
+	_lock = Vector3.INF
+	_rstate = "move"
+	_aim_cd = maxf(_aim_cd, retry)
+
+
+func _aiming_count() -> int:
+	var n := 0
+	for e in get_tree().get_nodes_in_group("enemies"):
+		if e != self and not e.dead and e._rstate == "aim":
+			n += 1
+	return n
+
+
+func _ranged(delta: float, flat: Vector3, dist: float) -> void:
 	var target: Vector3 = player.global_position + Vector3.UP
 	var blocked := not _clear_shot()
-	if (dist >= 22.0 or blocked) and _draw < Bow.RELEASE:
-		_cancel_draw()
-	if _draw < 0.0:
-		if blocked or dist >= 22.0 or _skill_cd > Bow.RELEASE:
-			_chase(flat, dist, 10.0, blocked)
-			_bow.pose(-1.0, target)
+	match _rstate:
+		"aim":
+			velocity.x = 0
+			velocity.z = 0
+			_rt += delta
+			var locked: bool = _rt >= ai.windup_s - ai.lock_s
+			# 鎖定前：被逼近、斷了視線或超出射程就收手後撤；鎖定後一定出手（玩家看到紅光就該閃）。
+			if not locked and (blocked or dist > ai.max_m or dist < ai.panic_m):
+				_ranged_cancel(0.5)
+				return
+			if locked and not _lock.is_finite():
+				_lock = player.global_position
+			var aim_at: Vector3 = _lock + Vector3.UP if locked else target
+			var f := aim_at - global_position
+			if Vector2(f.x, f.z).length() > 0.05:
+				rotation.y = atan2(-f.x, -f.z)
+			var k: float = clampf(_rt / ai.windup_s, 0.0, 1.0)
+			_body_mat.emission_enabled = true
+			_body_mat.emission = Color(1.0, 0.12, 0.08) if locked else Color(.85, .58, .18) * (0.35 + 0.65 * k)
+			if _bow:
+				_draw = k * Bow.RELEASE
+				_anim.seek(_draw, true)
+				_bow.pose(_draw, aim_at)
+			if _rt >= ai.windup_s:
+				_ranged_fire(dist)
+				_rstate = "recover"
+				_rt = 0.0
+				_body_mat.emission_enabled = false
 			return
-		_draw = 0.0
-		_anim.play(&"Shoot")
-		_anim.pause()
-	velocity.x = 0
-	velocity.z = 0
-	var prev := _draw
-	_draw += delta
-	if prev < Bow.RELEASE and _draw >= Bow.RELEASE:
-		_anim.seek(Bow.RELEASE,true)
-		_bow.pose(Bow.RELEASE,target)
-		_shoot(24.0, dmg, Color(0.9,0.8,0.5), false, _bow.tip_position())
-		_skill_cd = 2.0
-	_anim.seek(_draw,true)
-	_bow.pose(_draw,target)
-	_body_mat.emission_enabled = _draw >= Bow.RELEASE - .3 and _draw < Bow.RELEASE
-	_body_mat.emission = Color(.85,.58,.18)
-	if _draw >= Bow.FINISH:
-		_cancel_draw()
+		"recover":
+			velocity.x = 0
+			velocity.z = 0
+			_rt += delta
+			if _bow:
+				_draw = Bow.RELEASE + (_rt / ai.recover_s) * (Bow.FINISH - Bow.RELEASE)
+				_anim.seek(minf(_draw, Bow.FINISH), true)
+				_bow.pose(_draw, _lock + Vector3.UP)
+			if _rt >= ai.recover_s:
+				_cancel_draw()
+				_lock = Vector3.INF
+				_rstate = "move"
+				_aim_cd = randf_range(ai.cd_min_s, ai.cd_max_s)
+			return
+	# 走位
+	_aim_cd -= delta
+	if _bow:
+		_bow.pose(-1.0, target)
+	_reposition(delta, flat, dist, blocked)
+	var cornered: bool = _stuck_t > 0.5 and dist < ai.min_m
+	if _aim_cd <= 0.0:
+		var in_band: bool = dist <= ai.max_m and (dist >= ai.panic_m or cornered)
+		if blocked or not in_band:
+			_aim_cd = 0.25
+		elif _aiming_count() >= int(Data.cfg("ai_ranged_max_aiming")) or randf() > ai.attack_chance:
+			_aim_cd = randf_range(Data.cfg("ai_ranged_retry_min"), Data.cfg("ai_ranged_retry_max"))
+		else:
+			_rstate = "aim"
+			_rt = 0.0
+			_lock = Vector3.INF
+			Sfx.play("archer_draw" if eid == "H02" else "enemy_windup", hit_center())
+			velocity.x = 0
+			velocity.z = 0
+			if _bow:
+				_draw = 0.0
+				_anim.play(&"Shoot")
+				_anim.pause()
 
-func _shoot(speed_mps: float, amount: float, color: Color, cloud := false, arrow_tip := Vector3.INF) -> void:
+
+# 依距離決定走位：太近後撤（退不動就橫移）、太遠或被擋住就靠近、在舒適距離內繞著玩家橫移。
+func _reposition(delta: float, flat: Vector3, dist: float, blocked: bool) -> void:
+	var toward := flat.normalized() if dist > 0.01 else Vector3.FORWARD
+	var side := Vector3(-toward.z, 0, toward.x) * _strafe
+	_strafe_t -= delta
+	if _strafe_t <= 0.0:
+		_strafe = -_strafe
+		_strafe_t = randf_range(0.7, 1.3) * ai.strafe_s
+	var moved := Vector2(global_position.x - _last_pos.x, global_position.z - _last_pos.z).length()
+	_last_pos = global_position
+	var want := Vector3.ZERO
+	var mult := 1.0
+	if blocked:
+		_chase(flat, dist, ai.pref_m, true)
+		return
+	if dist < ai.min_m:
+		want = -toward + side * (0.6 if _stuck_t > 0.4 else 0.25)
+		mult = ai.retreat_mult
+	elif dist > ai.max_m:
+		want = toward
+	elif dist > ai.pref_m + 2.0:
+		want = toward * 0.7 + side * 0.5
+	else:
+		var drift := clampf((dist - ai.pref_m) / 2.0, -1.0, 1.0)
+		want = side * 0.8 + toward * drift * 0.4
+		mult = 0.7
+	if want.is_zero_approx():
+		velocity.x = 0
+		velocity.z = 0
+		return
+	want = want.normalized()
+	var here := Vector2(global_position.x, global_position.z)
+	var step := _ground_direction(here + Vector2(want.x, want.z) * 3.0)
+	var dir := Vector3(step.x, 0, step.y)
+	if dir.is_zero_approx() or (moved < _speed() * delta * 0.2 and velocity.length() > 0.1):
+		_stuck_t += delta
+		if _stuck_t > 0.4:
+			_strafe = -_strafe
+			_strafe_t = ai.strafe_s
+	else:
+		_stuck_t = maxf(0.0, _stuck_t - delta)
+	dir = (dir + _separation() * 0.8).limit_length()
+	velocity.x = dir.x * _speed() * mult
+	velocity.z = dir.z * _speed() * mult
+
+
+func _ranged_fire(dist: float) -> void:
+	var at: Vector3 = _lock if _lock.is_finite() else player.global_position
+	Sfx.play("archer_release" if eid == "H02" else "throw", hit_center())
+	match eid:
+		"H02":
+			_bow.pose(Bow.RELEASE, at + Vector3.UP)
+			_shoot(24.0, dmg, Color(0.9,0.8,0.5), false, _bow.tip_position(), at)
+		"H04":
+			_shoot(14.0, dmg, Color(0.4, 0.9, 0.3), false, Vector3.INF, at)
+		"H05":
+			_shoot(12.0, dmg * 0.6, Color(0.3, 0.8, 0.2), true, Vector3.INF, at)
+
+
+func _shoot(speed_mps: float, amount: float, color: Color, cloud := false, arrow_tip := Vector3.INF, at := Vector3.INF) -> void:
 	var p := PROJ.new()
 	world.add_child(p)
 	var from := global_position + Vector3(0, 1.3 * size, 0)
-	var target: Vector3 = player.global_position + Vector3(0, 1.0, 0)
+	var ground: Vector3 = at if at.is_finite() else player.global_position
+	var target: Vector3 = ground + Vector3(0, 1.0, 0)
 	if arrow_tip.is_finite():
 		from = arrow_tip
 	p.global_position = from
@@ -432,7 +595,7 @@ func _shoot(speed_mps: float, amount: float, color: Color, cloud := false, arrow
 	p.source = self
 	if cloud:
 		p.poison_cloud = true
-		p.target_pos = Vector3(player.global_position.x, 0.2, player.global_position.z)
+		p.target_pos = Vector3(ground.x, 0.2, ground.z)
 		p.direction = (p.target_pos - from).normalized()
 		p.max_range = from.distance_to(p.target_pos)
 	if arrow_tip.is_finite():
@@ -446,11 +609,15 @@ func _shoot(speed_mps: float, amount: float, color: Color, cloud := false, arrow
 
 func _aoe_after(center: Vector3, r: float, delay: float, amount: float) -> void:
 	FX.warn_circle(world, center, r, delay)
+	Sfx.play("aoe_warn", center)
 	await get_tree().create_timer(delay, false).timeout
 	if dead or not is_instance_valid(player):
 		return
 	var d := Vector2(player.global_position.x - center.x, player.global_position.z - center.z).length()
 	FX.impact_wave(world,center,r,.3,Color(1,.4,.2))
+	FX.burst(world, center + Vector3.UP * .2, Vector3.UP, Color(.6, .55, .5, .55), 18, "dust", 5.0, 1.6)
+	Sfx.play("aoe_boom", center)
+	Feel.shake(float(Data.feel.shake_boom) * clampf(1.0 - d / (r * 3.0), 0.2, 1.0))
 	if d <= r:
 		player.take_damage(amount, self)
 
@@ -477,9 +644,11 @@ func _behaviour(delta: float, flat: Vector3, dist: float) -> void:
 		"Z05":
 			if hp < max_hp * 0.5 and not _enraged:
 				_enraged = true
+				Sfx.play("roar", global_position)
 				Game.message.emit("天魔護法狂暴！")
 			if _skill_cd <= 0.0:
 				_skill_cd = 8.0
+				Sfx.play("roar", global_position, -3.0, 1.15)
 				_summon("B01", 3, 9)
 			_chase(flat, dist)
 			_melee(delta, dist)
@@ -495,30 +664,24 @@ func _behaviour(delta: float, flat: Vector3, dist: float) -> void:
 		"B07":
 			if _skill_cd <= 0.0:
 				_skill_cd = 10.0
+				Sfx.play("chant", global_position)
 				Game.message.emit("暗月樓主結印：影衛現身！")
 				_summon("H06", 6, 10)
 			_chase(flat, dist)
 			_melee(delta, dist)
 		"H02":
-			_archery(delta, flat, dist)
+			_ranged(delta, flat, dist)
 		"H04":
-			var blocked := not _clear_shot()
-			_chase(flat, dist, 8.0, blocked)
-			if not blocked and _skill_cd <= 0.0 and dist < 18.0:
-				_skill_cd = 2.5
-				_shoot(14.0, dmg, Color(0.4, 0.9, 0.3))
+			_ranged(delta, flat, dist)
 			if _skill2_cd <= 0.0:
 				_skill2_cd = 6.0
 				_raise_corpse()
 		"H05":
-			var blocked := not _clear_shot()
-			_chase(flat, dist, 8.0, blocked)
-			if not blocked and _skill_cd <= 0.0 and dist < 16.0:
-				_skill_cd = 4.0
-				_shoot(12.0, dmg * 0.6, Color(0.3, 0.8, 0.2), true)
+			_ranged(delta, flat, dist)
 		"H06":
 			if not _revealed and dist < 3.0:
 				_revealed = true
+				Sfx.play("assassin_reveal", global_position)
 				_visual.visible = true
 				FX.play(world, hit_center(), &"poof", 1.4, 0.15, Color(0.8, 0.8, 0.9))
 			_chase(flat, dist)
@@ -531,6 +694,7 @@ func _behaviour(delta: float, flat: Vector3, dist: float) -> void:
 				_aoe_after(global_position, 4.0, 1.5, dmg * 1.5)
 			if _skill2_cd <= 0.0:
 				_skill2_cd = 20.0
+				Sfx.play("horn", global_position)
 				Game.message.emit("黑風寨主吹響號角！")
 				_summon("H01", 10, 14)
 				_summon("H02", 2, 16)
@@ -549,6 +713,7 @@ func _b_hopper(delta: float, flat: Vector3, dist: float) -> void:
 			_melee(delta, dist)
 			if _skill_cd <= 0.0 and dist < 9.0 and dist > 2.0 and is_on_floor():
 				_state = "windup"
+				Sfx.play("roar" if eid == "B06" or eid == "B02" else "enemy_windup", hit_center(), -4.0)
 				_state_t = 0.6
 				_visual.scale = Vector3(1.2, 0.7, 1.2)
 				velocity.x = 0
@@ -579,6 +744,7 @@ func _b_boar(delta: float, flat: Vector3, dist: float) -> void:
 			_melee(delta, dist)
 			if _skill_cd <= 0.0 and dist < 14.0 and dist > 3.0:
 				_state = "windup"
+				Sfx.play("roar" if eid == "B06" or eid == "B02" else "enemy_windup", hit_center(), -4.0)
 				_state_t = 1.0
 				_move_dir = flat.normalized()
 				FX.warn_circle(world, global_position + _move_dir * 3.0, 0.8, 1.0)
@@ -643,6 +809,7 @@ func _b_tiger(delta: float, flat: Vector3, dist: float) -> void:
 			_melee(delta, dist)
 			if _skill_cd <= 0.0 and dist < 12.0 and dist > 3.0 and is_on_floor():
 				_state = "windup"
+				Sfx.play("roar" if eid == "B06" or eid == "B02" else "enemy_windup", hit_center(), -4.0)
 				_state_t = 0.6
 				_visual.scale = Vector3(1.1, 0.75, 1.1)
 		"windup":
@@ -671,6 +838,7 @@ func _b_blade(delta: float, flat: Vector3, dist: float) -> void:
 			_melee(delta, dist)
 			if _skill_cd <= 0.0 and dist < 12.0:
 				_state = "windup"
+				Sfx.play("roar" if eid == "B06" or eid == "B02" else "enemy_windup", hit_center(), -4.0)
 				_state_t = 0.5
 				_move_dir = flat.normalized()
 				_body_mat.emission_enabled = true
@@ -699,6 +867,7 @@ func _b_final(delta: float, flat: Vector3, dist: float) -> void:
 	var ratio := hp / max_hp
 	if _phase == 1 and ratio <= 0.66:
 		_phase = 2
+		Sfx.play("chant", global_position, 2.0, 0.8)
 		Game.message.emit("天魔：天魔領域！")
 		var hz := HAZARD.new()
 		world.add_child(hz)
@@ -726,6 +895,7 @@ func _raise_corpse() -> void:
 	if pos == Vector3.INF:
 		pos = global_position + Vector3(randf_range(-2, 2), 0, randf_range(-2, 2))
 	FX.play(world, pos + Vector3(0, 0.5, 0), &"poof", 1.68, 0.3, Color(0.4, 1, 0.4))
+	Sfx.play("chant", global_position)
 	var e = world.spawn_enemy("Z01", pos, false)
 	if e:
 		summons.append(e)
@@ -812,17 +982,27 @@ func _react_to_hit(away: Vector3, weight: float, guard: bool) -> void:
 	var roll := Vector3.UP.cross(right) * _hit_side * force * .14
 	for mesh in _flash_meshes:
 		mesh.material_overlay = _flash
-	_flash.albedo_color = Color(1, .025, .035, .70)
+	# 受擊閃白：全白維持 flash_hold，再淡出；暴擊（weight 已乘 1.5）更亮
+	_flash.albedo_color = Color(1, 1, 1, .95 if weight >= 1.4 else .82)
+	var sq := float(Data.feel.squash) * clampf(force, .5, 1.6) * (.5 if rank == "boss" else 1.0)
+	var squash := Vector3(1.0 + sq * .8, 1.0 - sq, 1.0 + sq * .8)
+	var stretch := Vector3(1.0 - sq * .35, 1.0 + sq * .45, 1.0 - sq * .35)
+	var hold := float(Data.feel.flash_hold_s)
+	var fade := float(Data.feel.flash_fade_s)
 	_recoil = create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 	_recoil.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	_recoil.tween_property(_impact_pivot, "position", offset, .04)
 	_recoil.parallel().tween_property(_impact_pivot, "rotation", roll, .04)
+	_recoil.parallel().tween_property(_impact_pivot, "scale", squash, .04)
+	_recoil.tween_interval(maxf(0.0, hold - .04))
 	_recoil.tween_property(_impact_pivot, "position", -offset * .68, .075)
 	_recoil.parallel().tween_property(_impact_pivot, "rotation", -roll * .68, .075)
-	_recoil.parallel().tween_property(_flash, "albedo_color:a", .23, .075)
+	_recoil.parallel().tween_property(_impact_pivot, "scale", stretch, .075)
+	_recoil.parallel().tween_property(_flash, "albedo_color", Color(1, .1, .1, .35), fade * .5)
 	_recoil.tween_property(_impact_pivot, "position", Vector3.ZERO, .095)
 	_recoil.parallel().tween_property(_impact_pivot, "rotation", Vector3.ZERO, .095)
-	_recoil.parallel().tween_property(_flash, "albedo_color:a", 0.0, .095)
+	_recoil.parallel().tween_property(_impact_pivot, "scale", Vector3.ONE, .12).set_trans(Tween.TRANS_BACK)
+	_recoil.parallel().tween_property(_flash, "albedo_color:a", 0.0, fade * .5)
 	_recoil.tween_callback(func():
 		for mesh in _flash_meshes:
 			mesh.material_overlay = null)
@@ -858,9 +1038,13 @@ func take_hit(amount: float, from_pos: Vector3, crit: bool, weight := 1.0) -> fl
 				dmg_in *= 0.5
 	if rank == "elite" or rank == "boss":
 		dmg_in /= float(row.ehp_factor) if eid != "Z06" and eid != "Z04" else 1.0
+	last_hit_metal = (eid == "H03" and front) or eid == "Z04"
+	_away = -to_attacker if not to_attacker.is_zero_approx() else _away
 	var dealt := _apply_damage(dmg_in, crit, false)
 	if dealt > 0 and not dead:
 		_react_to_hit(-to_attacker, weight * (1.5 if crit else 1.0), eid == "H03" and front)
+		var kv := float(Data.feel.knock_speed) * clampf(weight, .5, 2.0) * (float(Data.feel.knock_crit_mult) if crit else 1.0)
+		_knock += _away * kv * _knock_mass() * (.4 if last_hit_metal else 1.0)
 	return dealt
 
 
@@ -872,10 +1056,17 @@ func _apply_damage(v: float, crit: bool, dot: bool) -> float:
 		if is_instance_valid(player):
 			contact += contact.direction_to(player.cam.global_position) * hit_radius
 		FX.play(world, contact, &"crit-hit" if crit else &"hit-spark", (1.55 if crit else 0.76) * size, 0.24 if crit else 0.14)
+		# 第一人稱看得到：火花往攻擊者那側與上方噴，血墨往側上方灑
+		var side := _away.cross(Vector3.UP).normalized() * (1.0 if randf() < .5 else -1.0)
+		var out := (-_away * .55 + side * .45 + Vector3.UP * .6).normalized()
+		var metal := last_hit_metal
+		FX.burst(world, contact, out, Color(1, .92, .6) if not metal else Color(.8, .95, 1), int(Data.feel.particles_crit if crit else Data.feel.particles_hit), "spark", 11.0 if crit else 7.0)
+		if not metal:
+			FX.burst(world, contact, out, Color(.45, .02, .05, .95), 6 if not crit else 12, "ink", 5.0)
 	hp -= v
 	var col := UIKit.EMBER if crit else (Color(0.5, 1, 0.4) if dot else UIKit.BONE)
-	if not dot or randf() < 0.15:
-		FX.float_text(world, hit_center() + Vector3(0, 0.6 * size, 0), str(int(v)), col, 56 if crit else 36)
+	if Settings.on("damage_numbers") and (not dot or randf() < 0.15):
+		FX.damage_number(world, hit_center() + Vector3(0, 0.6 * size, 0), int(v), crit, col)
 	if hp <= 0.0:
 		if eid == "Z06" and not _revived and not _last_hit_from_behind:
 			_revived = true
@@ -891,6 +1082,9 @@ func die() -> void:
 		return
 	dead = true
 	FX.play(world, hit_center(), &"poof", 1.4 * size, 0.36)
+	FX.burst(world, hit_center(), (Vector3.UP * .8 + _away * .3).normalized(), Color(.42, .02, .05, .95), int(Data.feel.particles_kill), "ink", 7.0, 1.2)
+	FX.burst(world, global_position + Vector3.UP * .3, Vector3.UP, Color(.55, .52, .5, .5), 8, "dust", 3.0, size)
+	Sfx.play("enemy_death", global_position)
 	remove_from_group("enemies")
 	Game.add_kill(eid)
 	if is_instance_valid(player):
@@ -901,4 +1095,30 @@ func die() -> void:
 		hz.global_position = Vector3(global_position.x, 0, global_position.z)
 		hz.configure(2.0, dmg * 0.6, 3.0, true)
 	world.on_enemy_died(self)
-	queue_free()
+	_death_fling()
+
+
+## 擊殺後屍身被打飛、壓扁、縮小再消失（不再有碰撞）
+func _death_fling() -> void:
+	collision_layer = 0
+	collision_mask = 0
+	velocity = Vector3.ZERO
+	if _label:
+		_label.hide()
+	if _recoil:
+		_recoil.kill()
+	for mesh in _flash_meshes:
+		mesh.material_overlay = _flash
+	_flash.albedo_color = Color(1, 1, 1, .9)
+	var dur := float(Data.feel.death_fling_s)
+	var dist := float(Data.feel.death_fling_m) * _knock_mass() ** 0.5
+	var local_away := global_basis.inverse() * _away
+	var tilt := Vector3(-local_away.z, 0, local_away.x).normalized() * 1.25
+	var t := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+	t.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.tween_property(_impact_pivot, "scale", Vector3(1.25, .7, 1.25), .05)
+	t.tween_property(_impact_pivot, "position", local_away * dist + Vector3.UP * .35, dur)
+	t.parallel().tween_property(_impact_pivot, "rotation", tilt, dur)
+	t.parallel().tween_property(_impact_pivot, "scale", Vector3.ONE * .15, dur).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	t.parallel().tween_property(_flash, "albedo_color", Color(.1, 0, 0, .8), dur)
+	t.tween_callback(queue_free)

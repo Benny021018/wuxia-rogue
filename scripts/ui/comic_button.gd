@@ -3,6 +3,10 @@ extends Button
 ## 斜切按鈕：外觀來自主題（StyleBoxFlat skew）；游標或焦點時加青色括弧，可附按鍵提示
 
 var key_hint := ""
+var selected := false:          # 開／關這類二選一：選中的那顆常駐血紅底
+	set(v):
+		selected = v
+		_on_focus(has_focus())
 
 
 func _init() -> void:
@@ -14,18 +18,20 @@ func _init() -> void:
 
 
 func _on_focus(on: bool) -> void:
-	## 鍵盤焦點與游標同樣顯示血紅底
-	if on:
+	## 鍵盤焦點與游標同樣顯示血紅底；滑鼠操作時焦點不亮（避免一開畫面第一顆就像被游標指著）
+	on = on and UIKit.kbd_nav
+	if on or selected:
 		add_theme_stylebox_override("normal", get_theme_stylebox("hover"))
 	else:
 		remove_theme_stylebox_override("normal")
+	add_theme_color_override("font_color", UIKit.GREY if has_meta("toggle") and not selected and not on else UIKit.BONE)
 	queue_redraw()
 
 
 func _draw() -> void:
 	var w := size.x
 	var h := size.y
-	var hot := not disabled and (is_hovered() or has_focus())
+	var hot := not disabled and (is_hovered() or (has_focus() and UIKit.kbd_nav))
 	if hot:
 		var c := UIKit.TEAL
 		draw_polyline(PackedVector2Array([Vector2(-4, h * 0.3), Vector2(-4, -8), Vector2(34, -8)]), c, 3.0)

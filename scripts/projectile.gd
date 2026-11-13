@@ -41,6 +41,8 @@ func _physics_process(delta: float) -> void:
 			global_position = hit.position
 			if poison_cloud:
 				_spawn_cloud()
+			else:
+				Sfx.play("arrow_impact", global_position, -4.0)
 			queue_free()
 			return
 	global_position += step
@@ -73,6 +75,8 @@ func _physics_process(delta: float) -> void:
 
 
 func _spawn_cloud() -> void:
+	Sfx.play("glass_shatter", global_position)
+	Sfx.play("poison_hiss", global_position)
 	var hz := preload("res://scripts/hazard.gd").new()
 	get_parent().add_child(hz)
 	hz.global_position = Vector3(global_position.x, 0, global_position.z)

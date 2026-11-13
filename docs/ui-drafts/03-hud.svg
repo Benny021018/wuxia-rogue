@@ -185,7 +185,7 @@
 <g transform="translate(1184 814) scale(0.95) rotate(-28)" fill="#f3ede4"><path d="M-46,4 Q0,-6 50,-14 L54,-12 Q4,0 -44,8 Z"/><rect x="-60" y="2" width="16" height="6"/><rect x="-46" y="-2" width="4" height="16"/></g>
 <rect x="1128" y="758" width="64" height="24" fill="#f3ede4"/>
 <text x="1160" y="776" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="900" fill="#0b0a0d" text-anchor="middle" >主武器</text>
-<text x="1320" y="854" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="20" font-weight="900" fill="#f3ede4" text-anchor="end" >青鞘太刀</text>
+<text x="1320" y="854" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="20" font-weight="900" fill="#f3ede4" text-anchor="end" >太刀</text>
 <text x="1320" y="802" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="900" fill="#ff4a17" text-anchor="end" >淬煉+2</text>
 <rect x="1238.8" y="816.8" width="6.4" height="6.4" fill="#ff4a17"/><rect x="1254.8" y="816.8" width="6.4" height="6.4" fill="#ff4a17"/><rect x="1270.8" y="816.8" width="6.4" height="6.4" fill="#2e2a31"/><rect x="1286.8" y="816.8" width="6.4" height="6.4" fill="#2e2a31"/><rect x="1301.6" y="815.6" width="8.8" height="8.8" transform="rotate(45 1306 820)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/>
 <path d="M1368,770 H1576 L1558,874 H1350 Z" fill="#0b0a0d" stroke="#55505a" stroke-width="3" opacity=".9"/>

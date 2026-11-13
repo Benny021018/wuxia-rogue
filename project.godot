@@ -13,6 +13,10 @@ config/features=PackedStringArray("4.3", "Forward Plus")
 
 Data="*res://scripts/data.gd"
 Game="*res://scripts/game.gd"
+Settings="*res://scripts/settings.gd"
+Music="*res://scripts/music.gd"
+Sfx="*res://scripts/sfx.gd"
+Feel="*res://scripts/feel.gd"
 
 [display]
 

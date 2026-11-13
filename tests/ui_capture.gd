@@ -16,6 +16,8 @@ func _ready() -> void:
 	add_child(main)
 	await _frames(20)
 	await _shot("01-main-menu")
+	main.screens.show_settings(false)
+	await _shot("15-settings")
 	main.screens.show_select()
 	await _shot("02-character-select")
 	main.screens.show_weapon_pick()
@@ -41,6 +43,28 @@ func _ready() -> void:
 	player.hp = Game.max_hp() * 0.68
 	main.hud.set_hint("［E］參悟　悟道碑已浮現")
 	await _frames(20)
+	# 打擊感：暴擊瞬間（閃白、形變、火花、血墨、跳字）
+	var foe = world.spawn_enemy("H01", player.global_position + player.global_basis * Vector3(0.3, 0, -2.6), false)
+	foe.set_physics_process(false)
+	var to_p: Vector3 = player.global_position - foe.global_position
+	foe.rotation.y = atan2(-to_p.x, -to_p.z)
+	foe.max_hp = 1.0e6
+	foe.hp = 1.0e6
+	await _frames(12)
+	player._imp = {"crit": false, "kill": false, "metal": false}
+	player.dodge_crit_ready = true
+	player.deal(foe, 480.0, false, 1.8)
+	Settings.values["hitstop"] = 0.0      # 截圖抓命中後 4 幀：火花已散開、閃白還在
+	player._impact_feedback(1.8)
+	Settings.values["hitstop"] = 1.0
+	# xvfb 一幀要好幾百毫秒，命中瞬間會被跳過：把時間凍住拍第一幀（等同頓幀當下的畫面）
+	Feel.set_process(false)
+	Engine.time_scale = 0.0
+	await _shot("16-hit-feel", 1)
+	Engine.time_scale = 1.0
+	Feel.set_process(true)
+	foe.queue_free()
+	await _frames(30)
 	Game.message.emit("精進：三流・第四重　生命回復 20%")
 	Game.message.emit("銀兩：+18")
 	main.hud.show_banner("鎖　陣", "寨外山道・戰鬥　殺光所有敵人以破陣", "lock")

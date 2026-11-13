@@ -68,7 +68,7 @@ scripts/
   main.gd                 畫面流程：選單 → 角色 → 遊戲 → 結算
   world.gd                依 zones.json 搭灰盒地圖；鎖陣、分波出怪、破陣、悟道碑、換圖
   player.gd               第一人稱移動、主副武器切換、受傷流程、所有武學／門派／境界的戰鬥效果
-  enemy.gd                20 種敵人的 AI 與首領技能
+  enemy.gd                20 種敵人的 AI 與首領技能；遠程敵人（弓手、煉屍門徒、毒師）依 ranged_ai.csv 走位與起手
   projectile.gd           投射物（距離判定，不用物理）
   hazard.gd               毒池、毒霧、火、斷崖等持續傷害區
   fx.gd                   材質、浮動傷害數字、預警圈
@@ -138,6 +138,14 @@ python3 tools/balance/sim.py --set drop_chance_minion=0.02      # 試算單一�
 ## 協作
 
 AI 協作規則寫在 `AGENTS.md`（Codex 會自動讀取；Claude 經由 `CLAUDE.md` 讀取）。GitHub Actions 會在每次 push 或 PR 時自動跑冒煙測試（`.github/workflows/smoke-test.yml`）。
+
+## 音效與打擊感
+
+命中有頓幀、震屏、受擊閃白、擊退＋形變、粒子＋跳字，音效分低頻重擊、中頻碎裂、高頻風聲三層。全部 69 個音效（65 個獨立合成、79 個檔案）由 `tools/sfx/make_sfx.py` 程式合成，設計與清單見 [`docs/audio/sfx.md`](docs/audio/sfx.md)。主選單與暫停選單的「設定」可以調整主音量、音樂（預設 30%）、音效（預設 50%）、滑鼠靈敏度、畫面震動，以及開關頓幀、傷害跳字、全螢幕。
+
+## 配樂
+
+主題曲（主選單）與地圖一「綠林山寨」的配樂由 `tools/music/` 程式化作曲、分析、渲染；風格分析、和聲語法、動機、結構與聲部見 [`docs/music/README.md`](docs/music/README.md)。播放設定在 `data/music.csv`。
 
 ## 天機輪機率模型
 

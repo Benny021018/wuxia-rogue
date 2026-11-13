@@ -34,3 +34,6 @@ bow_aim_move_mult,0.6,弓：瞄準時移動速度倍率
 bow_spread_max_deg,5,弓：剛開始拉弓時箭的散射半角（度）；紅圈大小就是這個範圍
 bow_spread_min_deg,0.6,弓：滿弓時的散射半角（度），紅圈縮到最小
 bow_aim_spread_mult,0.5,弓：右鍵瞄準時散射乘上此值
+ai_ranged_max_aiming,2,同時在拉弓／蓄力的遠程敵人上限（其餘先走位）
+ai_ranged_retry_min,0.6,沒輪到出手時，下次判斷的最短間隔（秒）
+ai_ranged_retry_max,1.2,沒輪到出手時，下次判斷的最長間隔（秒）

@@ -1,0 +1,9 @@
+key,default,min,max,step,label_zh,note
+master_volume,1.0,0,1,0.05,主音量,0～100%
+music_volume,0.30,0,1,0.05,音樂,預設 30%
+sfx_volume,0.50,0,1,0.05,音效,預設 50%（含介面音效）
+mouse_sens,1.0,0.3,2.5,0.05,滑鼠靈敏度,倍率，乘在 player.gd 的 MOUSE_SENS
+screen_shake,1.0,0,1,0.05,畫面震動,0 = 關閉
+hitstop,1,0,1,1,頓幀,命中瞬間停頓；1 開、0 關
+damage_numbers,1,0,1,1,傷害跳字,1 開、0 關
+fullscreen,0,0,1,1,全螢幕,1 開、0 關

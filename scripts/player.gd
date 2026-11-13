@@ -67,6 +67,13 @@ var qiao_ready := false            # 蹻捷如風：衝刺後下一擊增傷
 const BASE_FOV := 80.0
 
 
+# 打擊感與音效
+var _imp := {"crit": false, "kill": false, "metal": false}
+var _was_floor := true
+var _fall_v := 0.0
+var _step_m := 0.0
+var _beat_t := 0.0
+
 func _ready() -> void:
 	add_to_group("player")
 	collision_layer = 2
@@ -119,7 +126,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not input_enabled:
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		var sens := MOUSE_SENS * cam.fov / BASE_FOV   # 瞄準放大時滑鼠跟著變細
+		var sens := MOUSE_SENS * Settings.get_value("mouse_sens") * cam.fov / BASE_FOV   # 瞄準放大時滑鼠跟著變細
 		yaw -= event.relative.x * sens
 		pitch = clampf(pitch - event.relative.y * sens, -1.45, 1.45)
 		rotation.y = yaw
@@ -145,12 +152,14 @@ func _physics_process(delta: float) -> void:
 			FX.play(get_parent(), cam.global_position - cam.global_basis.z * 1.1 - cam.global_basis.y * 0.32, &"blink-out", 0.5, 0.18)
 			dash_t = 0.2
 			dash_cd = 1.0
+			Sfx.play("dash")
 			if Game.special_on("yangqiao"):   # 陽蹻脈・蹻捷如風
 				dash_cd *= 1.0 - Game.special("yangqiao", "a") / 100.0
 				qiao_ready = true
 			invuln_t = maxf(invuln_t, 0.2)
 		if Input.is_action_just_pressed("jump") and is_on_floor():
 			velocity.y = JUMP_V
+			Sfx.play("jump")
 	var spd := Game.move_speed() * (3.2 if dash_t > 0.0 else 1.0) * lerpf(1.0, Data.cfg("bow_aim_move_mult"), aim)
 	if dash_t > 0.0 and dir == Vector3.ZERO:
 		dir = -transform.basis.z
@@ -158,8 +167,11 @@ func _physics_process(delta: float) -> void:
 	velocity.z = move_toward(velocity.z, dir.z * spd, 60.0 * delta)
 	if not is_on_floor():
 		velocity.y -= GRAVITY * delta
+	if not is_on_floor():
+		_fall_v = minf(_fall_v, velocity.y)
 	move_and_slide()
 	still_t = still_t + delta if Vector2(velocity.x, velocity.z).length() < 0.5 else 0.0
+	_move_sounds(delta)
 	if global_position.y < -10.0:
 		global_position.y = 2.0
 		velocity = Vector3.ZERO
@@ -235,6 +247,7 @@ func _bow_update(a: int, delta: float) -> void:
 			bow_held = true
 			bow_t = 0.0
 			view.bow_begin(_bow_interval(a) * Data.cfg("bow_load_frac"))
+			Sfx.play("bow_draw")
 		return
 	bow_t += delta
 	var draw := bow_draw()
@@ -264,6 +277,7 @@ func _release_arrow(a: int, draw: float) -> void:
 	var dmg := Game.weapon_hit_dmg(w.id, int(w.lv)) * mult
 	var speed_mult := lerpf(1.0, Data.cfg("bow_full_speed"), draw)
 	var spread := bow_spread_deg(draw)
+	Sfx.play("bow_release", Vector3.INF, lerpf(-4.0, 0.0, draw))
 	view.bow_release(recover, func(beat: int):
 		if is_instance_valid(view) and weapon_models[a] == view and hp > 0:
 			arrow_speed_mult = speed_mult
@@ -302,6 +316,7 @@ func _do_switch(target: int) -> void:
 		old._tachi_closed()
 	queued_press = [false, false]
 	swap_t = Data.cfg("weapon_swap_s")
+	Sfx.play("weapon_switch")
 	_show_hands()
 
 
@@ -434,6 +449,7 @@ func _attack(slot: int) -> void:
 	attack_count += 1
 	_count_du()
 	var dmg := Game.weapon_hit_dmg(w.id, int(w.lv))
+	_swing_sound(row)
 	view.attack(cooldowns[slot],int(row.hits),func(beat:int):
 		if is_instance_valid(view) and weapon_models[slot] == view and hp > 0:
 			return _weapon_impact(slot,row,dmg,beat)
@@ -448,6 +464,7 @@ func _weapon_impact(slot: int, row: Dictionary, dmg: float, beat: int) -> bool:
 	var origin := cam.global_position
 	var made_contact := false
 	var targets: Array = []
+	_imp = {"crit": false, "kill": false, "metal": false}
 	if row.range_type == "ranged":
 		range_m *= 1.0 + Game.st("range_pct") / 100.0
 		var pierce := 0
@@ -483,6 +500,8 @@ func _weapon_impact(slot: int, row: Dictionary, dmg: float, beat: int) -> bool:
 				if is_instance_valid(e) and not e.dead:
 					if deal(e, dmg, false, _impact_weight(row.weapon_id)):
 						made_contact = true
+		if made_contact:
+			_impact_feedback(_impact_weight(row.weapon_id))
 		var swing: StringName = MELEE_EFFECTS.get(row["class"], &"sword-slash")
 		var side := -1.0   # 武器都握在慣用手
 		var heading := Vector3(fwd.x,0,fwd.z).normalized()
@@ -498,6 +517,7 @@ func _weapon_impact(slot: int, row: Dictionary, dmg: float, beat: int) -> bool:
 			for k in n:
 				var d2 := fwd.rotated(Vector3.UP, (k - (n - 1) / 2.0) * 0.2)
 				_shoot(origin + d2 * 0.6, d2, dmg * Game.f("sword_qi_pct") / 100.0, 99, 12.0, Color(0.6, 0.9, 1.0))
+			Sfx.play("qi_burst")
 	var primary = targets[0] if not targets.is_empty() else _nearest_in_front(15.0, fwd)
 	if beat == 0:
 		_on_attack_effects(primary, dmg, fwd)
@@ -540,7 +560,11 @@ func _shoot(pos: Vector3, dir: Vector3, dmg: float, pierce: int, rng: float, col
 	p.pierce = pierce
 	p.max_range = rng
 	p.radius = 0.35
-	p.on_hit = func(e, d): deal(e, d, false, _impact_weight(visual_id), e.global_position - dir)
+	p.on_hit = func(e, d):
+		_imp = {"crit": false, "kill": false, "metal": false}
+		if deal(e, d, false, _impact_weight(visual_id), e.global_position - dir):
+			Sfx.play("arrow_impact", e.hit_center())
+			_impact_feedback(_impact_weight(visual_id) * 0.8)
 	if visual_id in ["W007","W303","W103","W203"]:
 		var missile := preload("res://scripts/archer_bow.gd").make_arrow()
 		var factor := .76 if visual_id=="W007" else (.48 if visual_id=="W303" else .24)
@@ -669,6 +693,9 @@ func deal(e, base: float, _is_dot: bool, weight := 1.0, source := Vector3.INF) -
 	var dealt: float = e.take_hit(base * mult, global_position if source == Vector3.INF else source, crit, weight)
 	if dealt <= 0.0:
 		return false
+	_imp.crit = _imp.crit or crit
+	_imp.kill = _imp.kill or e.dead
+	_imp.metal = _imp.metal or e.last_hit_metal
 	# 命中特效
 	var ls := Game.st("lifesteal_pct")
 	if Game.f("low_hp_lifesteal_x2") > 0.0 and hp < Game.max_hp() * 0.5:
@@ -725,6 +752,7 @@ func take_damage(amount: float, attacker = null, is_dot := false) -> void:
 			return
 		if Game.f("block_chance") > 0.0 and randf() * 100.0 < Game.f("block_chance"):
 			FX.float_text(get_parent(), global_position + Vector3(0, 2, 0), "格擋", Color(1, 0.9, 0.5))
+			Sfx.play("hit_mid_metal")
 			if attacker and is_instance_valid(attacker):
 				attacker.stun(0.5)
 			return
@@ -753,6 +781,11 @@ func take_damage(amount: float, attacker = null, is_dot := false) -> void:
 		shield -= absorbed
 		dmg -= absorbed
 	hp -= dmg
+	if dmg > 0.0:
+		var ratio := dmg / Game.max_hp()
+		Sfx.play("player_hurt", Vector3.INF, lerpf(-4.0, 2.0, clampf(ratio * 5.0, 0.0, 1.0)))
+		Feel.shake(float(Data.feel.shake_hurt) * clampf(ratio * 5.0, 0.35, 1.0) * (0.4 if is_dot else 1.0))
+		Feel.player_hurt.emit(clampf(ratio * 5.0, 0.3, 1.0))
 	if Game.special_on("dai") and dai_cd <= 0.0 and dmg > 0.0:
 		dai_t = Game.special("dai", "b")
 		dai_cd = 6.0
@@ -780,6 +813,7 @@ func _dodged() -> void:
 	if Game.f("dodge_crit") > 0.0:
 		dodge_crit_ready = true
 	FX.float_text(get_parent(), global_position + Vector3(0, 2, 0), "閃避", Color(0.7, 1, 0.8))
+	Sfx.play("dash", Vector3.INF, -5.0, 1.2)
 
 
 func _try_survive() -> void:
@@ -807,6 +841,7 @@ func heal(v: float, show := true) -> void:
 	hp = minf(Game.max_hp(), hp + v)
 	if show and gained > 0.0:
 		FX.play(get_parent(), cam.global_position - cam.global_basis.z - cam.global_basis.y * 0.3, &"heal", 0.48, 0.35)
+		Sfx.play("heal")
 		FX.float_text(get_parent(), global_position + Vector3(0, 2, 0), "+%d" % int(v), Color(0.4, 1, 0.4))
 	hp_changed.emit()
 
@@ -861,3 +896,47 @@ func _densest_point(r: float) -> Vector3:
 			best_n = n
 			best = e.global_position
 	return best
+
+
+# ------------------------------------------------------------------ 打擊感與音效
+func _impact_feedback(weight: float) -> void:
+	## 一次出招（或一支箭）命中後：分層音效＋頓幀＋震動
+	Sfx.hit(weight, _imp.crit, _imp.kill, _imp.metal)
+	Feel.impact(weight, _imp.crit, _imp.kill)
+
+
+func _swing_sound(row: Dictionary) -> void:
+	if row.range_type == "ranged":
+		Sfx.play("throw", Vector3.INF, -2.0, 1.1)
+		return
+	var cls: String = row["class"]
+	if cls in ["劍", "槍"]:
+		Sfx.play("swing_thrust")
+	elif _impact_weight(row.weapon_id) >= 1.5:
+		Sfx.play("swing_heavy")
+	else:
+		Sfx.play("swing_light")
+
+
+func _move_sounds(delta: float) -> void:
+	var on_floor := is_on_floor()
+	if on_floor and not _was_floor and _fall_v < -4.0:
+		Sfx.play("land", Vector3.INF, lerpf(-6.0, 0.0, clampf((-_fall_v - 4.0) / 8.0, 0.0, 1.0)))
+	if on_floor:
+		_fall_v = 0.0
+		var spd := Vector2(velocity.x, velocity.z).length()
+		if spd > 1.0 and dash_t <= 0.0:
+			_step_m += spd * delta
+			if _step_m >= float(Data.feel.footstep_m):
+				_step_m = 0.0
+				Sfx.play("footstep")
+	_was_floor = on_floor
+	# 低血量心跳：越低越快
+	var frac := hp / maxf(1.0, Game.max_hp())
+	if hp > 0.0 and frac < float(Data.feel.heartbeat_hp):
+		_beat_t -= delta
+		if _beat_t <= 0.0:
+			_beat_t = lerpf(0.55, 1.1, frac / float(Data.feel.heartbeat_hp))
+			Sfx.play("heartbeat")
+	else:
+		_beat_t = 0.0

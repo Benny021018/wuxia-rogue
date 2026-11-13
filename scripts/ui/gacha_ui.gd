@@ -179,6 +179,7 @@ func _panel(parent: Control, x: float, y: float, w: float, h: float) -> void:
 
 # ------------------------------------------------------------------ 狀態
 func open() -> void:
+	Sfx.play("ui_open")
 	visible = true
 	current = []
 	log_lines = []
@@ -194,6 +195,17 @@ func _set_state(s: String) -> void:
 	if s == "idle" or s == "spinning":
 		banner.visible = false
 	_refresh()
+	if s == "cards" and not current.is_empty():
+		_reveal_sounds()
+
+
+func _reveal_sounds() -> void:
+	var t := create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	for i in current.size():
+		t.tween_callback(func(): Sfx.play("card_reveal"))
+		t.tween_interval(0.08)
+	if current.any(func(c): return c.rarity == "legendary"):
+		t.tween_callback(func(): Sfx.play("legend_sting"))
 
 
 func _refresh() -> void:
@@ -271,6 +283,7 @@ func _spin(stops: Array) -> void:
 		while target < from + n * (3 + i):
 			target += n
 		spin_tween.tween_property(reel, "pos", target, 0.9 + 0.35 * i).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		spin_tween.tween_callback(func(): Sfx.play("wheel_stop")).set_delay(0.9 + 0.35 * i)
 	spin_tween.set_parallel(false)
 	spin_tween.tween_callback(_on_stopped)
 
@@ -281,6 +294,7 @@ func _skip() -> void:
 		return
 	if spin_tween:
 		spin_tween.kill()
+	Sfx.play("wheel_stop")
 	for i in reels.size():
 		reels[i].pos = float(int(pending_stops[i]))
 	_on_stopped()
@@ -301,6 +315,12 @@ func _on_stopped() -> void:
 		reels[i].hot_mid = o == "bagua" or (o == "resonance") or (o == "sense" and i < 2 and mid_sym != "cloud")
 		reels[i].queue_redraw()
 	log_lines.append(_result_text(r))
+	match o:
+		"bagua": Sfx.play("wheel_bagua")
+		"resonance": Sfx.play("wheel_resonance")
+		"sense": Sfx.play("wheel_sense")
+	if int(r.scatters) >= 3:
+		Sfx.play("wheel_dunwu")
 	banner.visible = true
 	UIKit.set_title(banner_title, _result_text(r) if _result_text(r) != "平" else "天機未顯")
 	banner_sub.text = _outcome_desc(r)
@@ -416,20 +436,28 @@ func _on_draw() -> void:
 	if state == "spinning":
 		_skip()
 		return
-	if state != "idle" or not Game.take_draw():
+	if state != "idle":
+		return
+	if not Game.take_draw():
+		Sfx.play("ui_error")
 		return
 	_spin(Game.wheel_spin())
 
 
 func _on_reroll() -> void:
-	if state != "cards" or not Game.pay_refresh():
+	if state != "cards":
 		return
+	if not Game.pay_refresh():
+		Sfx.play("ui_error")
+		return
+	Sfx.play("shop_refresh")
 	current = []
 	_spin(Game.wheel_spin())
 
 
 func _on_pick(c: Dictionary, slot: int) -> void:
 	Game.choose(c, slot)
+	Sfx.play("card_pick")
 	current = []
 	_set_state("idle")
 
@@ -451,6 +479,7 @@ func _on_close() -> void:
 		_set_state("cards")
 	if state == "cards" and not current.is_empty():
 		return   # 候選還沒選，不能離開（避免白白浪費一次參悟）
+	Sfx.play("ui_close")
 	visible = false
 	current = []
 	closed.emit()
