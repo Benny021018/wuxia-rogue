@@ -1013,7 +1013,7 @@ func _check_third_person(world, player) -> void:
 		if e.cs.state() == S.AIR and e.global_position.y > 0.5:
 			launched = true
 			break
-	_check(launched, "挑月把敵人挑上半空")
+	_check(launched and is_equal_approx(e._pose.rotation_degrees.x, 20.0), "挑月浮空時，敵人從直立向天空後仰二十度")
 	# 浮空追打
 	var hp0: float = e.hp
 	player.deal(e, 10.0, false, 1.0, Vector3.INF, {"hitstun_s": 0.2, "launch": 0})
@@ -1059,6 +1059,8 @@ func _check_third_person(world, player) -> void:
 	_check(player.cs.can_act(), "受擊保護期間只受傷不硬直")
 	player.take_damage(1.0, null, false, {"hitstun_s": 0.3, "launch": 1, "launch_h_m": 1.2})
 	_check(player.cs.state() == S.AIR and player.velocity.y > 0.0, "玩家被範圍攻擊打浮空")
+	player._animate(1.0 / 60.0)
+	_check(is_equal_approx(player.model.rotation_degrees.x, 20.0), "玩家浮空時向天空後仰二十度")
 	var up := false
 	for i in 240:
 		await get_tree().physics_frame

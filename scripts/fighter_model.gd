@@ -110,12 +110,19 @@ func _compose(move: Dictionary) -> Animation:
 		beats.append(result.length * .5)
 	var times: Array[float] = [0.0]
 	var phases: Array[float] = [0.0]
+	var dash_cut := String(m.dash_windup) != ""
+	if dash_cut:
+		times.append(float(move.lunge_from_s))
+		phases.append(float(m.dash_windup))
 	for i in beats.size():
 		if i > 0:
 			times.append(lerpf(beats[i-1], beats[i], .48))
 			phases.append(.20)
 		times.append(beats[i])
 		phases.append(float(m.extension))
+	if dash_cut:
+		times.append(float(move.lunge_to_s))
+		phases.append(float(m.dash_follow))
 	times.append(result.length)
 	phases.append(1.0)
 	for track in source.get_track_count():
@@ -131,7 +138,7 @@ func _compose(move: Dictionary) -> Animation:
 			for j in range(0 if k == 1 else 1, frames + 1):
 				var f := float(j) / frames
 				var at := lerpf(times[k-1], times[k], f)
-				var phase := lerpf(phases[k-1], phases[k], smoothstep(0, 1, f))
+				var phase := lerpf(phases[k-1], phases[k], f if dash_cut else smoothstep(0, 1, f))
 				var src := phase * source.length
 				var pose := sin(phase * PI) * (2 * phase - .45)
 				match type:

@@ -156,8 +156,9 @@ func update(delta: float) -> Vector3:
 	var vel := Vector3.ZERO
 	var l0 := float(move.lunge_from_s)
 	var l1 := float(move.lunge_to_s)
-	if l1 > l0 and t >= l0 and t < l1:
-		vel = dir * float(move.lunge_m) / (l1 - l0) * speed
+	if l1 > l0 and delta > 0:
+		var overlap := maxf(0.0, minf(t, l1) - maxf(prev, l0))
+		vel = dir * float(move.lunge_m) * overlap / ((l1 - l0) * delta)
 	if t >= float(move.duration_s) or (queued != "" and cancellable() and (queued != "attack" or t >= float(move.duration_s) * 0.72)):
 		var q := queued
 		move = {}
@@ -199,7 +200,7 @@ func _fire(h: Dictionary) -> void:
 	var shape := String(h.shape)
 	if shape == "proj":
 		var aim: Vector3 = p.aim_dir(origin)
-		_cue(origin + aim, .85, false)
+		_cue(origin + aim, .85 * CombatState.cfg("attack_fx_span_mult"), false)
 		if next_crit:
 			h = h.duplicate()
 			h["forced_crit"] = true
@@ -242,10 +243,11 @@ func _fire(h: Dictionary) -> void:
 	var finisher: bool = move.slot == "ult" and fired == move.hits.size() - 1
 	if shape in ["circle", "target"]:
 		FX.impact_wave(p.get_parent(), center, r, .22, tint)
-		_cue(center + Vector3.UP * .6, r, finisher)
+		_cue(center + Vector3.UP * .6, r * CombatState.cfg("area_fx_span_mult"), finisher)
 	else:
 		FX.attack_trail(p.get_parent(), origin, dir, r, float(h.arc_deg), .2, tint, .2)
-		_cue(origin + dir * minf(r, 3.0) * .6, minf(r, 4.5), finisher)
+		var distance := r * .5 if shape == "line" else minf(r, 3.0) * .6
+		_cue(origin + dir * distance, r * CombatState.cfg("attack_fx_span_mult"), finisher)
 	p._imp = {"crit": false, "kill": false, "metal": false}
 	var any := false
 	for e in targets:

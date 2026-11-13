@@ -258,7 +258,10 @@ func _animate(delta: float) -> void:
 	model.rotation.y = lerp_angle(m_rot, body_yaw, minf(1.0, delta * 18.0))
 	var S := CombatState.S
 	var lean := -deg_to_rad(CombatState.cfg("dodge_lean_deg")) if dash_t > 0.0 and hp > 0.0 else 0.0
-	model.rotation.x = lerpf(model.rotation.x, lean, minf(1.0, delta * 22.0))
+	if cs.base == S.AIR and hp > 0.0:
+		model.rotation.x = deg_to_rad(CombatState.cfg("air_tilt_deg"))
+	else:
+		model.rotation.x = lerpf(model.rotation.x, lean, minf(1.0, delta * 22.0))
 	if hp <= 0.0:
 		model.play("Death01", 1.0, 0.0, 0.1)
 		return
@@ -267,7 +270,7 @@ func _animate(delta: float) -> void:
 			model.play("Hit_Chest", 1.0, 0.0, 0.04)
 			return
 		S.AIR:
-			model.hold("Hit_Knockback", 0.45)
+			model.hold("Idle_Loop", 0.0)
 			_down_anim_t = 0.0
 			return
 		S.DOWN:

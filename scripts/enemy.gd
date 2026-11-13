@@ -231,9 +231,12 @@ func _physics_process(delta: float) -> void:
 	_route_retry -= delta
 	_tick_status(delta)
 	cs.tick(delta, is_on_floor())
-	var lying := cs.base == CombatState.S.AIR or cs.base == CombatState.S.DOWN
+	var lying := cs.base == CombatState.S.DOWN
 	if _pose:
-		_pose.rotation.x = lerp_angle(_pose.rotation.x, -PI / 2.0 if lying else 0.0, minf(1.0, delta * 16.0))
+		if cs.base == CombatState.S.AIR:
+			_pose.rotation.x = deg_to_rad(CombatState.cfg("air_tilt_deg"))
+		else:
+			_pose.rotation.x = lerp_angle(_pose.rotation.x, -PI / 2.0 if lying else 0.0, minf(1.0, delta * 16.0))
 		_pose.position.y = lerpf(_pose.position.y, 0.35 * size if lying else 0.0, minf(1.0, delta * 16.0))
 	if not cs.can_act():
 		# 受擊、浮空、倒地：不能行動，招式被打斷
