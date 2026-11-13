@@ -224,8 +224,6 @@ func _fire(h: Dictionary) -> void:
 	if shape == "target":
 		center = p.aim_point(r)
 		r = 4.0
-		if char_id == "tang":
-			_needle_rain(center, r)
 	var targets: Array = []
 	var cosv := cos(deg_to_rad(float(h.arc_deg) / 2.0))
 	for e in p.targets():
@@ -239,15 +237,12 @@ func _fire(h: Dictionary) -> void:
 		if shape in ["arc", "line"] and to.length() > 0.6 and to.normalized().dot(dir) < cosv:
 			continue
 		targets.append(e)
-	var tint := Color(move.fx_tint)
 	var finisher: bool = move.slot == "ult" and fired == move.hits.size() - 1
 	if shape in ["circle", "target"]:
-		FX.impact_wave(p.get_parent(), center, r, .22, tint)
-		_cue(center + Vector3.UP * .6, r * CombatState.cfg("area_fx_span_mult"), finisher)
+		_cue(center + Vector3.UP * .6, r * CombatState.cfg("area_fx_span_mult"), finisher, shape, center, r)
 	else:
-		FX.attack_trail(p.get_parent(), origin, dir, r, float(h.arc_deg), .2, tint, .2)
 		var distance := r * .5 if shape == "line" else minf(r, 3.0) * .6
-		_cue(origin + dir * distance, r * CombatState.cfg("attack_fx_span_mult"), finisher)
+		_cue(origin + dir * distance, r * CombatState.cfg("attack_fx_span_mult"), finisher, shape, origin, r, float(h.arc_deg))
 	p._imp = {"crit": false, "kill": false, "metal": false}
 	var any := false
 	for e in targets:
@@ -261,24 +256,40 @@ func _fire(h: Dictionary) -> void:
 
 
 ## 刀光、毒色與聲音在實際出手時出現；反擊和無判定招以起勢為準。
-func _cue(pos: Vector3, span: float, finisher: bool) -> void:
-	p.skill_cue.emit(move.move_id, pos, span, finisher)
-	var clip := StringName(move.fx_clip)
-	var sound := String(move.strike_sfx)
-	if finisher:
+func _cue(pos: Vector3, span: float, finisher: bool, shape := "", origin := Vector3.ZERO, radius := 0.0, arc := 0.0) -> void:
+	if p.predicted:
+		return
+	var cue := {"id": move.move_id, "pos": pos, "span": span, "finisher": finisher, "shape": shape,
+		"origin": origin, "radius": radius, "arc": arc, "dir": dir, "beat": fired}
+	p.skill_cue.emit(cue)
+	display_cue(cue)
+
+
+func display_cue(cue: Dictionary) -> void:
+	var m: Dictionary = Data.moves[cue.id]
+	var tint := Color(m.fx_tint)
+	if cue.shape in ["circle", "target"]:
+		FX.impact_wave(p.get_parent(), cue.origin, cue.radius, .22, tint)
+		if char_id == "tang" and cue.shape == "target":
+			_needle_rain(cue.origin, cue.radius, cue.beat, tint)
+	elif cue.shape != "":
+		FX.attack_trail(p.get_parent(), cue.origin, cue.dir, cue.radius, cue.arc, .2, tint, .2)
+	var clip := StringName(m.fx_clip)
+	var sound := String(m.strike_sfx)
+	if cue.finisher:
 		clip = &"ground-slam" if char_id != "nangong" else &"heavy-cleave"
 		sound = "aoe_boom"
-	FX.play(p.get_parent(), pos, clip, span, .24, Color(move.fx_tint), fired % 2 == 1)
-	Sfx.play(sound, pos)
+	FX.play(p.get_parent(), cue.pos, clip, cue.span, .24, tint, int(cue.beat) % 2 == 1)
+	Sfx.play(sound, cue.pos)
 
 
 ## 每一波針雨都在該次判定中心落下，散點固定以免干擾遊戲亂數。
-func _needle_rain(center: Vector3, radius: float) -> void:
+func _needle_rain(center: Vector3, radius: float, beat: int, tint: Color) -> void:
 	for i in 5:
-		var angle := TAU * i / 5.0 + fired
+		var angle := TAU * i / 5.0 + beat
 		var offset := Vector3(cos(angle), 0, sin(angle)) * radius * (.25 + .13 * i)
 		var end := center + offset + Vector3.UP * .1
-		var needle := FX.box(Vector3(.025, .68, .025), Color(move.fx_tint), 2)
+		var needle := FX.box(Vector3(.025, .68, .025), tint, 2)
 		p.get_parent().add_child(needle)
 		needle.global_position = end + Vector3.UP * 2.4
 		var fall := needle.create_tween()

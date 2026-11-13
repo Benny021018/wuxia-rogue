@@ -3,7 +3,7 @@ extends Node
 signal closed
 const PORT := 28570
 const DISCOVERY := 28571
-const PROTOCOL := "wuxia-lan/3"
+const PROTOCOL := "wuxia-lan/4"
 const PLAYER := preload("res://scripts/player.gd")
 const WORLD := preload("res://scripts/world.gd")
 const BUILD := preload("res://scripts/game.gd")
@@ -245,8 +245,8 @@ func _begin(kind: String, first: String, second: String) -> void:
 		p.cam.current = i == local_slot
 		p.died.connect(_record_death.bind(i))
 		build.leveled_up.connect(func(_level): p.level_up_heal())
-		if i == 0 and local_slot == 0:
-			p.skill_cue.connect(func(id,pos,span,finisher): _remote_cue.rpc_id(remote_id,epoch,id,pos,span,finisher))
+		if local_slot == 0:
+			p.skill_cue.connect(func(cue): _remote_cue.rpc_id(remote_id,epoch,world.map_index,i,cue))
 	fighters[local_slot].cam.current = true
 	world.player = fighters[0]
 	guest_build = fighters[1].build
@@ -265,6 +265,8 @@ func _begin(kind: String, first: String, second: String) -> void:
 		fighters[1].yaw = fighters[0].yaw
 		world.enemy_defeated.connect(guest_build.add_kill)
 		if local_slot == 0:
+			fighters[1].ally_hurt.connect(func(damage, dot): _guest_hurt.rpc_id(remote_id, epoch, world.map_index, damage, dot))
+			world.enemy_struck.connect(_send_enemy_impact)
 			world.telegraph.connect(func(pos,r,seconds): _warning.rpc_id(remote_id,pos,r,seconds))
 		world.zone_locked.connect(_lock)
 		world.zone_cleared.connect(_clear)
@@ -652,7 +654,9 @@ func _duel_impact(round_id: int, slot: int, damage: float, crit: bool, weight: f
 	var target = fighters[slot]
 	var center: Vector3 = target.hit_center() + target.model.global_position - target.global_position
 	var toward: Vector3 = center.direction_to(fighters[1-slot].hit_center())
-	var contact := center + toward * float(target.hit_radius)
+	var camera := get_viewport().get_camera_3d()
+	var surface := center.direction_to(camera.global_position) if camera else toward
+	var contact := center + surface * float(target.hit_radius)
 	target.model.flash_hit()
 	FX.play(world, contact, &"crit-hit" if crit else &"hit-spark", 1.55 if crit else 0.76, 0.24 if crit else 0.14)
 	FX.burst(world, contact, (toward + Vector3.UP).normalized(), UIKit.BONE, int(Data.feel.particles_crit if crit else Data.feel.particles_hit))
@@ -863,13 +867,38 @@ func leave() -> void:
 	closed.emit()
 
 
-@rpc("authority","unreliable", "call_remote", 2)
-func _remote_cue(round_id: int, id: String, pos: Vector3, span: float, finisher: bool) -> void:
-	if world == null or round_id != epoch or ended:
+@rpc("authority","call_remote","reliable")
+func _guest_hurt(round_id: int, map: int, damage: float, dot: bool) -> void:
+	if not ended and world != null and round_id == epoch and world.map_index == map:
+		fighters[local_slot].play_hurt_feedback(damage, dot)
+
+
+func _send_enemy_impact(e, damage: float, crit: bool, weight: float, away: Vector3) -> void:
+	_enemy_impact.rpc_id(remote_id, epoch, world.map_index, e.get_instance_id(), e.hit_center(), e.hit_radius, e.size, away, damage, crit, weight, e.last_hit_metal, e.dead)
+
+
+@rpc("authority","call_remote","reliable")
+func _enemy_impact(round_id: int, map: int, id: int, pos: Vector3, radius: float, size: float, away: Vector3, damage: float, crit: bool, weight: float, metal: bool, killed: bool) -> void:
+	if ended or world == null or round_id != epoch or world.map_index != map:
 		return
-	var m: Dictionary = Data.moves[id]
-	FX.play(world,pos,&"ground-slam" if finisher else StringName(m.fx_clip),span,.24,Color(m.fx_tint))
-	Sfx.play("aoe_boom" if finisher else String(m.strike_sfx),pos)
+	var mirror = mirrors.get(id)
+	if is_instance_valid(mirror) and not mirror.is_queued_for_deletion():
+		pos = mirror.hit_center()
+		if not killed:
+			mirror._react_to_hit(away, weight * (1.5 if crit else 1.0), metal)
+	FX.enemy_impact(world, pos, radius, size, away, crit, metal, get_viewport().get_camera_3d())
+	if Settings.on("damage_numbers"):
+		FX.damage_number(world, pos + Vector3.UP * 0.6 * size, int(damage), crit, UIKit.EMBER if crit else UIKit.BONE)
+	Sfx.hit(weight, crit, killed, metal)
+	Feel.impact(weight, crit, killed)
+
+
+@rpc("authority","call_remote","reliable")
+func _remote_cue(round_id: int, map: int, slot: int, cue: Dictionary) -> void:
+	if world == null or round_id != epoch or ended or world.map_index != map:
+		return
+	fighters[slot].runner.display_cue(cue)
+
 
 const PROGRESS_FIELDS := ["stage","level","realm","gold","zhenqi","acu_open","acu_fails","martial","martial_order","weapons","merchant_stock","kills"]
 func _progress(build) -> Dictionary:

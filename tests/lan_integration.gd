@@ -5,6 +5,8 @@ var session
 var attempts := 0
 var checkpoint := 0
 var maps_seen := 0
+var saw_impact_sprite := false
+var watching_effects := false
 var saw_duel_impact := false
 var saw_armor := false
 var saw_invincible := false
@@ -61,6 +63,13 @@ func _physics_process(_delta: float) -> bool:
 		session.ready_up()
 	if session.world == null:
 		return false
+	if not watching_effects:
+		watching_effects = true
+		session.world.child_entered_tree.connect(func(n):
+			if n is AnimatedSprite3D:
+				n.animation_changed.connect(func():
+					if n.animation in [&"hit-spark", &"crit-hit"]:
+						saw_impact_sprite = true))
 	if coop:
 		maps_seen = maxi(maps_seen,session.world.map_index+1)
 	if not coop:
@@ -69,6 +78,10 @@ func _physics_process(_delta: float) -> bool:
 			saw_armor = saw_armor or p.model.armored
 			saw_invincible = saw_invincible or p.model.invincible
 	if session.ended:
+		if not saw_impact_sprite:
+			push_error("未產生命中影格特效")
+			quit(1)
+			return false
 		if not coop and not (saw_duel_impact and saw_armor and saw_invincible):
 			push_error("未顯示完整對戰回饋：受擊 %s、霸體 %s、無敵 %s" % [saw_duel_impact, saw_armor, saw_invincible])
 			quit(1)

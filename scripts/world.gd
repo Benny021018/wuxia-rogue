@@ -638,6 +638,7 @@ func boss_spawned(e) -> void:
 	boss_appeared.emit(e)
 
 
+signal enemy_struck(enemy, damage: float, crit: bool, weight: float, away: Vector3)
 signal enemy_defeated(id: String)
 signal telegraph(pos: Vector3, radius: float, duration: float)
 

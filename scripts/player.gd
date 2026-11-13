@@ -7,7 +7,7 @@ const THRUST_HALF_WIDTH := 0.9
 
 signal hp_changed
 signal died
-signal skill_cue(move_id: String, pos: Vector3, span: float, finisher: bool)
+signal skill_cue(cue: Dictionary)
 signal interact_pressed
 
 const GRAVITY := 18.0
@@ -57,6 +57,7 @@ var predicted := false
 var net_axis := Vector2.ZERO
 var net_dash := false
 var net_jump := false
+signal ally_hurt(damage: float, dot: bool)
 signal duel_hit(damage: float, crit: bool, weight: float)
 var opponent
 var input_enabled := true
@@ -719,6 +720,13 @@ func on_enemy_killed(e) -> void:
 
 
 # ------------------------------------------------------------------ 受傷
+func play_hurt_feedback(damage: float, dot: bool) -> void:
+	var ratio := damage / build.max_hp()
+	Sfx.play("player_hurt", Vector3.INF, lerpf(-4.0, 2.0, clampf(ratio * 5.0, 0.0, 1.0)))
+	Feel.shake(float(Data.feel.shake_hurt) * clampf(ratio * 5.0, 0.35, 1.0) * (0.4 if dot else 1.0))
+	Feel.player_hurt.emit(clampf(ratio * 5.0, 0.3, 1.0))
+
+
 func damage_immune() -> bool:
 	return invuln_t > 0.0 or not cs.hittable() or (demon_t > 0.0 and (build.f("demon_form") > 0.0 or build.f("blood_demon") > 0.0))
 
@@ -779,11 +787,10 @@ func take_damage(amount: float, attacker = null, is_dot := false, hit := {}) -> 
 				model.current = ""
 	if not is_dot and opponent != null and attacker == opponent:
 		duel_hit.emit(maxf(0.0, dmg), bool(hit.get("crit", false)), float(hit.get("weight", 1.0)))
-	elif dmg > 0.0 and not network_driven:
-		var ratio := dmg / build.max_hp()
-		Sfx.play("player_hurt", Vector3.INF, lerpf(-4.0, 2.0, clampf(ratio * 5.0, 0.0, 1.0)))
-		Feel.shake(float(Data.feel.shake_hurt) * clampf(ratio * 5.0, 0.35, 1.0) * (0.4 if is_dot else 1.0))
-		Feel.player_hurt.emit(clampf(ratio * 5.0, 0.3, 1.0))
+	elif dmg > 0.0:
+		ally_hurt.emit(dmg, is_dot)
+		if not network_driven:
+			play_hurt_feedback(dmg, is_dot)
 	if build.special_on("dai") and dai_cd <= 0.0 and dmg > 0.0:
 		dai_t = build.special("dai", "b")
 		dai_cd = 6.0

@@ -1068,6 +1068,8 @@ func take_hit(amount: float, from_pos: Vector3, crit: bool, weight := 1.0, hit :
 	last_hit_metal = (eid == "H03" and front) or eid == "Z04"
 	_away = -to_attacker if not to_attacker.is_zero_approx() else _away
 	var dealt := _apply_damage(dmg_in, crit, false)
+	if dealt > 0:
+		world.enemy_struck.emit(self, dealt, crit, weight, _away)
 	if dealt > 0 and not dead:
 		_react_to_hit(-to_attacker, weight * (1.5 if crit else 1.0), eid == "H03" and front)
 		var kv := float(Data.feel.knock_speed) * clampf(weight, .5, 2.0) * (float(Data.feel.knock_crit_mult) if crit else 1.0)
@@ -1094,17 +1096,8 @@ func _apply_damage(v: float, crit: bool, dot: bool) -> float:
 	if dead:
 		return 0.0
 	if not dot:
-		var contact := hit_center()
-		if is_instance_valid(player):
-			contact += contact.direction_to(player.cam.global_position) * hit_radius
-		FX.play(world, contact, &"crit-hit" if crit else &"hit-spark", (1.55 if crit else 0.76) * size, 0.24 if crit else 0.14)
-		# 第一人稱看得到：火花往攻擊者那側與上方噴，血墨往側上方灑
-		var side := _away.cross(Vector3.UP).normalized() * (1.0 if randf() < .5 else -1.0)
-		var out := (-_away * .55 + side * .45 + Vector3.UP * .6).normalized()
-		var metal := last_hit_metal
-		FX.burst(world, contact, out, Color(1, .92, .6) if not metal else Color(.8, .95, 1), int(Data.feel.particles_crit if crit else Data.feel.particles_hit), "spark", 11.0 if crit else 7.0)
-		if not metal:
-			FX.burst(world, contact, out, Color(.45, .02, .05, .95), 6 if not crit else 12, "ink", 5.0)
+		var camera := get_viewport().get_camera_3d()
+		FX.enemy_impact(world, hit_center(), hit_radius, size, _away, crit, last_hit_metal, camera)
 	hp -= v
 	var col := UIKit.EMBER if crit else (Color(0.5, 1, 0.4) if dot else UIKit.BONE)
 	if Settings.on("damage_numbers") and (not dot or randf() < 0.15):

@@ -202,6 +202,19 @@ static func burst(parent: Node, pos: Vector3, dir: Vector3, color: Color, amount
 	p.setup(pos, dir, color, amount, kind, speed, size_m)
 
 
+static func enemy_impact(world: Node3D, center: Vector3, hit_radius: float, size: float, away: Vector3, crit: bool, metal: bool, camera: Camera3D) -> void:
+	var contact := center
+	if is_instance_valid(camera):
+		contact += contact.direction_to(camera.global_position) * hit_radius
+	FX.play(world, contact, &"crit-hit" if crit else &"hit-spark", (1.55 if crit else 0.76) * size, 0.24 if crit else 0.14)
+	# 第一人稱看得到：火花往攻擊者那側與上方噴，血墨往側上方灑
+	var side := away.cross(Vector3.UP).normalized() * (1.0 if randf() < .5 else -1.0)
+	var out := (-away * .55 + side * .45 + Vector3.UP * .6).normalized()
+	FX.burst(world, contact, out, Color(1, .92, .6) if not metal else Color(.8, .95, 1), int(Data.feel.particles_crit if crit else Data.feel.particles_hit), "spark", 11.0 if crit else 7.0)
+	if not metal:
+		FX.burst(world, contact, out, Color(.45, .02, .05, .95), 6 if not crit else 12, "ink", 5.0)
+
+
 ## 傷害跳字：彈出放大 → 縮回 → 往上飄並淡出；暴擊更大、帶橘紅與輕微抖動
 static func damage_number(parent: Node, pos: Vector3, value: int, crit := false, color := Color.WHITE) -> void:
 	if parent == null or not parent.is_inside_tree():
