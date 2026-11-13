@@ -19,7 +19,7 @@ RANGES = {   # 常用音域（MIDI）
     "pipa": (45, 93), "strings_pad": (40, 96), "tremolo": (40, 96), "low_strings": (28, 72), "timpani": (40, 57),
 }
 MELODIC = ["erhu", "dizi", "violins", "horns", "cello"]
-PENTA = {"a": [9, 0, 2, 4, 7], "e": [4, 7, 9, 11, 2]}
+PENTA = {"a": [9, 0, 2, 4, 7], "e": [4, 7, 9, 11, 2], "d": [2, 5, 7, 9, 0]}
 CS_FIX = {"madd9": "m add 9", "madd11": "m add 11", "add9": " add 9"}
 
 

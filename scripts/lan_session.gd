@@ -252,6 +252,7 @@ func _begin(kind: String, first: String, second: String) -> void:
 	guest_build = fighters[1].build
 	if kind == "duel":
 		_arena()
+		Music.play("duel")
 		for i in 2:
 			fighters[i].opponent = fighters[1-i]
 			if local_slot == 0:
@@ -259,6 +260,7 @@ func _begin(kind: String, first: String, second: String) -> void:
 			lives[i] = int(CombatState.cfg("lan_lives"))
 	else:
 		world.build_map(0)
+		Music.play(Data.map_order[0])
 		fighters[1].position = fighters[0].position + Vector3.BACK
 		fighters[1].yaw = fighters[0].yaw
 		world.enemy_defeated.connect(guest_build.add_kill)
@@ -289,6 +291,7 @@ func _begin(kind: String, first: String, second: String) -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 func _map_entered(_index: int) -> void:
+	Music.play(Data.map_order[_index])
 	var spawn: Vector3 = world.player.position
 	for i in 2:
 		fighters[i].position = spawn + Vector3.BACK * i

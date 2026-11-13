@@ -9,7 +9,7 @@
 音色庫不放進 repo（32 MB）。下載 https://github.com/mrbumpy409/GeneralUser-GS 後
 設定 MUSIC_SF2=路徑，或放在 ~/sf/GeneralUser-GS.sf2。
 
-    python3 tools/music/render.py [theme|greenwood] [--preview 輸出資料夾]
+    python3 tools/music/render.py [theme|greenwood|duel] [--preview 輸出資料夾]
 """
 import json, os, subprocess, sys
 from pathlib import Path

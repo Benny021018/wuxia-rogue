@@ -1,4 +1,4 @@
-"""天魔劫配樂：主題曲與第一張地圖（綠林山寨）的程式化樂譜。
+"""天魔劫配樂：主題曲、第一張地圖（綠林山寨）、1v1 單挑（問劍坪）的程式化樂譜。
 
 設計見 docs/music/README.md。這裡只放「樂譜」：動機、和聲進行、段落、聲部配置。
 渲染在 render.py，分析與樂譜輸出在 analyze.py。
@@ -506,7 +506,173 @@ def greenwood() -> Song:
     return s
 
 
-SONGS = {"theme": theme, "greenwood": greenwood}
+# ================================================================== 問劍坪（1v1 單挑）
+def duel() -> Song:
+    """兩把樂器對打：二胡是一方、笛子是另一方。先一人一句（各兩小節），再縮成一人一小節，
+    最後疊在一起；中段全場收掉只剩心跳，決勝段兩人齊奏同一條旋律。"""
+    s = Song("duel", "問劍坪", 152,
+             "Dm Dm Dm Asus4,A "                          # 序 起手式：鑼、太鼓，琵琶進來
+             "Dm C Bb A Dm C Bb A "                       # A 試探：二胡問兩小節、笛子答兩小節
+             "Dm C Bb A Dm C Gm A "                       # A' 交鋒：一人一小節，後半疊在一起
+             "Bb C Am Dm Gm Am Bb A "                     # B 搶攻：小提琴＋號角拉開
+             "Dm Eb/D Dm Eb/D Gm Gm Asus4 A "             # 橋 對峙：收到只剩心跳
+             "Dm C Bb A Dm C Bb A")                       # A'' 決勝：齊奏，回到 A 循環
+    s.key = "d"
+    I = s.sec("序 起手式", 4); A = s.sec("A 試探", 8); A2 = s.sec("A' 交鋒", 8); B = s.sec("B 搶攻", 8)
+    BR = s.sec("橋 對峙", 8); A3 = s.sec("A'' 決勝", 8)
+    s.loop_bar = A
+
+    # 出招動機 = 英雄動機 x 移到 D（D F G，上行）；應招動機 = 它的倒影（D C A，下行）
+    CALL_1 = "D5:1.5 F5:.5 G5:1 A5:1 | G5:.5 A5:.5 G5:.5 E5:.5 C5:2"
+    ANS_1 = "D6:1.5 C6:.5 A5:1 F5:1 | E5:.5 F5:.5 E5:.5 C#5:.5 A5:2"
+    CALL_2 = "A5:1 D6:1 C6:.5 A5:.5 G5:1 | E5:1 G5:.5 E5:.5 C5:1 D5:1"
+    ANS_2 = "F5:.5 G5:.5 A5:1 Bb5:1 D6:1 | C#6:1 A5:1 E5:2"
+    # 一小節一換手的短句（十六分音符起手、長音收）
+    CUT = ["D5:.25 F5:.25 G5:.25 A5:.25 D6:1 A5:2", "E6:.25 D6:.25 C6:.25 G5:.25 E5:1 G5:2",
+           "F5:.25 G5:.25 Bb5:.25 D6:.25 F6:1 D6:2", "E6:.25 C#6:.25 A5:.25 E5:.25 A5:1 C#6:2"]
+    CLASH = "D5:1.5 F5:.5 G5:1 A5:1 | G5:1 E5:.5 G5:.5 C6:2 | Bb5:1 A5:.5 G5:.5 D5:1 G5:1 | A5:3 r:1"
+    PRESS = "F5:2 D5:1 F5:1 | G5:3 E5:1 | A5:2 E5:1 C5:1 | D5:3 r:1 | G5:1 Bb5:1 D6:2 | C6:2 A5:1 E5:1 | F5:1 G5:1 Bb5:1 D6:1 | C#6:2 E6:2"
+
+    erhu = s.t("erhu", "gm", 110, pan=-0.28, gain=1.0, verb=0.22, expr="erhu")     # 左邊的對手
+    dizi = s.t("dizi", "gm", 73, pan=0.28, gain=0.95, verb=0.22, expr="dizi")      # 右邊的對手
+    pipa = s.t("pipa", "gm", 106, pan=0.12, gain=0.70, verb=0.15)
+    zheng = s.t("guzheng", "gm", 107, pan=-0.12, gain=0.70, verb=0.25)
+    spic = s.t("low_strings", "gm", 48, pan=-0.05, gain=0.78, verb=0.16)
+    strings = s.t("strings_pad", "gm", 49, pan=0.05, gain=0.48, verb=0.32)
+    vln = s.t("violins", "gm", 49, pan=-0.20, gain=0.80, verb=0.28)
+    horn = s.t("horns", "gm", 60, pan=0.20, gain=0.66, verb=0.28)
+    trem = s.t("tremolo", "gm", 44, pan=0.15, gain=0.5, verb=0.32)
+    cb = s.t("contrabass", "gm", 43, pan=0.0, gain=0.82, verb=0.14)
+    timp = s.t("timpani", "gm", 47, pan=0.0, gain=0.7, verb=0.22)
+    dr = s.t("drums", "drum", pan=0.0, gain=1.0, verb=0.14)
+    log = {}
+
+    # 鼓：梆子（rim）打切分，像兵器相碰；太鼓守住一、三拍前後
+    spar = {"taiko": [(0, .85), (6, .6), (10, .7)], "drum": [(4, .55), (12, .6)],
+            "rim": [(3, .32), (7, .26), (11, .32), (14, .26)]}
+    fight = {"taiko": [(0, .9), (3, .55), (6, .65), (10, .8)], "taiko_lo": [(0, .7)],
+             "drum": [(4, .62), (12, .66), (15, .34)], "rim": [(2, .3), (5, .26), (7, .3), (9, .26), (11, .3), (14, .28)]}
+    final = {"taiko": [(0, .95), (3, .6), (6, .7), (8, .85), (10, .65), (14, .6)], "taiko_lo": [(0, .85), (8, .65)],
+             "drum": [(4, .7), (12, .74), (15, .4)], "rim": [(2, .32), (5, .28), (7, .32), (9, .28), (11, .32), (13, .28)]}
+
+    def ostinato(bar0, bar1, vel, sixteenth=False):
+        """琵琶輪指：和弦音上下繞，第一下加重。"""
+        for beat, d, c in s.chords(bar0, bar1):
+            lad = c.ladder(50, 5)
+            pat = [0, 2, 3, 2, 4, 2, 3, 2]
+            step = .25 if sixteenth else .5
+            k = 0
+            while k * step < d - 1e-9:
+                pipa.add([[beat + k * step, step * 1.4, lad[pat[k % 8]], vel + (12 if k % 4 == 0 else 0)]])
+                k += 1
+
+    def spiccato(bar0, bar1, vel, pat=(0, 0, 7, 0, 12, 0, 7, 0)):
+        """低音弦樂頓弓：根音與五度、八度的八分音符。"""
+        for beat, d, c in s.chords(bar0, bar1):
+            r = 38 + (c.bass - 38) % 12
+            for k in range(int(d * 2)):
+                spic.add([[beat + k * .5, .3, r + pat[k % 8], vel + (14 if k % 2 == 0 else 0)]])
+
+    drive = [(0, 1, 0, 1.0), (1.5, .5, 0, .7), (2, 1, 0, .9), (3.5, .5, 0, .7)]
+    eighths = [(i * .5, .4, 0, 1.0 if i % 2 == 0 else .75) for i in range(8)]
+
+    # ---- 序 起手式：鑼一聲，太鼓獨奏，第 3 小節琵琶與頓弓進來，定音鼓滾進 A 段
+    drums(dr, I, {"gong": [(0, .85)], "taiko_lo": [(0, .9), (8, .7)]})
+    drums(dr, I + 1, {"taiko_lo": [(0, .85), (8, .7)], "taiko": [(6, .5), (14, .55)]})
+    drums(dr, I + 2, spar); drums(dr, I + 3, spar)
+    ostinato(I + 2, I + 4, 58)
+    spiccato(I + 2, I + 4, 62)
+    zheng.add([[(I + 3) * 4 + 2 + i * .07, 1.5, m, 50 + i * 4] for i, m in enumerate(Chord("A").ladder(45, 10))])
+    timpani_roll(timp, (I + 3) * 4 + 2, 2, midi("A2"), 45, 100)
+
+    # ---- A 試探：二胡出招兩小節，笛子應招兩小節，各說各的
+    erhu.add(parse_melody(CALL_1, A * 4, 92)); dizi.add(grace(parse_melody(ANS_1, (A + 2) * 4, 92), seed=11))
+    erhu.add(parse_melody(CALL_2, (A + 4) * 4, 94)); dizi.add(grace(parse_melody(ANS_2, (A + 6) * 4, 94), seed=12))
+    ostinato(A, A + 8, 54)
+    spiccato(A, A + 8, 62)
+    log["A"] = pad(s, strings, A, A + 8, 3, 53, 72, 62, 44)
+    bassline(s, cb, A, A + 8, 28, 43, 74, rhythm=drive)
+    for b in range(A, A + 8):
+        drums(dr, b, spar)
+    drums(dr, A, {"cym": [(0, .6)], "taiko_lo": [(0, .8)]})
+    drums(dr, A + 7, {"drum": [(12, .4), (13, .45), (14, .5), (15, .55)]})
+
+    # ---- A' 交鋒：一人一小節（越換越快），後四小節二胡搶攻、笛子在上方頂住
+    for k, text in enumerate(CUT):
+        (erhu if k % 2 == 0 else dizi).add(parse_melody(text, (A2 + k) * 4, 96))
+    erhu.add(parse_melody(CLASH, (A2 + 4) * 4, 98))
+    for k, m in enumerate(guide_line(s.prog[A2 + 4:A2 + 8], 77, 89, midi("A5"), [+1, +1, -1, +1])):
+        dizi.add([[(A2 + 4 + k) * 4, 1.5, m, 78], [(A2 + 4 + k) * 4 + 1.5, .5, m, 70], [(A2 + 4 + k) * 4 + 2, 2, m, 74]])
+    ostinato(A2, A2 + 8, 58)
+    spiccato(A2, A2 + 8, 68)
+    log["A'"] = pad(s, strings, A2, A2 + 8, 3, 53, 72, 62, 56)
+    pad(s, horn, A2 + 4, A2 + 8, 3, 50, 67, 58, 58)
+    bassline(s, cb, A2, A2 + 8, 28, 43, 80, rhythm=drive)
+    for b in range(A2, A2 + 8):
+        drums(dr, b, fight)
+    drums(dr, A2, {"cym": [(0, .6)]})
+    roll(dr, (A2 + 7) * 4 + 2, 2, "drum", .3, .8, rate=8)
+
+    # ---- B 搶攻：小提琴＋號角把場面拉開；二胡與笛子退到兩小節一次的短促對刺
+    mel(vln, PRESS, B, 94)
+    mel(horn, PRESS, B, 76, -12)
+    for k in range(4):
+        who, text = (erhu, "r:3 A5:.25 G5:.25 F5:.25 D5:.25") if k % 2 == 0 else (dizi, "r:3 A5:.25 C6:.25 D6:.25 E6:.25")
+        who.add(parse_melody(text, (B + 1 + k * 2) * 4, 84))
+    ostinato(B, B + 8, 50, sixteenth=True)
+    spiccato(B, B + 8, 72)
+    log["B"] = pad(s, strings, B, B + 8, 4, 50, 74, 63, 64)
+    bassline(s, cb, B, B + 8, 28, 43, 84, rhythm=eighths)
+    for b in range(B, B + 8):
+        drums(dr, b, fight)
+    drums(dr, B, {"cym": [(0, .75)], "taiko_lo": [(0, .9)]})
+    drums(dr, B + 4, {"cym": [(0, .6)]})
+    drums(dr, B + 7, {"drum": [(8 + i, .35 + .06 * i) for i in range(8)], "cym": [(15, .5)]})
+
+    # ---- 橋 對峙：全場收掉。低音 D 持續，bII（Eb/D）的小二度摩擦；大太鼓像心跳，
+    #      兩人各出一個短句就停住。後四小節每半小節換手、音越爬越高，滾奏衝進決勝段
+    for k, text in enumerate(["D5:.5 F5:.5 A5:3", "Bb5:.5 G5:.5 Eb5:3", "A5:.5 D6:.5 F5:3", "G5:.5 Bb5:.5 Eb6:3"]):
+        (erhu if k % 2 == 0 else dizi).add(parse_melody(text, (BR + k) * 4, 80))
+    erhu.add(parse_melody("G5:2 r:2 | Bb5:2 r:2 | A5:2 r:2 | C#6:2 r:2", (BR + 4) * 4, 88))
+    dizi.add(parse_melody("r:2 Bb5:2 | r:2 D6:2 | r:2 D6:2 | r:2 E6:2", (BR + 4) * 4, 88))
+    log["橋"] = pad(s, trem, BR, BR + 8, 4, 53, 76, 65, 52)
+    for b in range(BR, BR + 4):
+        cb.add([[b * 4, 4, midi("D2"), 66]])
+        drums(dr, b, {"taiko_lo": [(0, .8), (3, .5)]})
+        zheng.add([[b * 4 + 2 + j * .25, 1.5, m, 50 - j * 4] for j, m in enumerate(s.prog[b][0][1].ladder(74, 4)[::-1])])
+    drums(dr, BR, {"gong": [(0, .7)]})
+    bassline(s, cb, BR + 4, BR + 8, 28, 43, 74, rhythm=[(0, 1.5, 0, 1.0), (2, 1.5, 0, .9)])
+    spiccato(BR + 4, BR + 8, 56)
+    for k, b in enumerate(range(BR + 4, BR + 8)):
+        drums(dr, b, {"taiko_lo": [(0, .85), (8, .8)], "taiko": [(3, .5 + .05 * k), (11, .5 + .05 * k)] + ([(6, .6), (14, .6)] if k >= 2 else [])})
+    roll(dr, (BR + 7) * 4, 4, "drum", .3, .9, rate=8)
+    timpani_roll(timp, (BR + 6) * 4, 8, midi("A2"), 45, 115)
+    drums(dr, BR + 7, {"cym": [(12, .45)]})
+
+    # ---- A'' 決勝：兩人齊奏整條問答旋律（同度齊奏、小提琴低八度），號角長音，琵琶十六分
+    FULL = " | ".join([CALL_1, ANS_1, CALL_2, ANS_2])
+    erhu.add(parse_melody(FULL, A3 * 4, 100))
+    dizi.add(grace(parse_melody(FULL, A3 * 4, 100), seed=13))
+    vln.add(parse_melody(FULL, A3 * 4, 82, -12))
+    ostinato(A3, A3 + 8, 54, sixteenth=True)
+    spiccato(A3, A3 + 8, 74)
+    log["A''"] = pad(s, strings, A3, A3 + 8, 4, 50, 74, 63, 70)
+    pad(s, horn, A3, A3 + 8, 3, 50, 67, 58, 72)
+    bassline(s, cb, A3, A3 + 8, 28, 43, 88, rhythm=eighths)
+    for b in range(A3, A3 + 8):
+        drums(dr, b, final)
+    drums(dr, A3, {"cym": [(0, .85)], "gong": [(0, .5)]})
+    drums(dr, A3 + 4, {"cym": [(0, .6)]})
+    drums(dr, A3 + 7, {"drum": [(8 + i, .35 + .05 * i) for i in range(8)]})
+
+    s.dyn = [(I, -3), (A, -1.5), (A2, -0.5), (B, 0), (BR, -4), (BR + 4, -3), (BR + 7, -0.5), (A3, 0.8), (A3 + 8, 0.8)]
+    for tr in s.tracks.values():
+        tr.notes = humanize(tr.notes, hash(tr.name) % 1000, 5)
+    s.log = log
+    return s
+
+
+SONGS = {"theme": theme, "greenwood": greenwood, "duel": duel}
 
 # ------------------------------------------------------------------ MIDI
 GM_DRUM = {"taiko": 47, "taiko_lo": 41, "drum": 38, "rim": 76, "cym": 49, "gong": 52}

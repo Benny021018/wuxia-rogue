@@ -1,3 +1,4 @@
 key,file,volume_db,loop_offset_s,fade_s,note
 menu,res://assets/audio/music/theme.ogg,-3,0,1.5,主選單：天魔劫主題曲（整首循環）
 greenwood,res://assets/audio/music/greenwood.ogg,-5,7.2727,2.0,地圖一 綠林山寨（序 4 小節之後循環；循環點由 tools/music/render.py 寫入）
+duel,res://assets/audio/music/duel.ogg,-5,6.3158,1.5,問劍坪 1v1 單挑（序 4 小節之後循環；循環點由 tools/music/render.py 寫入）

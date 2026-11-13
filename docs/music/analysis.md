@@ -34,3 +34,20 @@
 - dizi 強拍音落在和弦音或五聲音階：33/33（100%）
 - violins 強拍音落在和弦音或五聲音階：14/14（100%）
 - 音域：dizi A4–E6、erhu A4–Eb6、pipa E3–G5、guzheng E3–E6、low_strings E2–D4、strings_pad E3–D5、violins A3–D5、horns D3–G4、trombones B2–F3、tuba B1–F2、tremolo G3–C5、contrabass A1–F3、timpani E2–B2
+
+## 問劍坪（D 小調／羽調式，♩=152）
+
+| 段落 | 小節 | 和弦 | 級數 |
+|---|---|---|---|
+| 序 起手式 | 1–4 | Dm Dm Dm Asus4 A | i i i i54 V |
+| A 試探 | 5–12 | Dm C Bb A Dm C Bb A | i bVII bVI V i bVII bVI V |
+| A' 交鋒 | 13–20 | Dm C Bb A Dm C Gm A | i bVII bVI V i bVII iv V |
+| B 搶攻 | 21–28 | Bb C Am Dm Gm Am Bb A | bVI bVII v i iv v bVI V |
+| 橋 對峙 | 29–36 | Dm Eb/D Dm Eb/D Gm Gm Asus4 A | i bII#6#42 i bII#6#42 iv iv i54 V |
+| A'' 決勝 | 37–44 | Dm C Bb A Dm C Bb A | i bVII bVI V i bVII bVI V |
+
+- 和弦墊底聲部檢查：40 個和弦，沒有平行五八度或聲部交錯
+- erhu 強拍音落在和弦音或五聲音階：41/41（100%）
+- dizi 強拍音落在和弦音或五聲音階：35/35（100%）
+- violins 強拍音落在和弦音或五聲音階：30/30（100%）
+- 音域：erhu C5–F6、dizi C5–E6、pipa D3–E5、guzheng A2–D6、low_strings D2–C4、strings_pad D3–C#5、violins C4–E6、horns D3–E5、tremolo G3–E5、contrabass G1–G2、timpani A2–A2
