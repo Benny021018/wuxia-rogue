@@ -100,6 +100,7 @@ func _run_character(cid: String) -> void:
 		await _check_hit_reactions(world)
 		await _check_game_feel(world, player)
 		await _check_third_person(world, player)
+		await _check_knockback(world, player)
 		var gate = world.rooms[0].gate_out
 		var meshes := (gate as Node).find_children("*", "MeshInstance3D", true, false)
 		_check(meshes.size() == 1, "山寨門只有一個可見模型")
@@ -970,6 +971,115 @@ func _check_hit_reactions(world) -> void:
 	_check(e._flash_meshes[0].material_overlay == null, "泛紅結束還原原本外觀")
 	_check(e._impact_pivot.transform.is_equal_approx(Transform3D.IDENTITY) and e.global_position.is_equal_approx(origin), "連擊後完全回正，碰撞位置不漂移")
 	e.queue_free()
+
+
+# 擊退距離由招式決定；出招的位移不會穿過目標
+func _check_knockback(world, player) -> void:
+	var S := CombatState.S
+	# 資料規則：普攻每一段的擊退距離不超過下一段往前的位移，連打不會把對手推出範圍
+	for cid in Data.char_moves:
+		var slots: Dictionary = Data.char_moves[cid]
+		var i := 1
+		while slots.has("normal%d" % (i + 1)):
+			var cur: Dictionary = Data.moves[slots["normal%d" % i]]
+			var nxt: Dictionary = Data.moves[slots["normal%d" % (i + 1)]]
+			var push := 0.0
+			for h in cur.hits:
+				push += float(h.push_m)
+			if float(nxt.lunge_m) > 0.0:
+				_check(push <= float(nxt.lunge_m) + 0.001, "%s 的擊退 %.2f 不超過下一段位移 %.2f" % [cur.name_zh, push, float(nxt.lunge_m)])
+			i += 1
+	Feel.reset()
+	player.cs.reset()
+	player.runner.interrupt()
+	player.velocity = Vector3.ZERO
+	player.rotation.y = 0.0
+	await _physics(2)
+	# 找一個前後都有空間的方向（測試場地旁邊有牆和擺設）
+	var keep_yaw: float = player.yaw
+	for k in 8:
+		player.yaw = keep_yaw + TAU * k / 8.0
+		var probe: Vector3 = player.aim_flat()
+		if not player.test_move(player.global_transform, probe * 9.0) and not player.test_move(player.global_transform, -probe * 3.0):
+			break
+	var fwd: Vector3 = player.aim_flat()
+	var e = world.spawn_enemy("H01", player.global_position + fwd * 2.0, false)
+	e.max_hp = 1.0e7
+	e.hp = 1.0e7
+	await _physics(2)
+	# 受擊：沿攻擊者出招方向退 push_m
+	var p0: Vector3 = e.global_position
+	var strike := {"hitstun_s": 0.6, "push_m": 1.0, "push_from": player.global_position, "push_fwd": fwd}
+	e.take_hit(1.0, player.global_position, false, 1.0, strike)
+	await _physics(26)
+	var moved: Vector3 = e.global_position - p0
+	_check(absf(moved.dot(fwd) - 1.0) < 0.2 and absf(moved.cross(fwd).y) < 0.15, "受擊沿出招方向退一公尺（實際 %.2f）" % moved.dot(fwd))
+	# 浮空：一樣會退
+	e.cs.reset()
+	p0 = e.global_position
+	strike["launch"] = 1
+	strike["launch_h_m"] = 1.5
+	e.take_hit(1.0, player.global_position, false, 1.0, strike)
+	await _physics(26)
+	_check(e.cs.state() == S.AIR and (e.global_position - p0).dot(fwd) > 0.8, "浮空同時被擊退（實際 %.2f）" % (e.global_position - p0).dot(fwd))
+	# 範圍招：從中心往外推
+	e.cs.reset()
+	e.global_position = player.global_position + fwd * 2.0
+	e.velocity = Vector3.ZERO
+	await _physics(2)
+	p0 = e.global_position
+	e.take_hit(1.0, player.global_position, false, 1.0, {"hitstun_s": 0.6, "push_m": 1.0, "push_from": player.global_position + fwd * 3.0})
+	await _physics(26)
+	_check((e.global_position - p0).dot(fwd) < -0.8, "範圍招從中心往外推")
+	# 連打四段普攻：不會走到目標身後，四段都打得到
+	e.cs.reset()
+	e.global_position = player.global_position + fwd * 1.6
+	e.velocity = Vector3.ZERO
+	var keep_inv: float = player.invuln_t
+	player.invuln_t = 30.0
+	player.runner.combo = 0
+	var hits := 0
+	var last_hp: float = e.hp
+	var behind := false
+	for f in 150:
+		if f % 6 == 0:
+			player.use("attack")
+		Feel.reset()      # 測試不等頓幀（頓幀用真實時間計時）
+		await get_tree().physics_frame
+		if e.hp < last_hp:
+			hits += 1
+			last_hp = e.hp
+		var gap: float = (e.global_position - player.global_position).dot(fwd)
+		if gap < e.hit_radius:
+			behind = true
+	_check(hits >= 4, "連打四段普攻全部命中（命中 %d 次）" % hits)
+	_check(not behind, "出招的位移不會穿過目標")
+	player.runner.interrupt()
+	player.invuln_t = keep_inv
+	e.queue_free()
+	Feel.reset()
+	# 玩家被打也會退
+	player.cs.reset()
+	player.hit_guard = 0.0
+	player.invuln_t = 0.0
+	player.hp = Game.max_hp()
+	player.velocity = Vector3.ZERO
+	await _physics(2)
+	p0 = player.global_position
+	player.take_damage(1.0, null, false, {"hitstun_s": 0.3, "push_m": 1.0, "push_fwd": -fwd})
+	await _physics(26)
+	_check((player.global_position - p0).dot(-fwd) > 0.8, "玩家受擊被擊退（實際 %.2f）" % (player.global_position - p0).dot(-fwd))
+	player.invuln_t = keep_inv
+	player.cs.reset()
+	player.hit_guard = 0.0
+	player.hp = Game.max_hp()
+	player.yaw = keep_yaw
+	Feel.reset()
+
+
+func _physics(n: int) -> void:
+	for i in n:
+		await get_tree().physics_frame
 
 
 # 取動畫與所有父節點變換後的世界頭部朝向。

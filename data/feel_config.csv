@@ -16,11 +16,12 @@ shake_max_offset,0.09,震動最大位移（公尺）
 shake_max_roll_deg,1.6,震動最大翻滾角
 flash_hold_s,0.045,受擊閃白維持
 flash_fade_s,0.12,受擊閃白淡出
-knock_speed,3.2,一般命中的擊退初速（公尺／秒，再乘武器權重）
+knock_speed,3.2,沒有招式資料的傷害（武學追加傷害等）的擊退初速（公尺／秒，再乘武器權重）；招式的擊退距離看 move_hits.csv 的 push_m
 knock_crit_mult,1.5,暴擊擊退倍率
 knock_decay,10,擊退速度每秒衰減比例
 knock_mass_elite,0.45,精英受擊退比例
 knock_mass_boss,0.12,首領受擊退比例
+knock_armor_mult,0.2,霸體吃招（或玩家受擊保護期間）的擊退比例
 squash,0.22,受擊形變幅度（壓扁比例）
 death_fling_s,0.32,擊殺後屍身被打飛到消失的時間
 death_fling_m,1.6,擊殺打飛距離

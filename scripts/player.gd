@@ -232,6 +232,8 @@ func _physics_process(delta: float) -> void:
 	elif runner.busy():
 		dir = Vector3.ZERO
 	if lunge != Vector3.ZERO:
+		if int(runner.move.get("lunge_pass", 0)) != 1:
+			lunge = _limit_lunge(lunge, delta)
 		velocity.x = lunge.x
 		velocity.z = lunge.z
 	else:
@@ -240,6 +242,12 @@ func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= (CombatState.cfg("air_gravity") if cs.base == CombatState.S.AIR else GRAVITY) * delta
 		_fall_v = minf(_fall_v, velocity.y)
+	if _knock != Vector3.ZERO:
+		# 被擊退：速度逐幀衰減，總位移等於招式指定的距離；空中、倒地時一樣會退
+		move_and_collide(_knock * delta)
+		_knock *= exp(-float(Data.feel.knock_decay) * delta)
+		if _knock.length_squared() < 0.0004:
+			_knock = Vector3.ZERO
 	move_and_slide()
 	if dir != Vector3.ZERO and not runner.busy():
 		face(dir)
@@ -253,6 +261,31 @@ func _physics_process(delta: float) -> void:
 
 
 var _dash_dir := Vector3.FORWARD
+var _knock := Vector3.ZERO          # 被擊退的速度（逐幀衰減）
+
+
+## 出招往前的位移不會穿過前方的目標：停在離目標邊緣 lunge_stop_gap_m 的地方，
+## 這樣連打時不會走到對手身後而揮空。標了 lunge_pass 的招式（疾風步等）不受限制。
+func _limit_lunge(lunge: Vector3, delta: float) -> Vector3:
+	var speed := lunge.length()
+	if speed <= 0.0 or lunge.dot(runner.dir) <= 0.0:
+		return lunge
+	var fwd := lunge / speed
+	var room := INF
+	for e in targets():
+		if not is_instance_valid(e) or e.dead:
+			continue
+		var to: Vector3 = e.global_position - global_position
+		if absf(to.y) > 2.5:
+			continue
+		to.y = 0
+		var along := to.dot(fwd)
+		if along <= 0.0 or (to - fwd * along).length() > e.hit_radius + hit_radius:
+			continue
+		room = minf(room, along - e.hit_radius - CombatState.cfg("lunge_stop_gap_m"))
+	if room >= speed * delta:
+		return lunge
+	return fwd * maxf(0.0, room) / delta
 
 
 func _update_camera() -> void:
@@ -502,11 +535,13 @@ func _shoot(pos: Vector3, dir: Vector3, dmg: float, pierce: int, rng: float, col
 	p.damage = dmg
 	p.pierce = pierce
 	p.max_range = rng
-	p.radius = 0.35
+	p.radius = CombatState.cfg("player_proj_radius_m")
 	p.caster = self
+	var strike := hit.duplicate()
+	strike["push_fwd"] = Vector3(dir.x, 0, dir.z).normalized()     # 飛行道具：往飛行方向推
 	p.on_hit = func(e, d):
 		_imp = {"crit": false, "kill": false, "metal": false}
-		if deal(e, d, false, _impact_weight(visual_id), e.global_position - dir, hit):
+		if deal(e, d, false, _impact_weight(visual_id), e.global_position - dir, strike):
 			runner.add_rage(CombatState.cfg("rage_per_hit"))
 			Sfx.play("hit_high" if visual_id == "W006" else "arrow_impact", e.hit_center())
 			_impact_feedback(_impact_weight(visual_id) * 0.8)
@@ -606,12 +641,10 @@ func deal(e, base: float, _is_dot: bool, weight := 1.0, source := Vector3.INF, h
 		var strike := hit.duplicate()
 		strike["crit"] = crit
 		strike["weight"] = weight
+		if not strike.has("push_from") and not strike.has("push_fwd"):
+			strike["push_from"] = global_position
 		e.take_damage(base * power, self, _is_dot, strike)
 		if before > e.hp:
-			if not e.dead and (float(hit.get("push_m",0)) > 0 or float(hit.get("launch_h_m",0)) > 0):
-				var away: Vector3 = (e.position-position).slide(Vector3.UP).normalized()
-				var push: float = float(hit.get("push_m",0))
-				e.move_and_collide(away*push)
 			if build.f("poison_pct") > 0:
 				e.duel_poison += (before - e.hp) * build.f("poison_pct") / 100
 				e.duel_poison_left = 3
@@ -769,14 +802,23 @@ func take_damage(amount: float, attacker = null, is_dot := false, hit := {}) -> 
 		runner.add_rage(CombatState.cfg("rage_per_hurt"))
 		# 狀態：硬直、浮空、倒地（受擊保護期間只受傷）
 		var h := hit if not hit.is_empty() else {"hitstun_s": CombatState.cfg("enemy_hitstun_s")}
+		var knock_mult := float(Data.feel.knock_armor_mult)
 		if cs.base in [CombatState.S.DOWN, CombatState.S.AIR] or hit_guard <= 0.0 or int(h.get("launch", 0)) == 1 or int(h.get("knockdown", 0)) == 1:
 			var before := cs.base
 			var res: Dictionary = cs.apply_hit(h)
 			if float(res.launch_v) > 0.0:
 				velocity.y = float(res.launch_v)
+			knock_mult = float(Data.feel.knock_armor_mult) if res.absorbed else 1.0
 			if cs.base != CombatState.S.NORMAL and before == CombatState.S.NORMAL:
 				hit_guard = float(h.get("hitstun_s", 0.0)) + CombatState.cfg("player_hit_guard_s")
 				model.current = ""
+		# 擊退：距離由這一下攻擊的 push_m 決定；霸體或受擊保護期間只退一小段
+		var back := float(h.get("push_m", 0.0)) * knock_mult
+		if back > 0.0:
+			var away := Vector3.ZERO
+			if attacker != null and is_instance_valid(attacker):
+				away = global_position - attacker.global_position
+			_knock = CombatState.push_dir(h, global_position, away) * back * float(Data.feel.knock_decay)
 	if not is_dot and opponent != null and attacker == opponent:
 		duel_hit.emit(maxf(0.0, dmg), bool(hit.get("crit", false)), float(hit.get("weight", 1.0)))
 	elif dmg > 0.0 and not network_driven:
