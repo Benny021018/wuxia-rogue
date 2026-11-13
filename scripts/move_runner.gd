@@ -223,7 +223,7 @@ func _fire(h: Dictionary) -> void:
 		return
 	if shape == "target":
 		center = p.aim_point(r)
-		r = 4.0
+		r = CombatState.cfg("target_area_radius_m")
 		if char_id == "tang":
 			_needle_rain(center, r)
 	var targets: Array = []
@@ -250,6 +250,11 @@ func _fire(h: Dictionary) -> void:
 		_cue(origin + dir * distance, r * CombatState.cfg("attack_fx_span_mult"), finisher)
 	p._imp = {"crit": false, "kill": false, "metal": false}
 	var any := false
+	# 擊退方向：近戰往出招方向推（目標留在正前方），範圍招從中心往外推
+	h = h.duplicate()
+	h["push_from"] = center
+	if shape in ["arc", "line"]:
+		h["push_fwd"] = dir
 	for e in targets:
 		if p.deal(e, base, false, _weight(h), Vector3.INF, h):
 			any = true

@@ -172,3 +172,20 @@ func _emit() -> void:
 		var old := _last
 		_last = s
 		changed.emit(old, s)
+
+
+## 擊退方向（水平單位向量）。hit 可帶 push_from（攻擊中心）與 push_fwd（攻擊者出招方向）：
+## 近戰兩者相加，目標會被推向攻擊者的正前方；範圍招只有中心，往外推；飛行道具只有方向。
+static func push_dir(hit: Dictionary, victim_pos: Vector3, fallback: Vector3) -> Vector3:
+	var fwd: Vector3 = hit.get("push_fwd", Vector3.ZERO)
+	var d := fwd
+	if hit.has("push_from"):
+		var from: Vector3 = hit.push_from
+		var radial := Vector3(victim_pos.x - from.x, 0, victim_pos.z - from.z)
+		if radial.length() > 0.3:
+			d += radial.normalized()
+	d.y = 0
+	if d.length() > 0.05:
+		return d.normalized()
+	fallback.y = 0
+	return fallback.normalized() if fallback.length() > 0.05 else Vector3.ZERO

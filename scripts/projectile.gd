@@ -71,7 +71,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		for p in get_tree().get_nodes_in_group("player"):
 			if p and not p.dead and p.global_position.distance_to(global_position - Vector3(0, 0.9, 0)) <= radius + 0.5:
-				p.take_damage(damage, source, false, {"hitstun_s": CombatState.cfg("enemy_proj_hitstun_s")})
+				p.take_damage(damage, source, false, {"hitstun_s": CombatState.cfg("enemy_proj_hitstun_s"), "push_m": CombatState.cfg("enemy_proj_push_m"), "push_fwd": Vector3(direction.x, 0, direction.z).normalized()})
 				queue_free()
 				return
 

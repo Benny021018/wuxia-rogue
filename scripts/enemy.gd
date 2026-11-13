@@ -448,7 +448,8 @@ func _hit_player(amount: float) -> void:
 		_first_strike = false
 	if eid == "H07" and hp < max_hp * 0.3:
 		hp = minf(max_hp, hp + amount * 0.3)
-	player.take_damage(amount, self, false, {"hitstun_s": CombatState.cfg("enemy_hitstun_s" if rank == "minion" else ("enemy_hitstun_elite_s" if rank == "elite" else "enemy_hitstun_boss_s"))})
+	var tier := "" if rank == "minion" else ("_elite" if rank == "elite" else "_boss")
+	player.take_damage(amount, self, false, {"hitstun_s": CombatState.cfg("enemy_hitstun%s_s" % tier), "push_m": CombatState.cfg("enemy_push%s_m" % tier)})
 
 
 func _cancel_draw() -> void:
@@ -646,7 +647,7 @@ func _aoe_after(center: Vector3, r: float, delay: float, amount: float) -> void:
 	Sfx.play("aoe_boom", center)
 	Feel.shake(float(Data.feel.shake_boom) * clampf(1.0 - d / (r * 3.0), 0.2, 1.0))
 	if d <= r:
-		player.take_damage(amount, self, false, {"hitstun_s": 0.4, "launch": 1, "launch_h_m": CombatState.cfg("enemy_aoe_launch_h_m")})
+		player.take_damage(amount, self, false, {"hitstun_s": 0.4, "launch": 1, "launch_h_m": CombatState.cfg("enemy_aoe_launch_h_m"), "push_m": CombatState.cfg("enemy_aoe_push_m")})
 
 
 func _summon(id: String, n: int, cap: int) -> void:
@@ -1070,18 +1071,20 @@ func take_hit(amount: float, from_pos: Vector3, crit: bool, weight := 1.0, hit :
 	var dealt := _apply_damage(dmg_in, crit, false)
 	if dealt > 0 and not dead:
 		_react_to_hit(-to_attacker, weight * (1.5 if crit else 1.0), eid == "H03" and front)
-		var kv := float(Data.feel.knock_speed) * clampf(weight, .5, 2.0) * (float(Data.feel.knock_crit_mult) if crit else 1.0)
-		_knock += _away * kv * _knock_mass() * (.4 if last_hit_metal else 1.0)
-		if not hit.is_empty():
-			# 狀態屬性：硬直、浮空、破霸體、擊倒；招式另外指定的推開距離加在擊退上
+		if hit.is_empty():
+			# 沒有招式資料的傷害（武學的追加傷害等）：用通用的小擊退
+			var kv := float(Data.feel.knock_speed) * clampf(weight, .5, 2.0) * (float(Data.feel.knock_crit_mult) if crit else 1.0)
+			_knock += _away * kv * _knock_mass() * (.4 if last_hit_metal else 1.0)
+		else:
+			# 狀態屬性：硬直、浮空、破霸體、擊倒；擊退距離由招式的 push_m 決定，受擊、浮空、倒地都會退
 			var res: Dictionary = cs.apply_hit(hit)
 			if float(res.launch_v) > 0.0:
 				velocity.y = float(res.launch_v)
-				_knock *= 0.3
-			elif res.absorbed:
-				_knock *= 0.2
-			else:
-				_knock += _away * float(hit.get("push_m", 0.0)) * 3.0 * _knock_mass()
+			var dist := float(hit.get("push_m", 0.0)) * _knock_mass()
+			if res.absorbed:
+				dist *= float(Data.feel.knock_armor_mult)
+			# _knock 是逐幀衰減的速度：初速 = 距離 × 衰減率，總位移剛好是這段距離
+			_knock = CombatState.push_dir(hit, global_position, _away) * dist * float(Data.feel.knock_decay)
 	return dealt
 
 
