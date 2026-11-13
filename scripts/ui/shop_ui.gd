@@ -78,16 +78,21 @@ func _refresh() -> void:
 		UIKit.set_title(title_node, "鐵匠・強化與重鑄")
 		coin_label.text = "持有 %d 銀兩" % int(Game.gold)
 		clang.visible = true
-		for i in 2:
-			_smith_slot(i, 170.0 + i * 660.0)
+		if Game.weapons[1] == null:
+			_smith_slot(0, 500.0)          # 角色固定一把兵器：置中顯示
+		else:
+			for i in 2:
+				_smith_slot(i, 170.0 + i * 660.0)
 	else:
 		UIKit.set_title(title_node, "商人・武學")
 		coin_label.text = "持有 %d 銀兩　｜　武學 %d / %d" % [int(Game.gold), Game.martial.size(), Game.martial_slots()]
 		clang.visible = false
 		if Game.merchant_stock.is_empty():
 			_put(UIKit.box_text("narration", "今天沒有可以學的武學。", 26), 450, 420, 700, 90)
+		# 3 欄網格，一次看完全部上架的武學（docs/ui-drafts/11-merchant.svg）
+		var x0 := (1600.0 - (3.0 * MCW + 2.0 * MGAP)) / 2.0
 		for i in Game.merchant_stock.size():
-			_merchant_card(i, 80.0 + i * 370.0)
+			_merchant_card(i, x0 + (i % 3) * (MCW + MGAP), 200.0 + floori(i / 3.0) * (MCH + 18.0))
 		var refresh := UIKit.button("重新上架（%d）" % Game.merchant_refresh_cost(), _on_refresh, 20, 220, 50)
 		refresh.disabled = Game.gold < Game.merchant_refresh_cost()
 		_put(refresh, 580, 836, 220, 50)
@@ -191,74 +196,83 @@ func _clang() -> void:
 
 
 # ------------------------------------------------------------------ 商人
-func _merchant_card(i: int, x: float) -> void:
+const MCW := 460.0
+const MCH := 290.0
+const MGAP := 22.0
+
+
+func _merchant_card(i: int, x: float, y: float) -> void:
 	var item: Dictionary = Game.merchant_stock[i]
 	var m: Dictionary = Data.martial[item.id]
-	var y := 200.0
-	var cw := 330.0
-	var ch := 540.0
-	var k := 24.0
+	var cw := MCW
+	var ch := MCH
+	var k := 22.0
 	var col := UIKit.rarity_color(m.rarity)
 	var lv: int = Game.martial.get(item.id, 0)
 	var holder := Control.new()
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.modulate.a = 0.45 if item.sold else 1.0
 	UIKit.place(holder, 0, 0, x, y, cw, ch)
+	holder.name = "MerchantCard%d" % i
 	body.add_child(holder)
 	var outline := PackedVector2Array([Vector2(0, 0), Vector2(cw - k, 0), Vector2(cw, k), Vector2(cw, ch), Vector2(k, ch), Vector2(0, ch - k)])
 	var art := ComicFX.new()
 	art.add_poly(outline, Color("#0f0d12"))
-	art.add_poly(PackedVector2Array([Vector2(0, 0), Vector2(cw - k, 0), Vector2(cw, k), Vector2(cw, 40), Vector2(0, 72)]), Color(col, 0.95))
+	art.add_poly(PackedVector2Array([Vector2(0, 0), Vector2(cw - k, 0), Vector2(cw, k), Vector2(cw, 34), Vector2(0, 46)]), Color(col, 0.95))
 	art.add_outline(outline, col, 3.0)
 	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	holder.add_child(art)
 	var sect: Dictionary = Data.sects[m.sect]
-	var head := UIKit.label("武學・%s・%s" % [sect.name_zh, m.school], 15, UIKit.INK)
+	var head := UIKit.label("武學・%s・%s" % [sect.name_zh, m.school], 14, UIKit.INK)
 	head.autowrap_mode = TextServer.AUTOWRAP_OFF
-	UIKit.place(head, 0, 0, 18, 10, cw - 80, 24)
+	UIKit.place(head, 0, 0, 16, 7, cw - 80, 22)
 	holder.add_child(head)
-	var s := UIKit.seal(Data.rarity[m.rarity].name_zh, UIKit.INK if m.rarity == "legendary" else UIKit.BLOOD, 20, 5)
-	UIKit.place(s, 0, 0, cw - 50 - s.size.x / 2.0, 64 - s.size.y / 2.0, s.size.x, s.size.y)
+	var s := UIKit.seal(Data.rarity[m.rarity].name_zh, UIKit.INK if m.rarity == "legendary" else UIKit.BLOOD, 18, 5)
+	UIKit.place(s, 0, 0, cw - 46 - s.size.x / 2.0, 52 - s.size.y / 2.0, s.size.x, s.size.y)
 	holder.add_child(s)
 	var badge := UIKit.box("chip", "", 0)
 	var sc: Color = UIKit.SECT_COLORS.get(String(m.sect), UIKit.GREY)
 	badge.fill = sc
 	badge.border = sc
-	var bl := UIKit.label(String(sect.name_zh).left(1), 36, UIKit.INK, HORIZONTAL_ALIGNMENT_CENTER, true)
+	var bl := UIKit.label(String(sect.name_zh).left(1), 30, UIKit.INK, HORIZONTAL_ALIGNMENT_CENTER, true)
 	bl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	badge.add_child(bl)
-	UIKit.place(badge, 0, 0, 20, 90, 64, 64)
+	UIKit.place(badge, 0, 0, 16, 58, 52, 52)
 	holder.add_child(badge)
-	var name_node := UIKit.title(m.name_zh, 36 if String(m.name_zh).length() <= 4 else 30, UIKit.BONE, 7, false, -2, HORIZONTAL_ALIGNMENT_LEFT)
-	UIKit.place(name_node, 0, 0, 96, 92, cw - 106, 60)
+	var name_node := UIKit.title(m.name_zh, 30 if String(m.name_zh).length() <= 4 else 26, UIKit.BONE, 6, false, -2, HORIZONTAL_ALIGNMENT_LEFT)
+	UIKit.place(name_node, 0, 0, 80, 58, cw - 160, 52)
 	holder.add_child(name_node)
 	var lvtxt := "新習得・入門" if lv == 0 else "%s → %s" % [UIKit.LV_NAMES[lv], UIKit.LV_NAMES[mini(lv + 1, 5)]]
-	var ll := UIKit.label(lvtxt, 17, UIKit.EMBER)
+	var ll := UIKit.label(lvtxt, 15, UIKit.EMBER)
 	ll.autowrap_mode = TextServer.AUTOWRAP_OFF
-	UIKit.place(ll, 0, 0, 22, 172, 170, 26)
+	UIKit.place(ll, 0, 0, 18, 118, 200, 24)
 	holder.add_child(ll)
 	var p := ComicFX.new()
-	p.add_pips(Vector2(0, 0), lv, 5, 9.0)
-	UIKit.place(p, 0, 0, 196, 186, 100, 1)
+	p.add_pips(Vector2(0, 0), lv, 5, 8.0)
+	UIKit.place(p, 0, 0, cw - 120, 130, 100, 1)
 	holder.add_child(p)
-	var eff := UIKit.box_text("system", Data.martial_text(item.id, mini(lv + 1, 5)), 16, "", HORIZONTAL_ALIGNMENT_LEFT)
-	eff.set_padding(10, 16)
-	UIKit.place(eff, 0, 0, 20, 214, cw - 40, 90)
+	var eff := UIKit.box_text("system", Data.martial_text(item.id, mini(lv + 1, 5)), 15, "", HORIZONTAL_ALIGNMENT_LEFT)
+	eff.set_padding(8, 14)
+	UIKit.place(eff, 0, 0, 16, 150, cw - 32, 56)
 	holder.add_child(eff)
-	var extra := UIKit.label(("小成：" + String(m.lv3_desc)) if lv + 1 <= 3 else ("圓滿：" + String(m.lv5_desc)), 14, UIKit.TEAL)
-	UIKit.place(extra, 0, 0, 22, 322, cw - 44, 90)
+	var extra := UIKit.label(("小成：" + String(m.lv3_desc)) if lv + 1 <= 3 else ("圓滿：" + String(m.lv5_desc)), 13, UIKit.TEAL)
+	extra.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	UIKit.place(extra, 0, 0, 18, 212, cw - 36, 22)
+	extra.clip_text = true
+	extra.tooltip_text = extra.text
+	extra.mouse_filter = Control.MOUSE_FILTER_PASS
 	holder.add_child(extra)
 	if item.sold:
-		var sold := UIKit.seal("已售出", UIKit.BLOOD, 40, -12)
-		_put(sold, x + cw / 2.0 - sold.size.x / 2.0, y + 280 - sold.size.y / 2.0, sold.size.x, sold.size.y)
+		var sold := UIKit.seal("已售出", UIKit.BLOOD, 34, -12)
+		_put(sold, x + cw / 2.0 - sold.size.x / 2.0, y + ch / 2.0 + 10 - sold.size.y / 2.0, sold.size.x, sold.size.y)
 		return
 	var price := Game.martial_price(item.id)
 	var label := "購買（%d 銀兩）" % price
 	if not Game.can_learn(item.id):
 		label = "武學格已滿"
-	var buy := UIKit.button(label, _on_buy.bind(i), 20, cw - 60, 52)
+	var buy := UIKit.button(label, _on_buy.bind(i), 18, 206, 42)
 	buy.disabled = Game.gold < price or not Game.can_learn(item.id)
-	_put(buy, x + 30, y + ch - 76, cw - 60, 52)
+	_put(buy, x + cw - 226, y + ch - 56, 206, 42)
 
 
 func _on_buy(i: int) -> void:

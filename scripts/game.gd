@@ -82,8 +82,8 @@ func new_run(cid: String, start_wid := "") -> void:
 	free_draws = 0
 	bond_tiers = {}
 	# 開局自選一把起手武器（weapons.csv 的 starter 欄），沒有詞條
-	var starters := starter_weapons()
-	var first: String = start_wid if start_wid in starters else starters[0]
+	# 每個角色固定一把兵器（characters.csv 的 weapon_id）；start_wid 只給測試指定用
+	var first: String = start_wid if start_wid != "" else String(Data.characters[cid].weapon_id)
 	weapons = [make_weapon(first, 0), null]
 	active_weapon = 0
 	merchant_stock = []
@@ -891,7 +891,7 @@ func _pool(rar: String, kind: String, seen: Dictionary) -> Array:
 			if Data.weapons[wid].rarity != rar or seen.has(wid):
 				continue
 			var lv := _owned_weapon_lv(wid)
-			if lv >= MAX_LV:
+			if lv >= MAX_LV or lv == 0:     # 角色固定兵器：天機輪只會出自己那把的淬煉
 				continue
 			if lv > 0 and Data.cfg("shrine_weapon_upgrade") < 0.5:
 				continue  # 淬煉交給鐵匠，悟道碑只出新武器
@@ -957,11 +957,11 @@ func roll_choices(o := {}) -> Array:
 		if kind == "W" and _owned_weapon_lv(id) == 0:
 			cand.affixes = roll_affixes(id, affix_count("shrine"))
 		cands.append(cand)
-	# 武學全部圓滿、幸運又把凡品權重壓到接近 0 時，武器（全部同品質）仍可出現
+	# 武學全部圓滿、幸運又把凡品權重壓到接近 0 時，改出固定兵器的淬煉
 	if cands.is_empty():
-		for wid in FEATURED_WEAPONS:
-			if _owned_weapon_lv(wid) == 0 and cands.size() < n:
-				cands.append({"kind": "W", "id": wid, "rarity": Data.weapons[wid].rarity, "affixes": roll_affixes(wid, affix_count("shrine"))})
+		var own = current_weapon()
+		if own != null and int(own.lv) < MAX_LV:
+			cands.append({"kind": "W", "id": own.id, "rarity": Data.weapons[own.id].rarity})   # 沒有武學可出時：淬煉自己的兵器
 	# 唐門門主：必有一門唐門武學
 	if f("guarantee_tangmen") > 0 and not cands.any(func(c): return c.kind == "M" and Data.martial[c.id].sect == "tangmen"):
 		var opts: Array = []
@@ -1059,7 +1059,7 @@ func describe(c: Dictionary) -> Dictionary:
 func _setup_input() -> void:
 	var keys := {
 		"move_forward": [KEY_W], "move_back": [KEY_S], "move_left": [KEY_A], "move_right": [KEY_D],
-		"jump": [KEY_SPACE], "dash": [KEY_SHIFT], "interact": [KEY_E], "inventory": [KEY_TAB], "meridian": [KEY_K],
+		"jump": [KEY_SPACE], "dash": [KEY_SHIFT], "interact": [KEY_F], "inventory": [KEY_TAB], "meridian": [KEY_K],
 		"pause": [KEY_ESCAPE],
 	}
 	for a in keys:
@@ -1069,19 +1069,18 @@ func _setup_input() -> void:
 				var ev := InputEventKey.new()
 				ev.physical_keycode = k
 				InputMap.action_add_event(a, ev)
-	# 左鍵出招（弓：按住拉弓、放開射出）；右鍵瞄準；Q、滾輪切換主副武器；1、2 直接拿主武器、副武器
-	var buttons := {"attack_1": [MOUSE_BUTTON_LEFT], "aim": [MOUSE_BUTTON_RIGHT], "switch_weapon": [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]}
-	for a in buttons:
+	# 第三人稱戰鬥：左鍵普攻，右鍵＋Q E R 1 2 3 是七個技能，V 大招，F 互動
+	var mouse := {"attack": MOUSE_BUTTON_LEFT, "skill1": MOUSE_BUTTON_RIGHT}
+	for a in mouse:
 		if not InputMap.has_action(a):
 			InputMap.add_action(a)
-			for b in buttons[a]:
-				var mb := InputEventMouseButton.new()
-				mb.button_index = b
-				InputMap.action_add_event(a, mb)
-	for pair in [["switch_weapon", KEY_Q], ["weapon_main", KEY_1], ["weapon_sub", KEY_2]]:
-		if not InputMap.has_action(pair[0]):
-			InputMap.add_action(pair[0])
-		var ev := InputEventKey.new()
-		ev.physical_keycode = pair[1]
-		if not InputMap.action_has_event(pair[0], ev):
-			InputMap.action_add_event(pair[0], ev)
+			var mb := InputEventMouseButton.new()
+			mb.button_index = mouse[a]
+			InputMap.action_add_event(a, mb)
+	var skill_keys := {"skill2": KEY_Q, "skill3": KEY_E, "skill4": KEY_R, "skill5": KEY_1, "skill6": KEY_2, "skill7": KEY_3, "ult": KEY_V}
+	for a in skill_keys:
+		if not InputMap.has_action(a):
+			InputMap.add_action(a)
+			var ev := InputEventKey.new()
+			ev.physical_keycode = skill_keys[a]
+			InputMap.action_add_event(a, ev)

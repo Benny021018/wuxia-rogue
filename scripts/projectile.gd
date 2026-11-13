@@ -70,7 +70,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		var p = get_tree().get_first_node_in_group("player")
 		if p and p.global_position.distance_to(global_position - Vector3(0, 0.9, 0)) <= radius + 0.5:
-			p.take_damage(damage, source)
+			p.take_damage(damage, source, false, {"hitstun_s": CombatState.cfg("enemy_proj_hitstun_s")})
 			queue_free()
 
 

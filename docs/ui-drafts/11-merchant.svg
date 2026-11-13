@@ -89,104 +89,148 @@
 <rect x="566" y="112" width="468" height="36" fill="none" stroke="#f3ede4" stroke-width="1" opacity=".55"/>
 <text x="800.0" y="136.48" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="18" font-weight="700" fill="#f3ede4" text-anchor="middle" >持有 236 銀兩　｜　武學 3 / 8</text>
 <g opacity="1">
-<path d="M80,200 H386 L410,224 V740 H104 L80,716 Z" fill="#0f0d12" stroke="#a9a4ac" stroke-width="3"/>
-<path d="M80,200 H386 L410,224 V240 L80,272 Z" fill="#a9a4ac" opacity=".95"/>
-<text x="98" y="228" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="900" fill="#0b0a0d" text-anchor="start" >武學・天劍宗・外功</text>
-<g transform="rotate(5 360 264)"><g filter="url(#rough)"><rect x="347.5" y="250.0" width="25.0" height="28.0" fill="#b3121c"/></g><rect x="351.5" y="254.0" width="17.0" height="20.0" fill="none" stroke="#f3ede4" stroke-width="1.5" opacity=".8"/><text x="360" y="271.2" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="20" font-weight="900" fill="#f3ede4" text-anchor="middle" >凡品</text></g>
-<rect x="100" y="290" width="64" height="64" fill="#6fd8e0"/>
-<text x="132" y="335" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="36" font-weight="900" fill="#0b0a0d" text-anchor="middle" >天</text>
-<g transform="rotate(-2 178 338)" ><g filter="url(#rough)">
-<text x="178" y="338" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="36" font-weight="900" text-anchor="start" fill="none" stroke="#0b0a0d" stroke-width="7" stroke-linejoin="round">快刀訣</text>
-<text x="178" y="338" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="36" font-weight="900" text-anchor="start" fill="#f3ede4">快刀訣</text>
+<path d="M88.0,200 H526.0 L548.0,222 V490 H110.0 L88.0,468 Z" fill="#0f0d12" stroke="#a9a4ac" stroke-width="3"/>
+<path d="M88.0,200 H526.0 L548.0,222 V234 L88.0,246 Z" fill="#a9a4ac" opacity=".95"/>
+<text x="104.0" y="225" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="900" fill="#0b0a0d" text-anchor="start" >武學・天劍宗・外功</text>
+<g transform="rotate(5 502.0 252)"><g filter="url(#rough)"><rect x="490.75" y="239.4" width="22.5" height="25.2" fill="#b3121c"/></g><rect x="494.75" y="243.4" width="14.5" height="17.2" fill="none" stroke="#f3ede4" stroke-width="1.5" opacity=".8"/><text x="502.0" y="258.48" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="18" font-weight="900" fill="#f3ede4" text-anchor="middle" >凡品</text></g>
+<rect x="104.0" y="258" width="52" height="52" fill="#6fd8e0"/>
+<text x="130.0" y="296" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="30" font-weight="900" fill="#0b0a0d" text-anchor="middle" >天</text>
+<g transform="rotate(-2 170.0 296)" ><g filter="url(#rough)">
+<text x="170.0" y="296" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="30" font-weight="900" text-anchor="start" fill="none" stroke="#0b0a0d" stroke-width="6" stroke-linejoin="round">快刀訣</text>
+<text x="170.0" y="296" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="30" font-weight="900" text-anchor="start" fill="#f3ede4">快刀訣</text>
 </g></g>
-<text x="102" y="392" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="17" font-weight="900" fill="#ff4a17" text-anchor="start" >入門 → 熟練</text>
-<rect x="266.4" y="382.4" width="7.2" height="7.2" fill="#ff4a17"/><rect x="283.4" y="382.4" width="7.2" height="7.2" fill="#2e2a31"/><rect x="299.05" y="381.05" width="9.9" height="9.9" transform="rotate(45 304 386)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/><rect x="317.4" y="382.4" width="7.2" height="7.2" fill="#2e2a31"/><rect x="333.05" y="381.05" width="9.9" height="9.9" transform="rotate(45 338 386)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/>
-<path d="M110,414 H380 L390,424 V494 L380,504 H110 L100,494 V424 Z" fill="#fbf8f3" stroke="#0b0a0d" stroke-width="3.5"/>
-<path d="M95,423 V409 H109" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<path d="M395,423 V409 H381" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<path d="M95,495 V509 H109" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<path d="M395,495 V509 H381" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<text x="120" y="464.76" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#0b0a0d" text-anchor="start" >攻速+14.4%</text>
-<text x="102" y="536" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="700" fill="#16c6cc" text-anchor="start" >小成：暴擊率+16%</text>
+<text x="106.0" y="336" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="900" fill="#ff4a17" text-anchor="start" >入門 → 熟練</text>
+<rect x="424.8" y="326.8" width="6.4" height="6.4" fill="#ff4a17"/><rect x="440.8" y="326.8" width="6.4" height="6.4" fill="#2e2a31"/><rect x="455.6" y="325.6" width="8.8" height="8.8" transform="rotate(45 460.0 330)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/><rect x="472.8" y="326.8" width="6.4" height="6.4" fill="#2e2a31"/><rect x="487.6" y="325.6" width="8.8" height="8.8" transform="rotate(45 492.0 330)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/>
+<path d="M114.0,350 H522.0 L532.0,360 V390 L522.0,400 H114.0 L104.0,390 V360 Z" fill="#fbf8f3" stroke="#0b0a0d" stroke-width="3.5"/>
+<path d="M99.0,359 V345 H113.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M537.0,359 V345 H523.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M99.0,391 V405 H113.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M537.0,391 V405 H523.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<text x="124.0" y="380.4" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="700" fill="#0b0a0d" text-anchor="start" >攻速+14.4%</text>
+<text x="106.0" y="426" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="700" fill="#16c6cc" text-anchor="start" >小成：暴擊率+16%</text>
 </g>
-<g filter="url(#glowRed)"><path d="M126,664 H380 L364,716 H110 Z" fill="#b3121c" stroke="#f3ede4" stroke-width="3" /></g>
-<path d="M98,677.0 V656 H140" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<path d="M392,703.0 V724 H350" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<text x="245.0" y="697.2" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="20" font-weight="900" fill="#f3ede4" text-anchor="middle" >購買（28 銀兩）</text>
+<g filter="url(#glowRed)"><path d="M338.0,434 H528.0 L512.0,476 H322.0 Z" fill="#b3121c" stroke="#f3ede4" stroke-width="3" /></g>
+<path d="M310.0,444.5 V426 H352.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M540.0,465.5 V484 H498.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<text x="425.0" y="461.48" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="18" font-weight="900" fill="#f3ede4" text-anchor="middle" >購買（28 銀兩）</text>
 <g opacity="1">
-<path d="M450,200 H756 L780,224 V740 H474 L450,716 Z" fill="#0f0d12" stroke="#a9a4ac" stroke-width="3"/>
-<path d="M450,200 H756 L780,224 V240 L450,272 Z" fill="#a9a4ac" opacity=".95"/>
-<text x="468" y="228" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="900" fill="#0b0a0d" text-anchor="start" >武學・少林・內功</text>
-<g transform="rotate(5 730 264)"><g filter="url(#rough)"><rect x="717.5" y="250.0" width="25.0" height="28.0" fill="#b3121c"/></g><rect x="721.5" y="254.0" width="17.0" height="20.0" fill="none" stroke="#f3ede4" stroke-width="1.5" opacity=".8"/><text x="730" y="271.2" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="20" font-weight="900" fill="#f3ede4" text-anchor="middle" >凡品</text></g>
-<rect x="470" y="290" width="64" height="64" fill="#e0a43a"/>
-<text x="502" y="335" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="36" font-weight="900" fill="#0b0a0d" text-anchor="middle" >少</text>
-<g transform="rotate(-2 548 338)" ><g filter="url(#rough)">
-<text x="548" y="338" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="36" font-weight="900" text-anchor="start" fill="none" stroke="#0b0a0d" stroke-width="7" stroke-linejoin="round">金鐘罩</text>
-<text x="548" y="338" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="36" font-weight="900" text-anchor="start" fill="#f3ede4">金鐘罩</text>
+<path d="M570.0,200 H1008.0 L1030.0,222 V490 H592.0 L570.0,468 Z" fill="#0f0d12" stroke="#a9a4ac" stroke-width="3"/>
+<path d="M570.0,200 H1008.0 L1030.0,222 V234 L570.0,246 Z" fill="#a9a4ac" opacity=".95"/>
+<text x="586.0" y="225" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="900" fill="#0b0a0d" text-anchor="start" >武學・少林・內功</text>
+<g transform="rotate(5 984.0 252)"><g filter="url(#rough)"><rect x="972.75" y="239.4" width="22.5" height="25.2" fill="#b3121c"/></g><rect x="976.75" y="243.4" width="14.5" height="17.2" fill="none" stroke="#f3ede4" stroke-width="1.5" opacity=".8"/><text x="984.0" y="258.48" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="18" font-weight="900" fill="#f3ede4" text-anchor="middle" >凡品</text></g>
+<rect x="586.0" y="258" width="52" height="52" fill="#e0a43a"/>
+<text x="612.0" y="296" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="30" font-weight="900" fill="#0b0a0d" text-anchor="middle" >少</text>
+<g transform="rotate(-2 652.0 296)" ><g filter="url(#rough)">
+<text x="652.0" y="296" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="30" font-weight="900" text-anchor="start" fill="none" stroke="#0b0a0d" stroke-width="6" stroke-linejoin="round">金鐘罩</text>
+<text x="652.0" y="296" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="30" font-weight="900" text-anchor="start" fill="#f3ede4">金鐘罩</text>
 </g></g>
-<text x="472" y="392" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="17" font-weight="900" fill="#ff4a17" text-anchor="start" >新習得・入門</text>
-<rect x="636.4" y="382.4" width="7.2" height="7.2" fill="#2e2a31"/><rect x="653.4" y="382.4" width="7.2" height="7.2" fill="#2e2a31"/><rect x="669.05" y="381.05" width="9.9" height="9.9" transform="rotate(45 674 386)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/><rect x="687.4" y="382.4" width="7.2" height="7.2" fill="#2e2a31"/><rect x="703.05" y="381.05" width="9.9" height="9.9" transform="rotate(45 708 386)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/>
-<path d="M480,414 H750 L760,424 V494 L750,504 H480 L470,494 V424 Z" fill="#fbf8f3" stroke="#0b0a0d" stroke-width="3.5"/>
-<path d="M465,423 V409 H479" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<path d="M765,423 V409 H751" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<path d="M465,495 V509 H479" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<path d="M765,495 V509 H751" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<text x="490" y="464.76" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#0b0a0d" text-anchor="start" >生命上限+12%</text>
-<text x="472" y="536" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="700" fill="#16c6cc" text-anchor="start" >小成：每10秒獲得一層護體，抵擋一</text>
-<text x="472" y="558" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="700" fill="#16c6cc" text-anchor="start" >次傷害</text>
+<text x="588.0" y="336" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="900" fill="#ff4a17" text-anchor="start" >新習得・入門</text>
+<rect x="906.8" y="326.8" width="6.4" height="6.4" fill="#2e2a31"/><rect x="922.8" y="326.8" width="6.4" height="6.4" fill="#2e2a31"/><rect x="937.6" y="325.6" width="8.8" height="8.8" transform="rotate(45 942.0 330)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/><rect x="954.8" y="326.8" width="6.4" height="6.4" fill="#2e2a31"/><rect x="969.6" y="325.6" width="8.8" height="8.8" transform="rotate(45 974.0 330)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/>
+<path d="M596.0,350 H1004.0 L1014.0,360 V390 L1004.0,400 H596.0 L586.0,390 V360 Z" fill="#fbf8f3" stroke="#0b0a0d" stroke-width="3.5"/>
+<path d="M581.0,359 V345 H595.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M1019.0,359 V345 H1005.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M581.0,391 V405 H595.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M1019.0,391 V405 H1005.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<text x="606.0" y="380.4" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="700" fill="#0b0a0d" text-anchor="start" >生命上限+12%</text>
+<text x="588.0" y="426" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="700" fill="#16c6cc" text-anchor="start" >小成：每10秒獲得一層護體，抵擋一次傷害</text>
 </g>
-<path d="M496,664 H750 L734,716 H480 Z" fill="#0b0a0d" stroke="#f3ede4" stroke-width="3" />
-<path d="M502,670 H744" stroke="#f3ede4" stroke-width="1" opacity=".4"/>
-<text x="615.0" y="697.2" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="20" font-weight="900" fill="#f3ede4" text-anchor="middle" >購買（28 銀兩）</text>
+<path d="M820.0,434 H1010.0 L994.0,476 H804.0 Z" fill="#0b0a0d" stroke="#f3ede4" stroke-width="3" />
+<path d="M826.0,440 H1004.0" stroke="#f3ede4" stroke-width="1" opacity=".4"/>
+<text x="907.0" y="461.48" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="18" font-weight="900" fill="#f3ede4" text-anchor="middle" >購買（28 銀兩）</text>
 <g opacity="0.45">
-<path d="M820,200 H1126 L1150,224 V740 H844 L820,716 Z" fill="#0f0d12" stroke="#27b8d6" stroke-width="3"/>
-<path d="M820,200 H1126 L1150,224 V240 L820,272 Z" fill="#27b8d6" opacity=".95"/>
-<text x="838" y="228" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="900" fill="#0b0a0d" text-anchor="start" >武學・唐門・內功</text>
-<g transform="rotate(5 1100 264)"><g filter="url(#rough)"><rect x="1087.5" y="250.0" width="25.0" height="28.0" fill="#b3121c"/></g><rect x="1091.5" y="254.0" width="17.0" height="20.0" fill="none" stroke="#f3ede4" stroke-width="1.5" opacity=".8"/><text x="1100" y="271.2" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="20" font-weight="900" fill="#f3ede4" text-anchor="middle" >良品</text></g>
-<rect x="840" y="290" width="64" height="64" fill="#9a5cf0"/>
-<text x="872" y="335" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="36" font-weight="900" fill="#0b0a0d" text-anchor="middle" >唐</text>
-<g transform="rotate(-2 918 338)" ><g filter="url(#rough)">
-<text x="918" y="338" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="36" font-weight="900" text-anchor="start" fill="none" stroke="#0b0a0d" stroke-width="7" stroke-linejoin="round">萬毒心經</text>
-<text x="918" y="338" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="36" font-weight="900" text-anchor="start" fill="#f3ede4">萬毒心經</text>
+<path d="M1052.0,200 H1490.0 L1512.0,222 V490 H1074.0 L1052.0,468 Z" fill="#0f0d12" stroke="#27b8d6" stroke-width="3"/>
+<path d="M1052.0,200 H1490.0 L1512.0,222 V234 L1052.0,246 Z" fill="#27b8d6" opacity=".95"/>
+<text x="1068.0" y="225" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="900" fill="#0b0a0d" text-anchor="start" >武學・唐門・內功</text>
+<g transform="rotate(5 1466.0 252)"><g filter="url(#rough)"><rect x="1454.75" y="239.4" width="22.5" height="25.2" fill="#b3121c"/></g><rect x="1458.75" y="243.4" width="14.5" height="17.2" fill="none" stroke="#f3ede4" stroke-width="1.5" opacity=".8"/><text x="1466.0" y="258.48" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="18" font-weight="900" fill="#f3ede4" text-anchor="middle" >良品</text></g>
+<rect x="1068.0" y="258" width="52" height="52" fill="#9a5cf0"/>
+<text x="1094.0" y="296" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="30" font-weight="900" fill="#0b0a0d" text-anchor="middle" >唐</text>
+<g transform="rotate(-2 1134.0 296)" ><g filter="url(#rough)">
+<text x="1134.0" y="296" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="30" font-weight="900" text-anchor="start" fill="none" stroke="#0b0a0d" stroke-width="6" stroke-linejoin="round">萬毒心經</text>
+<text x="1134.0" y="296" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="30" font-weight="900" text-anchor="start" fill="#f3ede4">萬毒心經</text>
 </g></g>
-<text x="842" y="392" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="17" font-weight="900" fill="#ff4a17" text-anchor="start" >新習得・入門</text>
-<rect x="1006.4" y="382.4" width="7.2" height="7.2" fill="#2e2a31"/><rect x="1023.4" y="382.4" width="7.2" height="7.2" fill="#2e2a31"/><rect x="1039.05" y="381.05" width="9.9" height="9.9" transform="rotate(45 1044 386)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/><rect x="1057.4" y="382.4" width="7.2" height="7.2" fill="#2e2a31"/><rect x="1073.05" y="381.05" width="9.9" height="9.9" transform="rotate(45 1078 386)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/>
-<path d="M850,414 H1120 L1130,424 V494 L1120,504 H850 L840,494 V424 Z" fill="#fbf8f3" stroke="#0b0a0d" stroke-width="3.5"/>
-<path d="M835,423 V409 H849" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<path d="M1135,423 V409 H1121" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<path d="M835,495 V509 H849" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<path d="M1135,495 V509 H1121" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<text x="860" y="452.76" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#0b0a0d" text-anchor="start" >攻擊使敵人中毒，3秒內造成該次攻擊</text>
-<text x="860" y="476.76" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#0b0a0d" text-anchor="start" >27.5%的傷害</text>
-<text x="842" y="536" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="700" fill="#16c6cc" text-anchor="start" >小成：毒可以疊加（不再只刷新時間）</text>
+<text x="1070.0" y="336" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="900" fill="#ff4a17" text-anchor="start" >新習得・入門</text>
+<rect x="1388.8" y="326.8" width="6.4" height="6.4" fill="#2e2a31"/><rect x="1404.8" y="326.8" width="6.4" height="6.4" fill="#2e2a31"/><rect x="1419.6" y="325.6" width="8.8" height="8.8" transform="rotate(45 1424.0 330)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/><rect x="1436.8" y="326.8" width="6.4" height="6.4" fill="#2e2a31"/><rect x="1451.6" y="325.6" width="8.8" height="8.8" transform="rotate(45 1456.0 330)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/>
+<path d="M1078.0,350 H1486.0 L1496.0,360 V390 L1486.0,400 H1078.0 L1068.0,390 V360 Z" fill="#fbf8f3" stroke="#0b0a0d" stroke-width="3.5"/>
+<path d="M1063.0,359 V345 H1077.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M1501.0,359 V345 H1487.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M1063.0,391 V405 H1077.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M1501.0,391 V405 H1487.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<text x="1088.0" y="380.4" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="700" fill="#0b0a0d" text-anchor="start" >攻擊使敵人中毒，3秒內造成該次攻擊27.5%的傷害</text>
+<text x="1070.0" y="426" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="700" fill="#16c6cc" text-anchor="start" >小成：毒可以疊加（不再只刷新時間）</text>
 </g>
-<g transform="rotate(-12 985.0 500)"><g filter="url(#rough)"><rect x="922.0" y="472.0" width="125.99999999999997" height="56.0" fill="#b3121c"/></g><rect x="926.0" y="476.0" width="117.99999999999997" height="48.0" fill="none" stroke="#f3ede4" stroke-width="1.5" opacity=".8"/><text x="985.0" y="514.4" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="40" font-weight="900" fill="#f3ede4" text-anchor="middle" >已售出</text></g>
+<g transform="rotate(-12 1282.0 355.0)"><g filter="url(#rough)"><rect x="1228.45" y="331.2" width="107.09999999999998" height="47.599999999999994" fill="#b3121c"/></g><rect x="1232.45" y="335.2" width="99.09999999999998" height="39.599999999999994" fill="none" stroke="#f3ede4" stroke-width="1.5" opacity=".8"/><text x="1282.0" y="367.24" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="34" font-weight="900" fill="#f3ede4" text-anchor="middle" >已售出</text></g>
 <g opacity="1">
-<path d="M1190,200 H1496 L1520,224 V740 H1214 L1190,716 Z" fill="#0f0d12" stroke="#9a5cf0" stroke-width="3"/>
-<path d="M1190,200 H1496 L1520,224 V240 L1190,272 Z" fill="#9a5cf0" opacity=".95"/>
-<text x="1208" y="228" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="900" fill="#0b0a0d" text-anchor="start" >武學・天劍宗・外功</text>
-<g transform="rotate(5 1470 264)"><g filter="url(#rough)"><rect x="1457.5" y="250.0" width="25.0" height="28.0" fill="#b3121c"/></g><rect x="1461.5" y="254.0" width="17.0" height="20.0" fill="none" stroke="#f3ede4" stroke-width="1.5" opacity=".8"/><text x="1470" y="271.2" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="20" font-weight="900" fill="#f3ede4" text-anchor="middle" >神兵</text></g>
-<rect x="1210" y="290" width="64" height="64" fill="#6fd8e0"/>
-<text x="1242" y="335" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="36" font-weight="900" fill="#0b0a0d" text-anchor="middle" >天</text>
-<g transform="rotate(-2 1288 338)" ><g filter="url(#rough)">
-<text x="1288" y="338" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="36" font-weight="900" text-anchor="start" fill="none" stroke="#0b0a0d" stroke-width="7" stroke-linejoin="round">雷霆劍訣</text>
-<text x="1288" y="338" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="36" font-weight="900" text-anchor="start" fill="#f3ede4">雷霆劍訣</text>
+<path d="M88.0,508 H526.0 L548.0,530 V798 H110.0 L88.0,776 Z" fill="#0f0d12" stroke="#9a5cf0" stroke-width="3"/>
+<path d="M88.0,508 H526.0 L548.0,530 V542 L88.0,554 Z" fill="#9a5cf0" opacity=".95"/>
+<text x="104.0" y="533" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="900" fill="#0b0a0d" text-anchor="start" >武學・天劍宗・外功</text>
+<g transform="rotate(5 502.0 560)"><g filter="url(#rough)"><rect x="490.75" y="547.4" width="22.5" height="25.2" fill="#b3121c"/></g><rect x="494.75" y="551.4" width="14.5" height="17.2" fill="none" stroke="#f3ede4" stroke-width="1.5" opacity=".8"/><text x="502.0" y="566.48" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="18" font-weight="900" fill="#f3ede4" text-anchor="middle" >神兵</text></g>
+<rect x="104.0" y="566" width="52" height="52" fill="#6fd8e0"/>
+<text x="130.0" y="604" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="30" font-weight="900" fill="#0b0a0d" text-anchor="middle" >天</text>
+<g transform="rotate(-2 170.0 604)" ><g filter="url(#rough)">
+<text x="170.0" y="604" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="30" font-weight="900" text-anchor="start" fill="none" stroke="#0b0a0d" stroke-width="6" stroke-linejoin="round">雷霆劍訣</text>
+<text x="170.0" y="604" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="30" font-weight="900" text-anchor="start" fill="#f3ede4">雷霆劍訣</text>
 </g></g>
-<text x="1212" y="392" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="17" font-weight="900" fill="#ff4a17" text-anchor="start" >新習得・入門</text>
-<rect x="1376.4" y="382.4" width="7.2" height="7.2" fill="#2e2a31"/><rect x="1393.4" y="382.4" width="7.2" height="7.2" fill="#2e2a31"/><rect x="1409.05" y="381.05" width="9.9" height="9.9" transform="rotate(45 1414 386)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/><rect x="1427.4" y="382.4" width="7.2" height="7.2" fill="#2e2a31"/><rect x="1443.05" y="381.05" width="9.9" height="9.9" transform="rotate(45 1448 386)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/>
-<path d="M1220,414 H1490 L1500,424 V494 L1490,504 H1220 L1210,494 V424 Z" fill="#fbf8f3" stroke="#0b0a0d" stroke-width="3.5"/>
-<path d="M1205,423 V409 H1219" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<path d="M1505,423 V409 H1491" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<path d="M1205,495 V509 H1219" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<path d="M1505,495 V509 H1491" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<text x="1230" y="452.76" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#0b0a0d" text-anchor="start" >每第5次攻擊引發落雷，造成167%傷</text>
-<text x="1230" y="476.76" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#0b0a0d" text-anchor="start" >害（2m範圍）</text>
-<text x="1212" y="536" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="700" fill="#16c6cc" text-anchor="start" >小成：落雷範圍+50%並使敵人麻痺</text>
-<text x="1212" y="558" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="700" fill="#16c6cc" text-anchor="start" >1秒</text>
+<text x="106.0" y="644" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="900" fill="#ff4a17" text-anchor="start" >新習得・入門</text>
+<rect x="424.8" y="634.8" width="6.4" height="6.4" fill="#2e2a31"/><rect x="440.8" y="634.8" width="6.4" height="6.4" fill="#2e2a31"/><rect x="455.6" y="633.6" width="8.8" height="8.8" transform="rotate(45 460.0 638)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/><rect x="472.8" y="634.8" width="6.4" height="6.4" fill="#2e2a31"/><rect x="487.6" y="633.6" width="8.8" height="8.8" transform="rotate(45 492.0 638)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/>
+<path d="M114.0,658 H522.0 L532.0,668 V698 L522.0,708 H114.0 L104.0,698 V668 Z" fill="#fbf8f3" stroke="#0b0a0d" stroke-width="3.5"/>
+<path d="M99.0,667 V653 H113.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M537.0,667 V653 H523.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M99.0,699 V713 H113.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M537.0,699 V713 H523.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<text x="124.0" y="688.4" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="700" fill="#0b0a0d" text-anchor="start" >每第5次攻擊引發落雷，造成167%傷害（2m範圍）</text>
+<text x="106.0" y="734" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="700" fill="#16c6cc" text-anchor="start" >小成：落雷範圍+50%並使敵人麻痺1秒</text>
 </g>
-<path d="M1236,664 H1490 L1474,716 H1220 Z" fill="#0b0a0d" stroke="#f3ede4" stroke-width="3" />
-<path d="M1242,670 H1484" stroke="#f3ede4" stroke-width="1" opacity=".4"/>
-<text x="1355.0" y="697.2" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="20" font-weight="900" fill="#f3ede4" text-anchor="middle" >購買（110 銀兩）</text>
+<path d="M338.0,742 H528.0 L512.0,784 H322.0 Z" fill="#0b0a0d" stroke="#f3ede4" stroke-width="3" />
+<path d="M344.0,748 H522.0" stroke="#f3ede4" stroke-width="1" opacity=".4"/>
+<text x="425.0" y="769.48" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="18" font-weight="900" fill="#f3ede4" text-anchor="middle" >購買（110 銀兩）</text>
+<g opacity="1">
+<path d="M570.0,508 H1008.0 L1030.0,530 V798 H592.0 L570.0,776 Z" fill="#0f0d12" stroke="#a9a4ac" stroke-width="3"/>
+<path d="M570.0,508 H1008.0 L1030.0,530 V542 L570.0,554 Z" fill="#a9a4ac" opacity=".95"/>
+<text x="586.0" y="533" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="900" fill="#0b0a0d" text-anchor="start" >武學・天劍宗・外功</text>
+<g transform="rotate(5 984.0 560)"><g filter="url(#rough)"><rect x="972.75" y="547.4" width="22.5" height="25.2" fill="#b3121c"/></g><rect x="976.75" y="551.4" width="14.5" height="17.2" fill="none" stroke="#f3ede4" stroke-width="1.5" opacity=".8"/><text x="984.0" y="566.48" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="18" font-weight="900" fill="#f3ede4" text-anchor="middle" >凡品</text></g>
+<rect x="586.0" y="566" width="52" height="52" fill="#6fd8e0"/>
+<text x="612.0" y="604" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="30" font-weight="900" fill="#0b0a0d" text-anchor="middle" >天</text>
+<g transform="rotate(-2 652.0 604)" ><g filter="url(#rough)">
+<text x="652.0" y="604" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="30" font-weight="900" text-anchor="start" fill="none" stroke="#0b0a0d" stroke-width="6" stroke-linejoin="round">鷹爪功</text>
+<text x="652.0" y="604" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="30" font-weight="900" text-anchor="start" fill="#f3ede4">鷹爪功</text>
+</g></g>
+<text x="588.0" y="644" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="900" fill="#ff4a17" text-anchor="start" >熟練 → 小成</text>
+<rect x="906.8" y="634.8" width="6.4" height="6.4" fill="#ff4a17"/><rect x="922.8" y="634.8" width="6.4" height="6.4" fill="#ff4a17"/><rect x="937.6" y="633.6" width="8.8" height="8.8" transform="rotate(45 942.0 638)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/><rect x="954.8" y="634.8" width="6.4" height="6.4" fill="#2e2a31"/><rect x="969.6" y="633.6" width="8.8" height="8.8" transform="rotate(45 974.0 638)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/>
+<path d="M596.0,658 H1004.0 L1014.0,668 V698 L1004.0,708 H596.0 L586.0,698 V668 Z" fill="#fbf8f3" stroke="#0b0a0d" stroke-width="3.5"/>
+<path d="M581.0,667 V653 H595.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M1019.0,667 V653 H1005.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M581.0,699 V713 H595.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M1019.0,699 V713 H1005.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<text x="606.0" y="688.4" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="700" fill="#0b0a0d" text-anchor="start" >暴擊率+41.6%</text>
+<text x="588.0" y="734" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="700" fill="#16c6cc" text-anchor="start" >小成：暴擊傷害+40%</text>
+</g>
+<path d="M820.0,742 H1010.0 L994.0,784 H804.0 Z" fill="#0b0a0d" stroke="#f3ede4" stroke-width="3" />
+<path d="M826.0,748 H1004.0" stroke="#f3ede4" stroke-width="1" opacity=".4"/>
+<text x="907.0" y="769.48" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="18" font-weight="900" fill="#f3ede4" text-anchor="middle" >購買（28 銀兩）</text>
+<g opacity="1">
+<path d="M1052.0,508 H1490.0 L1512.0,530 V798 H1074.0 L1052.0,776 Z" fill="#0f0d12" stroke="#a9a4ac" stroke-width="3"/>
+<path d="M1052.0,508 H1490.0 L1512.0,530 V542 L1052.0,554 Z" fill="#a9a4ac" opacity=".95"/>
+<text x="1068.0" y="533" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="900" fill="#0b0a0d" text-anchor="start" >武學・武當・身法</text>
+<g transform="rotate(5 1466.0 560)"><g filter="url(#rough)"><rect x="1454.75" y="547.4" width="22.5" height="25.2" fill="#b3121c"/></g><rect x="1458.75" y="551.4" width="14.5" height="17.2" fill="none" stroke="#f3ede4" stroke-width="1.5" opacity=".8"/><text x="1466.0" y="566.48" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="18" font-weight="900" fill="#f3ede4" text-anchor="middle" >凡品</text></g>
+<rect x="1068.0" y="566" width="52" height="52" fill="#cfd6dc"/>
+<text x="1094.0" y="604" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="30" font-weight="900" fill="#0b0a0d" text-anchor="middle" >武</text>
+<g transform="rotate(-2 1134.0 604)" ><g filter="url(#rough)">
+<text x="1134.0" y="604" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="26" font-weight="900" text-anchor="start" fill="none" stroke="#0b0a0d" stroke-width="6" stroke-linejoin="round">燕子三抄水</text>
+<text x="1134.0" y="604" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="26" font-weight="900" text-anchor="start" fill="#f3ede4">燕子三抄水</text>
+</g></g>
+<text x="1070.0" y="644" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="900" fill="#ff4a17" text-anchor="start" >新習得・入門</text>
+<rect x="1388.8" y="634.8" width="6.4" height="6.4" fill="#2e2a31"/><rect x="1404.8" y="634.8" width="6.4" height="6.4" fill="#2e2a31"/><rect x="1419.6" y="633.6" width="8.8" height="8.8" transform="rotate(45 1424.0 638)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/><rect x="1436.8" y="634.8" width="6.4" height="6.4" fill="#2e2a31"/><rect x="1451.6" y="633.6" width="8.8" height="8.8" transform="rotate(45 1456.0 638)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/>
+<path d="M1078.0,658 H1486.0 L1496.0,668 V698 L1486.0,708 H1078.0 L1068.0,698 V668 Z" fill="#fbf8f3" stroke="#0b0a0d" stroke-width="3.5"/>
+<path d="M1063.0,667 V653 H1077.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M1501.0,667 V653 H1487.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M1063.0,699 V713 H1077.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M1501.0,699 V713 H1487.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<text x="1088.0" y="688.4" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="700" fill="#0b0a0d" text-anchor="start" >移動速度+6%</text>
+<text x="1070.0" y="734" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="700" fill="#16c6cc" text-anchor="start" >小成：閃避+5%</text>
+</g>
+<path d="M1302.0,742 H1492.0 L1476.0,784 H1286.0 Z" fill="#0b0a0d" stroke="#f3ede4" stroke-width="3" />
+<path d="M1308.0,748 H1486.0" stroke="#f3ede4" stroke-width="1" opacity=".4"/>
+<text x="1389.0" y="769.48" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="18" font-weight="900" fill="#f3ede4" text-anchor="middle" >購買（28 銀兩）</text>
 <path d="M596,836 H800 L784,886 H580 Z" fill="#0b0a0d" stroke="#f3ede4" stroke-width="3" />
 <path d="M602,842 H794" stroke="#f3ede4" stroke-width="1" opacity=".4"/>
 <text x="690.0" y="868.2" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="20" font-weight="900" fill="#f3ede4" text-anchor="middle" >重新上架（8）</text>
@@ -194,8 +238,8 @@
 <path d="M842,842 H1014" stroke="#f3ede4" stroke-width="1" opacity=".4"/>
 <text x="920.0" y="868.92" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="22" font-weight="900" fill="#f3ede4" text-anchor="middle" >離開</text>
 <text x="1580" y="890" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="700" fill="#8d8790" text-anchor="end" >已習得的武學再買會升級；武學格滿時只上架已習得的武學</text>
-<g opacity=".95"><rect x="20" y="20" width="271" height="56" fill="#ffe94d"/>
-<text x="32" y="43.0" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="700" fill="#0b0a0d" text-anchor="start" >稿註：每到休息區重新上架 4 門；</text>
+<g opacity=".95"><rect x="20" y="20" width="687" height="56" fill="#ffe94d"/>
+<text x="32" y="43.0" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="700" fill="#0b0a0d" text-anchor="start" >稿註：3 欄網格，6 門一次看完（shop_config.csv 的 merchant_slots）；</text>
 <text x="32" y="63.019999999999996" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="700" fill="#0b0a0d" text-anchor="start" >價格依稀有度與區域成長，CSV 可調。</text>
 </g>
 <rect width="1600" height="900" filter="url(#grain)" pointer-events="none"/>

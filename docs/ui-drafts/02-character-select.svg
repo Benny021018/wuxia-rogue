@@ -84,7 +84,6 @@
 <text x="800" y="92" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="70" font-weight="900" text-anchor="middle" fill="none" stroke="#0b0a0d" stroke-width="9" stroke-linejoin="round">選擇角色</text>
 <text x="800" y="92" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="70" font-weight="900" text-anchor="middle" fill="#f3ede4">選擇角色</text>
 </g></g>
-<text x="800" y="128" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#8d8790" text-anchor="middle" >三人各有被動與境界效果；出身門派影響參悟權重</text>
 <path d="M138,150 H542 L496,810 H92 Z" fill="#b3121c" filter="url(#glowRed)" transform="translate(0 0)"/>
 <clipPath id="blnangong"><path d="M138,150 H542 L496,810 H92 Z"/></clipPath>
 <g clip-path="url(#blnangong)"><rect x="92" y="150" width="450" height="660" fill="#0b0a0d"/><ellipse cx="317.0" cy="320" rx="300" ry="260" fill="url(#tealBloom)"/></g>
@@ -173,7 +172,6 @@
 <path d="M1346,836 H1530 L1514,886 H1330 Z" fill="#0b0a0d" stroke="#f3ede4" stroke-width="3" />
 <path d="M1352,842 H1524" stroke="#f3ede4" stroke-width="1" opacity=".4"/>
 <text x="1430.0" y="868.92" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="22" font-weight="900" fill="#f3ede4" text-anchor="middle" >返回</text>
-<text x="800" y="868" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#8d8790" text-anchor="middle" >← → 切換　Enter 選定　Esc 返回</text>
 <g opacity=".95"><rect x="1270" y="20" width="258" height="76" fill="#ffe94d"/>
 <text x="1282" y="43.0" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="700" fill="#0b0a0d" text-anchor="start" >稿註：選中者全彩＋青背光＋血紅外光；</text>
 <text x="1282" y="63.019999999999996" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="700" fill="#0b0a0d" text-anchor="start" >未選者壓成墨色雙色調。境界效果收合，</text>

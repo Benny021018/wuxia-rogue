@@ -446,17 +446,16 @@ def s01_menu():
     b.append(splatter(800, 330, 70, 70, BLOOD, 5, 12))
     # 標題
     b.append(brush_title(560, 400, "天魔劫", 220, EMBER, INK, 16, "middle", -3, outline_white=True))
-    b.append(seal(900, 205, "武俠", 40, BLOOD, 6))
-    b.append(system_box(330, 450, 460, 50, ["武俠 Roguelike・第一人稱"], 20, align="middle"))
-    b.append(narration(200, 560, 720, 120, ["十年前，天魔神教血洗中原。如今天魔復活，", "綠林、暗月樓、屍門盡成爪牙。", "一路殺上天魔神教總壇，了結這場劫數。"], 21))
+    b.append(narration(200, 500, 720, 120, ["十年前，天魔神教血洗中原。如今天魔復活，", "綠林、暗月樓、屍門盡成爪牙。", "一路殺上天魔神教總壇，了結這場劫數。"], 21))
     # 選單
     b.append(slant(1060, 360, 470, 420, 30, INK, BONE, 3, 'opacity=".82"'))
     b.append(button(1100, 400, 380, 78, "踏上江湖", "normal", 34))
-    b.append(button(1100, 510, 380, 66, "操作說明", "normal", 28))
-    b.append(button(1100, 606, 380, 66, "離開遊戲", "normal", 28))
-    b.append(text(1290, 735, "滑鼠點選　Enter 確認", 16, GREY, SANS, 700, "middle"))
+    b.append(button(1100, 496, 380, 60, "操作說明", "normal", 28))
+    b.append(button(1100, 572, 380, 60, "設定", "normal", 28))
+    b.append(button(1100, 648, 380, 60, "離開遊戲", "normal", 28))
     b.append(embers(0, 600, 1600, 900, 70, 9))
-    b.append(text(1570, 880, "灰盒原型　v0.x", 14, GREY, SANS, 500, "end"))
+    b.append(text(1570, 880, "武俠 Roguelike・灰盒原型", 14, GREY, SANS, 500, "end"))
+    b.append(note(30, 800, ["稿註：標題獨立不加印章與副標；類型資訊縮到右下角小字。"]))
     return doc("\n".join(b), "01 主選單")
 
 
@@ -500,7 +499,6 @@ def s02_select():
     b.append(f'<rect width="{W}" height="{H}" fill="{INK}"/>')
     b.append(speed_lines(800, 450, 380, 1100, 80, VIOLET, 0.8, 21, 9))
     b.append(brush_title(800, 92, "選擇角色", 70, BONE, INK, 9, "middle", -2))
-    b.append(text(800, 128, "三人各有被動與境界效果；出身門派影響參悟權重", 16, GREY, SANS, 700, "middle"))
     order = ["nangong", "han", "tang"]
     sel = "nangong"
     k = 46
@@ -550,7 +548,6 @@ def s02_select():
         if on:
             b.append(button(x + 60, y + h + 18, 300, 58, "選定此人", "normal", 26))
     b.append(button(1330, 836, 200, 50, "返回", "normal", 22))
-    b.append(text(800, 868, "← → 切換　Enter 選定　Esc 返回", 16, GREY, SANS, 700, "middle"))
     b.append(note(1270, 20, ["稿註：選中者全彩＋青背光＋血紅外光；", "未選者壓成墨色雙色調。境界效果收合，", "游標停留時展開成系統框。"]))
     return doc("\n".join(b), "02 角色選擇")
 
@@ -701,9 +698,19 @@ def s04_shrine():
         b.append(system_box(x + 22, y + 236, cw - 44, 112, c["body"], 17))
         for j, r in enumerate(wrap(c["extra"], 21)[:3]):
             b.append(text(x + 24, y + 384 + j * 22, r, 15, TEAL, SANS, 700))
-        by = y + ch - 24 - 58 * len(c["btns"])
-        for j, (lab, st) in enumerate(c["btns"]):
-            b.append(button(x + 30, by + j * 58, cw - 60, 48, lab, st, 20 if len(lab) > 4 else 24))
+        if len(c["btns"]) == 2:
+            # 替換主／副武器左右並排，讓上方詞條完整露出
+            bw = (cw - 72) / 2
+            for j, (lab, st) in enumerate(c["btns"]):
+                top, name = lab.split("：")
+                bx = x + 30 + j * (bw + 12)
+                b.append(button(bx, y + ch - 92, bw, 64, "", st, 18))
+                b.append(text(bx + bw / 2, y + ch - 66, top, 18, BONE, SERIF, 900, "middle"))
+                b.append(text(bx + bw / 2, y + ch - 42, name, 15, EMBER if st == "hover" else GREY, SANS, 900, "middle"))
+        else:
+            by = y + ch - 24 - 58 * len(c["btns"])
+            for j, (lab, st) in enumerate(c["btns"]):
+                b.append(button(x + 30, by + j * 58, cw - 60, 48, lab, st, 20 if len(lab) > 4 else 24))
     if True:
         b.append(embers(540, 220, 1060, 860, 40, 13, RARITY["legendary"][1]))
     b.append(button(470, 836, 200, 50, "參悟", "disabled", 22))
@@ -913,7 +920,6 @@ def s08_start_weapon():
         if on:
             b.append(button(x + 50, y + ch + 20, cw - 100, 58, "持此兵器入江湖", "normal", 26))
     b.append(button(1330, 836, 200, 50, "返回", "normal", 22))
-    b.append(text(800, 868, "← → 切換　Enter 入江湖　Esc 返回角色", 16, GREY, SANS, 700, "middle"))
     b.append(note(1210, 24, ["稿註：兵器不分品質，差別只在打法；", "可選的起手兵器由 weapons.csv 的 starter 欄決定。"]))
     return doc("\n".join(b), "08 起手兵器")
 
@@ -1010,38 +1016,40 @@ def s11_merchant():
     sects = _csv("sects", "sect_id")
     b = []
     _shop_frame(b, "商人・武學", "持有 236 銀兩　｜　武學 3 / 8")
-    stock = [("M006", 1, False, 28), ("M002", 0, False, 28), ("M104", 0, True, 55), ("M205", 0, False, 110)]
+    stock = [("M006", 1, False, 28), ("M002", 0, False, 28), ("M104", 0, True, 55), ("M205", 0, False, 110),
+             ("M007", 2, False, 28), ("M003", 0, False, 28)]
+    cw, ch, gap = 460, 290, 22
+    x0 = (W - (3 * cw + 2 * gap)) / 2
     for i, (mid, lv, sold, price) in enumerate(stock):
         m = martial[mid]
         name, col = RARITY[m["rarity"]]
         sc = SECT_COL[m["sect"]]
-        x, y, cw, ch = 80 + i * 370, 200, 330, 540
-        k = 24
+        x, y = x0 + (i % 3) * (cw + gap), 200 + (i // 3) * (ch + 18)
+        k = 22
         outline = f"M{x},{y} H{x+cw-k} L{x+cw},{y+k} V{y+ch} H{x+k} L{x},{y+ch-k} Z"
         b.append(f'<g opacity="{.45 if sold else 1}">')
         b.append(f'<path d="{outline}" fill="#0f0d12" stroke="{col}" stroke-width="3"/>')
-        b.append(f'<path d="M{x},{y} H{x+cw-k} L{x+cw},{y+k} V{y+40} L{x},{y+72} Z" fill="{col}" opacity=".95"/>')
-        b.append(text(x + 18, y + 28, f'武學・{sects[m["sect"]]["name_zh"]}・{m["school"]}', 15, INK, SANS, 900))
-        b.append(seal(x + cw - 50, y + 64, name, 20, BLOOD if m["rarity"] != "legendary" else INK, 5))
-        b.append(f'<rect x="{x+20}" y="{y+90}" width="64" height="64" fill="{sc}"/>')
-        b.append(text(x + 52, y + 135, sects[m["sect"]]["name_zh"][0], 36, INK, SERIF, 900, "middle"))
-        b.append(brush_title(x + 98, y + 138, m["name_zh"], 36 if len(m["name_zh"]) <= 4 else 30, BONE, INK, 7, "start", -2))
+        b.append(f'<path d="M{x},{y} H{x+cw-k} L{x+cw},{y+k} V{y+34} L{x},{y+46} Z" fill="{col}" opacity=".95"/>')
+        b.append(text(x + 16, y + 25, f'武學・{sects[m["sect"]]["name_zh"]}・{m["school"]}', 14, INK, SANS, 900))
+        b.append(seal(x + cw - 46, y + 52, name, 18, BLOOD if m["rarity"] != "legendary" else INK, 5))
+        b.append(f'<rect x="{x+16}" y="{y+58}" width="52" height="52" fill="{sc}"/>')
+        b.append(text(x + 42, y + 96, sects[m["sect"]]["name_zh"][0], 30, INK, SERIF, 900, "middle"))
+        b.append(brush_title(x + 82, y + 96, m["name_zh"], 30 if len(m["name_zh"]) <= 4 else 26, BONE, INK, 6, "start", -2))
         lvtxt = "新習得・入門" if lv == 0 else f'{["", "入門", "熟練", "小成", "大成", "圓滿"][lv]} → {["", "入門", "熟練", "小成", "大成", "圓滿"][lv+1]}'
-        b.append(text(x + 22, y + 192, lvtxt, 17, EMBER, SANS, 900))
-        b.append(pips(x + 190, y + 186, lv, 5, 9))
+        b.append(text(x + 18, y + 136, lvtxt, 15, EMBER, SANS, 900))
+        b.append(pips(x + cw - 120, y + 130, lv, 5, 8))
         eff = m["effect_template"].replace("{v}", martial_value(m, lv + 1))
-        b.append(system_box(x + 20, y + 214, cw - 40, 90, wrap(eff, 17)[:2], 16))
-        for j, r in enumerate(wrap("小成：" + m["lv3_desc"], 17)[:3]):
-            b.append(text(x + 22, y + 336 + j * 22, r, 14, TEAL, SANS, 700))
+        b.append(system_box(x + 16, y + 150, cw - 32, 50, wrap(eff, 26)[:1], 15))
+        b.append(text(x + 18, y + 226, wrap("小成：" + m["lv3_desc"], 26)[0], 13, TEAL, SANS, 700))
         b.append("</g>")
         if sold:
-            b.append(seal(x + cw / 2, y + 300, "已售出", 40, BLOOD, -12))
+            b.append(seal(x + cw / 2, y + ch / 2 + 10, "已售出", 34, BLOOD, -12))
         else:
-            b.append(button(x + 30, y + ch - 76, cw - 60, 52, f"購買（{price} 銀兩）", "hover" if i == 0 else "normal", 20))
+            b.append(button(x + cw - 226, y + ch - 56, 206, 42, f"購買（{price} 銀兩）", "hover" if i == 0 else "normal", 18))
     b.append(button(580, 836, 220, 50, "重新上架（8）", "normal", 20))
     b.append(button(820, 836, 200, 50, "離開", "normal", 22))
     b.append(text(1580, 890, "已習得的武學再買會升級；武學格滿時只上架已習得的武學", 13, GREY, SANS, 700, "end"))
-    b.append(note(20, 20, ["稿註：每到休息區重新上架 4 門；", "價格依稀有度與區域成長，CSV 可調。"]))
+    b.append(note(20, 20, ["稿註：3 欄網格，6 門一次看完（shop_config.csv 的 merchant_slots）；", "價格依稀有度與區域成長，CSV 可調。"]))
     return doc("\n".join(b), "11 商人")
 
 
@@ -1488,6 +1496,31 @@ def s15_settings():
     return doc("\n".join(b), "15 設定")
 
 
+def s16_skill_bar():
+    b = []
+    _dim_scene(b, 0.25)
+    keys = ["右鍵", "Q", "E", "R", "1", "2", "3", "V"]
+    names = ["挑月", "疾風步", "追風連斬", "落雁斬", "拔刀・一閃", "殘影", "劍氣縱橫", "萬象歸一"]
+    cds = [0, 3.2, 0, 0, 9.0, 0, 0, None]
+    x0, y, w, gap = 566, 800, 60, 6
+    b.append(text(x0, y - 14, "怒氣", 13, GREY, SANS, 900))
+    b.append(bar(x0 + 40, y - 26, 8 * w + 7 * gap - 40, 12, 0.62, "url(#bloodFill)", segs=10, cut=5))
+    for i in range(8):
+        x = x0 + i * (w + gap)
+        ult = i == 7
+        col = EMBER if ult else BONE
+        b.append(f'<rect x="{x}" y="{y}" width="{w}" height="{w}" fill="{INK}" stroke="{col}" stroke-width="{3 if ult else 2}"/>')
+        if cds[i]:
+            h = w * cds[i] / 12
+            b.append(f'<rect x="{x+1}" y="{y+1}" width="{w-2}" height="{h:.0f}" fill="{BONE}" opacity=".28"/>')
+            b.append(text(x + w / 2, y + 40, f"{cds[i]:.0f}", 24, BONE, SANS, 900, "middle"))
+        b.append(f'<rect x="{x}" y="{y}" width="{28 if len(keys[i]) < 2 else 40}" height="18" fill="{col}"/>')
+        b.append(text(x + 4, y + 14, keys[i], 13, INK, SANS, 900))
+        b.append(text(x + w / 2, y + w + 16, names[i][:4], 12, GREY if cds[i] else BONE, SANS, 700, "middle"))
+    b.append(note(30, 30, ["稿註：第三人稱技能列，放在畫面下方中央（生命條與兵器卡之間）。", "七個技能＋大招；冷卻時由上往下蓋灰並顯示剩餘秒數；怒氣滿時大招框轉橘紅。"]))
+    return doc("\n".join(b), "16 技能列")
+
+
 def build(only=None):
     os.makedirs(OUT, exist_ok=True)
     screens = {k: v for k, v in globals().items() if k.startswith("s") and k[1:3].isdigit()}
@@ -1496,7 +1529,7 @@ def build(only=None):
             continue
         slug = {"s00": "00-style", "s01": "01-main-menu", "s02": "02-character-select", "s03": "03-hud",
                 "s04": "04-shrine", "s05": "05-martial-panel", "s06": "06-pause", "s07": "07-result",
-                "s08": "08-start-weapon", "s09": "09-drop-compare", "s10": "10-smith", "s11": "11-merchant", "s12c": "12c-meridian-pose", "s12d": "12d-meridian-poses", "s13": "13-bow-aim", "s14": "14-tianji-wheel", "s15": "15-settings"}[name.split("_")[0]]
+                "s08": "08-start-weapon", "s09": "09-drop-compare", "s10": "10-smith", "s11": "11-merchant", "s12c": "12c-meridian-pose", "s12d": "12d-meridian-poses", "s13": "13-bow-aim", "s14": "14-tianji-wheel", "s15": "15-settings", "s16": "16-skill-bar"}[name.split("_")[0]]
         path = os.path.join(OUT, slug + ".svg")
         with open(path, "w", encoding="utf-8") as f:
             f.write(fn())

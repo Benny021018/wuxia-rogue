@@ -140,13 +140,17 @@
 <text x="632" y="559.62" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="17" font-weight="700" fill="#0b0a0d" text-anchor="start" >間隔 1.4 秒　射程 3.5 m</text>
 <text x="614" y="620" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="700" fill="#16c6cc" text-anchor="start" >器靈覺醒（+5）：每次重劈產生4m劍氣衝擊</text>
 <text x="614" y="642" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="700" fill="#16c6cc" text-anchor="start" >波（20%傷害）</text>
-<g filter="url(#glowRed)"><path d="M636,656 H980 L964,704 H620 Z" fill="#b3121c" stroke="#f3ede4" stroke-width="3" /></g>
-<path d="M608,668.0 V648 H650" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<path d="M992,692.0 V712 H950" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<text x="800.0" y="687.2" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="20" font-weight="900" fill="#f3ede4" text-anchor="middle" >替換主武器：太刀</text>
-<path d="M636,714 H980 L964,762 H620 Z" fill="#0b0a0d" stroke="#f3ede4" stroke-width="3" />
-<path d="M642,720 H974" stroke="#f3ede4" stroke-width="1" opacity=".4"/>
-<text x="800.0" y="745.2" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="20" font-weight="900" fill="#f3ede4" text-anchor="middle" >替換副武器：竹弓</text>
+<g filter="url(#glowRed)"><path d="M636.0,704 H794.0 L778.0,768 H620.0 Z" fill="#b3121c" stroke="#f3ede4" stroke-width="3" /></g>
+<path d="M608.0,720.0 V696 H650.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M806.0,752.0 V776 H764.0" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<text x="707.0" y="742.48" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="18" font-weight="900" fill="#f3ede4" text-anchor="middle" ></text>
+<text x="707.0" y="730" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="18" font-weight="900" fill="#f3ede4" text-anchor="middle" >替換主武器</text>
+<text x="707.0" y="754" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="900" fill="#ff4a17" text-anchor="middle" >太刀</text>
+<path d="M822.0,704 H980.0 L964.0,768 H806.0 Z" fill="#0b0a0d" stroke="#f3ede4" stroke-width="3" />
+<path d="M828.0,710 H974.0" stroke="#f3ede4" stroke-width="1" opacity=".4"/>
+<text x="893.0" y="742.48" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="18" font-weight="900" fill="#f3ede4" text-anchor="middle" ></text>
+<text x="893.0" y="730" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="18" font-weight="900" fill="#f3ede4" text-anchor="middle" >替換副武器</text>
+<text x="893.0" y="754" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="900" fill="#8d8790" text-anchor="middle" >竹弓</text>
 <path d="M140,262 H502 L530,290 V782 H168 L140,754 Z" fill="#0f0d12" stroke="#a9a4ac" stroke-width="4"/>
 <clipPath id="cc0"><path d="M140,262 H502 L530,290 V782 H168 L140,754 Z"/></clipPath>
 <g clip-path="url(#cc0)"><path d="M140,262 H530 V308 L140,348 Z" fill="#a9a4ac" opacity=".95"/><path d="M140,262 H530 V308 L140,348 Z" fill="url(#tone)" opacity=".5"/></g>

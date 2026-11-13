@@ -20,8 +20,6 @@ func _ready() -> void:
 	await _shot("15-settings")
 	main.screens.show_select()
 	await _shot("02-character-select")
-	main.screens.show_weapon_pick()
-	await _shot("08-start-weapon")
 	main._start("nangong")
 	await _frames(10)
 	var world = main.world
@@ -41,7 +39,7 @@ func _ready() -> void:
 	player.rotation.y = player.yaw
 	await _frames(40)
 	player.hp = Game.max_hp() * 0.68
-	main.hud.set_hint("［E］參悟　悟道碑已浮現")
+	main.hud.set_hint("［F］參悟　悟道碑已浮現")
 	await _frames(20)
 	# 打擊感：暴擊瞬間（閃白、形變、火花、血墨、跳字）
 	var foe = world.spawn_enemy("H01", player.global_position + player.global_basis * Vector3(0.3, 0, -2.6), false)
@@ -97,7 +95,7 @@ func _ready() -> void:
 	main.gacha._skip()
 	await _shot("14-tianji-wheel", 4)
 	main.gacha.auto_advance = true
-	main.gacha.current = [{"kind": "W", "id": "W001", "rarity": "common"}, {"kind": "W", "id": "W301", "rarity": "legendary"}, {"kind": "M", "id": "M007", "rarity": "common"}]
+	main.gacha.current = [{"kind": "W", "id": "W001", "rarity": "common"}, {"kind": "W", "id": "W301", "rarity": "legendary", "affixes": [{"id": "A02", "v": 26}, {"id": "A03", "v": 29}, {"id": "A04", "v": 40}]}, {"kind": "M", "id": "M007", "rarity": "common"}]
 	main.gacha._set_state("cards")
 	await _shot("04-shrine")
 	main.gacha.visible = false
@@ -125,22 +123,25 @@ func _ready() -> void:
 	player.global_position = Vector3(mid.x, 0.1, mid.z - 8.5 * signf(mid.z if mid.z != 0.0 else 1.0))
 	player.yaw = PI
 	player.rotation.y = PI
-	player.cam.rotation.x = -0.08
 	await _shot("12-rest-stop", 10)
-	# 弓：拉弓中的紅圈
-	Game.weapons = [Game.make_weapon("W007", 2), Game.make_weapon("W001", 1)]
-	Game.active_weapon = 0
-	Game.recompute()
-	player.refresh_weapon_models()
-	player.cam.rotation.x = 0.0
+	# 第三人稱：待機、普攻、挑空追打
 	player.yaw = 0.0
 	player.rotation.y = 0.0
-	Input.action_press("aim")
-	Input.action_press("attack_1")
-	await _shot("13-bow-aim", 30)
-	Input.action_release("attack_1")
-	Input.action_release("aim")
-	await _frames(20)
+	await _shot("17a-tp-idle", 20)
+	var dummy = world.spawn_enemy("H01", player.global_position + Vector3(0.2, 0, -2.2), false)
+	dummy.set_physics_process(false)
+	dummy.max_hp = 1.0e6
+	dummy.hp = 1.0e6
+	Settings.values["hitstop"] = 0.0
+	player.use("attack")
+	await _shot("17b-tp-attack", 4)
+	await _frames(40)
+	dummy.set_physics_process(true)
+	player.use("skill1")
+	await _shot("17c-tp-launch", 9)
+	Settings.values["hitstop"] = 1.0
+	dummy.queue_free()
+	await _frames(30)
 	# 經脈頁
 	Game.acu_open = {"ren": 9, "du": 4, "chong": 2, "yangwei": 5, "yinwei": 1}
 	Game.acu_fails = {"du5": 2}

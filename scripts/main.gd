@@ -152,8 +152,8 @@ func _on_zone_cleared(stage: int) -> void:
 	hud.set_enemies(0)
 	if stage >= Data.stages.size():
 		return
-	hud.show_banner("破　陣", "悟道碑已浮現，按 E 參悟", "clear")
-	hud.set_hint("走到悟道碑按［E］參悟　｜　出口已開啟")
+	hud.show_banner("破　陣", "悟道碑已浮現，按 F 參悟", "clear")
+	hud.set_hint("走到悟道碑按［F］參悟　｜　出口已開啟")
 
 
 func _interactable() -> Array:
@@ -188,13 +188,13 @@ func _process(_delta: float) -> void:
 			var item: Dictionary = t[1].get_meta("item")
 			var wname: String = Data.weapons[item.id].name_zh
 			if Game.weapons[1] == null:
-				text = "［E］撿起 %s（放進副武器）" % wname
+				text = "［F］撿起 %s（放進副武器）" % wname
 			else:
-				text = "［E］撿起 %s（換掉手上的 %s）" % [wname, Data.weapons[Game.current_weapon().id].name_zh]
+				text = "［F］撿起 %s（換掉手上的 %s）" % [wname, Data.weapons[Game.current_weapon().id].name_zh]
 		"smith":
-			text = "［E］鐵匠：強化武器、重鑄詞條"
+			text = "［F］鐵匠：強化武器、重鑄詞條"
 		"merchant":
-			text = "［E］商人：購買武學"
+			text = "［F］商人：購買武學"
 	hud.set_prompt(text)
 
 

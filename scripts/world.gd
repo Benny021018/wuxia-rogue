@@ -482,7 +482,7 @@ func _clear_zone() -> void:
 		pillar.rotation.y = PI / 2.0
 		FX.play(shrine_node, pillar.global_position + Vector3.UP, &"magic-circle-cast", 2.5, 0.8)
 		Sfx.play("shrine_appear", r.shrine)
-		var lab := FX.label3d("悟道碑\n［E］參悟", 64, Color(0.7, 1, 0.85))
+		var lab := FX.label3d("悟道碑\n［F］參悟", 64, Color(0.7, 1, 0.85))
 		lab.position.y = 3.3
 		shrine_node.add_child(lab)
 		shrine_room = current
@@ -518,8 +518,8 @@ func _spawn_rest_stop(shrine_pos: Vector3) -> void:
 		if shrine_pos.x >= room.x0 and shrine_pos.x <= room.x0 + room.w:
 			r = room
 	var smith_at := _stall_spot(r, shrine_pos, [])
-	smith_node = _rest_npc(SMITH_PROP, smith_at, "鐵匠\n［E］強化／重鑄", Color(1.0, 0.62, 0.3))
-	merchant_node = _rest_npc(MERCHANT_PROP, _stall_spot(r, shrine_pos, [smith_at]), "商人\n［E］購買武學", Color(0.95, 0.85, 0.5))
+	smith_node = _rest_npc(SMITH_PROP, smith_at, "鐵匠\n［F］強化／重鑄", Color(1.0, 0.62, 0.3))
+	merchant_node = _rest_npc(MERCHANT_PROP, _stall_spot(r, shrine_pos, [smith_at]), "商人\n［F］購買武學", Color(0.95, 0.85, 0.5))
 	Game.restock_merchant()
 
 
