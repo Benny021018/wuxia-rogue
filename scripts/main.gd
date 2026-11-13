@@ -272,6 +272,22 @@ func _on_won() -> void:
 	screens.show_end(true)
 
 
+func _input(event: InputEvent) -> void:
+	## 介面的焦點高亮只在鍵盤／手把操作時顯示
+	if event is InputEventMouseMotion and event.relative.length() > 2.0:
+		if UIKit.kbd_nav:
+			UIKit.set_kbd_nav(false, get_viewport())
+	elif (event is InputEventKey or event is InputEventJoypadButton) and event.is_pressed() and not UIKit.kbd_nav:
+		var nav := false
+		for a in ["ui_up", "ui_down", "ui_left", "ui_right", "ui_focus_next", "ui_focus_prev"]:
+			if event.is_action(a):
+				nav = true
+		if nav and get_viewport().gui_get_focus_owner() is ComicButton:
+			# 第一次按方向鍵：先把目前焦點亮出來，不要直接跳到下一顆
+			UIKit.set_kbd_nav(true, get_viewport())
+			get_viewport().set_input_as_handled()
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause"):
 		match mode:

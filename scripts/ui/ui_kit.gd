@@ -24,6 +24,8 @@ const LV_NAMES := ["", "入門", "熟練", "小成", "大成", "圓滿"]
 const BASE := Vector2(1600, 900)    # 設計稿尺寸
 
 static var _theme: Theme
+## 只有用鍵盤／手把操作時才顯示焦點高亮；滑鼠操作時按鈕只在游標移上去才亮
+static var kbd_nav := false
 static var _serif: Font
 static var _sans: Font
 static var _ink_shader: Shader
@@ -397,3 +399,15 @@ static func backdrop(path: String, inked := true) -> TextureRect:
 
 static func rarity_color(rarity: String) -> Color:
 	return Data.rarity_color(rarity)
+
+
+## 切換「鍵盤操作中」狀態，並刷新目前焦點按鈕的外觀
+static func set_kbd_nav(on: bool, vp: Viewport) -> void:
+	if kbd_nav == on:
+		return
+	kbd_nav = on
+	var f := vp.gui_get_focus_owner() if vp else null
+	if f and f.has_method("_on_focus"):
+		f._on_focus(true)
+	elif f:
+		f.queue_redraw()

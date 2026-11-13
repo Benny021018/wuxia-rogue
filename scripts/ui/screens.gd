@@ -141,7 +141,7 @@ func show_select() -> void:
 	for i in Data.char_order.size():
 		_char_card(Data.char_order[i], i)
 	set_meta("selecting", true)
-	_at(UIKit.label("← → 切換　Enter 出師　Esc 返回", 16, UIKit.GREY, HORIZONTAL_ALIGNMENT_CENTER), 550, 850, 500, 26)
+	_at(UIKit.label("← → 切換　Enter 選定　Esc 返回", 16, UIKit.GREY, HORIZONTAL_ALIGNMENT_CENTER), 550, 850, 500, 26)
 	_at(UIKit.button("返回", show_main, 22, 200, 50), 1330, 836, 200, 50)
 
 
@@ -204,7 +204,7 @@ func _char_card(cid: String, i: int) -> void:
 			line.mouse_filter = Control.MOUSE_FILTER_PASS
 			realms.add_child(line)
 	if on:
-		var go := UIKit.button("以此人出師", show_weapon_pick, 26, 300, 58)
+		var go := UIKit.button("選定此人", show_weapon_pick, 26, 300, 58)
 		_at(go, x + 60, y + h + 18, 300, 58)
 		_focus_first(go)
 
@@ -230,7 +230,7 @@ func show_weapon_pick() -> void:
 	for i in starters.size():
 		_weapon_card(starters[i], i, x0 + i * gap)
 	set_meta("picking_weapon", true)
-	_at(UIKit.label("← → 切換　Enter 出師　Esc 返回角色", 16, UIKit.GREY, HORIZONTAL_ALIGNMENT_CENTER), 550, 850, 500, 26)
+	_at(UIKit.label("← → 切換　Enter 入江湖　Esc 返回角色", 16, UIKit.GREY, HORIZONTAL_ALIGNMENT_CENTER), 550, 850, 500, 26)
 	_at(UIKit.button("返回", show_select, 22, 200, 50), 1330, 836, 200, 50)
 
 
@@ -266,7 +266,7 @@ func _weapon_card(wid: String, i: int, x: float) -> void:
 		stats.accent = Color("#3b4a4c")
 	_at(stats, x + 30, y + 392, cw - 60, 100)
 	if on:
-		var go := UIKit.button("以此兵器出師", func(): start_run.emit(_selected, wid), 26, cw - 100, 58)
+		var go := UIKit.button("持此兵器入江湖", func(): start_run.emit(_selected, wid), 26, cw - 100, 58)
 		_at(go, x + 50, y + ch + 20, cw - 100, 58)
 		_focus_first(go)
 

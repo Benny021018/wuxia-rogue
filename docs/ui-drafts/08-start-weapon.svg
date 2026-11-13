@@ -105,12 +105,11 @@
 <path d="M155,659 V673 H169" fill="none" stroke="#16c6cc" stroke-width="3"/>
 <path d="M505,659 V673 H491" fill="none" stroke="#16c6cc" stroke-width="3"/>
 <text x="180" y="601.76" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#0b0a0d" text-anchor="start" >前方120°扇形揮砍</text>
-<text x="180" y="625.76" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#0b0a0d" text-anchor="start" >傷害 56 × 1 段</text>
+<text x="180" y="625.76" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#0b0a0d" text-anchor="start" >傷害 73 × 1 段</text>
 <text x="180" y="649.76" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#0b0a0d" text-anchor="start" >間隔 0.8 秒　射程 2.5 m</text>
-<g filter="url(#glowRed)"><path d="M196,760 H480 L464,818 H180 Z" fill="#b3121c" stroke="#f3ede4" stroke-width="3" /></g>
-<path d="M168,774.5 V752 H210" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<path d="M492,803.5 V826 H450" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<text x="330.0" y="798.36" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="26" font-weight="900" fill="#f3ede4" text-anchor="middle" >以此兵器出師</text>
+<path d="M196,760 H480 L464,818 H180 Z" fill="#0b0a0d" stroke="#f3ede4" stroke-width="3" />
+<path d="M202,766 H474" stroke="#f3ede4" stroke-width="1" opacity=".4"/>
+<text x="330.0" y="798.36" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="26" font-weight="900" fill="#f3ede4" text-anchor="middle" >持此兵器入江湖</text>
 <path d="M600,180 H972 L1000,208 V740 H628 L600,712 Z" fill="#16131a" stroke="#3a363e" stroke-width="3"/>
 <ellipse cx="800.0" cy="350" rx="200" ry="150" fill="url(#tealBloom)" opacity="0.18"/>
 <rect x="690" y="220" width="220" height="220" fill="#0b0a0d" stroke="#8d8790" stroke-width="2"/><g clip-path="url(#bc690220)" fill="#2a1d36" opacity="0.9"><polygon points="726.9,477.9 725.4,477.2 760.9,408.2"/><polygon points="948.8,401.3 947.6,403.8 870.1,364.3"/><polygon points="954.6,387.6 953.7,390.0 862.8,354.0"/><polygon points="649.4,397.5 648.8,396.1 736.9,357.9"/><polygon points="654.0,406.9 652.4,403.8 737.6,362.0"/><polygon points="829.1,492.4 826.1,492.9 816.3,425.9"/><polygon points="653.4,254.2 654.5,252.1 713.1,284.3"/><polygon points="958.5,375.9 957.5,379.3 872.3,351.8"/><polygon points="902.4,459.4 901.1,460.4 847.0,390.0"/><polygon points="865.8,178.7 867.4,179.4 834.4,252.1"/><polygon points="693.1,204.3 694.8,202.8 746.0,265.6"/><polygon points="952.6,392.7 952.0,394.1 867.2,358.0"/><polygon points="729.0,181.1 731.2,180.0 767.7,260.8"/><polygon points="657.6,246.6 658.9,244.4 734.8,291.1"/><polygon points="843.9,170.9 846.9,171.8 820.4,258.8"/><polygon points="652.1,256.8 653.3,254.4 715.3,287.2"/><polygon points="777.7,166.5 779.8,166.2 787.3,232.5"/><polygon points="922.5,440.6 920.8,442.4 867.1,391.5"/><polygon points="896.4,463.9 894.2,465.4 838.9,384.9"/><polygon points="717.4,187.1 720.4,185.5 758.3,256.1"/><polygon points="916.3,212.9 917.8,214.4 863.1,267.3"/><polygon points="662.4,239.0 664.0,236.6 732.8,284.7"/><polygon points="886.8,189.7 890.0,191.7 843.7,261.1"/><polygon points="714.6,188.8 715.9,188.0 754.2,253.5"/></g><clipPath id="bc690220"><rect x="690" y="220" width="220" height="220"/></clipPath><g transform="translate(800.0 330.0) scale(2.0)" fill="none" stroke="#f3ede4" stroke-width="5"><path d="M-8,-44 Q34,0 -8,44"/><path d="M-8,-44 L-8,44" stroke-width="1.5"/><path d="M-30,0 H34" stroke-width="2.5"/><path d="M34,0 l-8,-5 m8,5 l-8,5" stroke-width="2.5"/></g>
@@ -126,7 +125,7 @@
 <path d="M625,659 V673 H639" fill="none" stroke="#3b4a4c" stroke-width="3"/>
 <path d="M975,659 V673 H961" fill="none" stroke="#3b4a4c" stroke-width="3"/>
 <text x="650" y="601.76" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#f3ede4" text-anchor="start" >長射程箭矢穿透1</text>
-<text x="650" y="625.76" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#f3ede4" text-anchor="start" >傷害 89 × 1 段</text>
+<text x="650" y="625.76" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#f3ede4" text-anchor="start" >傷害 116 × 1 段</text>
 <text x="650" y="649.76" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#f3ede4" text-anchor="start" >間隔 0.9 秒　射程 25 m</text>
 <path d="M1070,180 H1442 L1470,208 V740 H1098 L1070,712 Z" fill="#16131a" stroke="#3a363e" stroke-width="3"/>
 <ellipse cx="1270.0" cy="350" rx="200" ry="150" fill="url(#tealBloom)" opacity="0.18"/>
@@ -143,12 +142,12 @@
 <path d="M1095,659 V673 H1109" fill="none" stroke="#3b4a4c" stroke-width="3"/>
 <path d="M1445,659 V673 H1431" fill="none" stroke="#3b4a4c" stroke-width="3"/>
 <text x="1120" y="601.76" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#f3ede4" text-anchor="start" >重劈震地</text>
-<text x="1120" y="625.76" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#f3ede4" text-anchor="start" >傷害 49 × 1 段</text>
+<text x="1120" y="625.76" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#f3ede4" text-anchor="start" >傷害 64 × 1 段</text>
 <text x="1120" y="649.76" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#f3ede4" text-anchor="start" >間隔 1.4 秒　射程 3.5 m</text>
 <path d="M1346,836 H1530 L1514,886 H1330 Z" fill="#0b0a0d" stroke="#f3ede4" stroke-width="3" />
 <path d="M1352,842 H1524" stroke="#f3ede4" stroke-width="1" opacity=".4"/>
 <text x="1430.0" y="868.92" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="22" font-weight="900" fill="#f3ede4" text-anchor="middle" >返回</text>
-<text x="800" y="868" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#8d8790" text-anchor="middle" >← → 切換　Enter 出師　Esc 返回角色</text>
+<text x="800" y="868" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="700" fill="#8d8790" text-anchor="middle" >← → 切換　Enter 入江湖　Esc 返回角色</text>
 <g opacity=".95"><rect x="1210" y="24" width="479" height="56" fill="#ffe94d"/>
 <text x="1222" y="47.0" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="700" fill="#0b0a0d" text-anchor="start" >稿註：兵器不分品質，差別只在打法；</text>
 <text x="1222" y="67.02" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="700" fill="#0b0a0d" text-anchor="start" >可選的起手兵器由 weapons.csv 的 starter 欄決定。</text>

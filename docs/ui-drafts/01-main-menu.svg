@@ -103,9 +103,8 @@
 <text x="560.0" y="627.56" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="21" font-weight="700" fill="#f3ede4" text-anchor="middle" >綠林、暗月樓、屍門盡成爪牙。</text>
 <text x="560.0" y="660.3199999999999" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="21" font-weight="700" fill="#f3ede4" text-anchor="middle" >一路殺上天魔神教總壇，了結這場劫數。</text>
 <path d="M1090,360 H1530 L1500,780 H1060 Z" fill="#0b0a0d" stroke="#f3ede4" stroke-width="3" opacity=".82"/>
-<g filter="url(#glowRed)"><path d="M1116,400 H1480 L1464,478 H1100 Z" fill="#b3121c" stroke="#f3ede4" stroke-width="3" /></g>
-<path d="M1088,419.5 V392 H1130" fill="none" stroke="#16c6cc" stroke-width="3"/>
-<path d="M1492,458.5 V486 H1450" fill="none" stroke="#16c6cc" stroke-width="3"/>
+<path d="M1116,400 H1480 L1464,478 H1100 Z" fill="#0b0a0d" stroke="#f3ede4" stroke-width="3" />
+<path d="M1122,406 H1474" stroke="#f3ede4" stroke-width="1" opacity=".4"/>
 <text x="1290.0" y="451.24" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="34" font-weight="900" fill="#f3ede4" text-anchor="middle" >踏上江湖</text>
 <path d="M1116,510 H1480 L1464,576 H1100 Z" fill="#0b0a0d" stroke="#f3ede4" stroke-width="3" />
 <path d="M1122,516 H1474" stroke="#f3ede4" stroke-width="1" opacity=".4"/>

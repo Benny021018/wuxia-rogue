@@ -451,7 +451,7 @@ def s01_menu():
     b.append(narration(200, 560, 720, 120, ["十年前，天魔神教血洗中原。如今天魔復活，", "綠林、暗月樓、屍門盡成爪牙。", "一路殺上天魔神教總壇，了結這場劫數。"], 21))
     # 選單
     b.append(slant(1060, 360, 470, 420, 30, INK, BONE, 3, 'opacity=".82"'))
-    b.append(button(1100, 400, 380, 78, "踏上江湖", "hover", 34))
+    b.append(button(1100, 400, 380, 78, "踏上江湖", "normal", 34))
     b.append(button(1100, 510, 380, 66, "操作說明", "normal", 28))
     b.append(button(1100, 606, 380, 66, "離開遊戲", "normal", 28))
     b.append(text(1290, 735, "滑鼠點選　Enter 確認", 16, GREY, SANS, 700, "middle"))
@@ -548,9 +548,9 @@ def s02_select():
             b.append(text(x + 30 - (py - y - ph) * 0.0, py, f'◆ {r["realm_zh"]}・{r["name_zh"]}', 14.5, TEAL if on else "#3e5b5d", SANS, 900))
             py += 22
         if on:
-            b.append(button(x + 60, y + h + 18, 300, 58, "以此人出師", "hover", 26))
+            b.append(button(x + 60, y + h + 18, 300, 58, "選定此人", "normal", 26))
     b.append(button(1330, 836, 200, 50, "返回", "normal", 22))
-    b.append(text(800, 868, "← → 切換　Enter 出師　Esc 返回", 16, GREY, SANS, 700, "middle"))
+    b.append(text(800, 868, "← → 切換　Enter 選定　Esc 返回", 16, GREY, SANS, 700, "middle"))
     b.append(note(1270, 20, ["稿註：選中者全彩＋青背光＋血紅外光；", "未選者壓成墨色雙色調。境界效果收合，", "游標停留時展開成系統框。"]))
     return doc("\n".join(b), "02 角色選擇")
 
@@ -911,9 +911,9 @@ def s08_start_weapon():
         b.append(text(x + cw / 2, y + 368, f'{w["class"]}・{RANGE_ZH[w["range_type"]]}', 18, EMBER if on else GREY, SERIF, 900, "middle"))
         b.append(system_box(x + 30, y + 392, cw - 60, 96, weapon_stats(w), 16, dark=not on, accent=TEAL if on else "#3b4a4c"))
         if on:
-            b.append(button(x + 50, y + ch + 20, cw - 100, 58, "以此兵器出師", "hover", 26))
+            b.append(button(x + 50, y + ch + 20, cw - 100, 58, "持此兵器入江湖", "normal", 26))
     b.append(button(1330, 836, 200, 50, "返回", "normal", 22))
-    b.append(text(800, 868, "← → 切換　Enter 出師　Esc 返回角色", 16, GREY, SANS, 700, "middle"))
+    b.append(text(800, 868, "← → 切換　Enter 入江湖　Esc 返回角色", 16, GREY, SANS, 700, "middle"))
     b.append(note(1210, 24, ["稿註：兵器不分品質，差別只在打法；", "可選的起手兵器由 weapons.csv 的 starter 欄決定。"]))
     return doc("\n".join(b), "08 起手兵器")
 

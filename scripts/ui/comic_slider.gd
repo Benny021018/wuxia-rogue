@@ -64,7 +64,7 @@ func _gui_input(e: InputEvent) -> void:
 
 
 func _draw() -> void:
-	var hot := _hot or has_focus()
+	var hot := _hot or (has_focus() and UIKit.kbd_nav)
 	var h := 22.0
 	var y0 := (size.y - h) / 2.0
 	var w := size.x

@@ -14,6 +14,21 @@ func _ready() -> void:
 	add_child(main)
 	await _frames(5)
 	_check_music("menu")
+	var first_btn = get_viewport().gui_get_focus_owner()
+	_check(first_btn is ComicButton and first_btn.text == "踏上江湖", "主選單焦點在「踏上江湖」（Enter 可直接開始）")
+	UIKit.kbd_nav = false
+	first_btn._on_focus(true)
+	_check(not first_btn.has_theme_stylebox_override("normal"), "滑鼠操作時「踏上江湖」預設不顯示高亮")
+	var down := InputEventKey.new()
+	down.keycode = KEY_DOWN
+	down.physical_keycode = KEY_DOWN
+	down.pressed = true
+	main._input(down)
+	_check(UIKit.kbd_nav and first_btn.has_theme_stylebox_override("normal") and get_viewport().gui_get_focus_owner() == first_btn, "第一次按方向鍵先亮出目前焦點")
+	var mv := InputEventMouseMotion.new()
+	mv.relative = Vector2(10, 0)
+	main._input(mv)
+	_check(not UIKit.kbd_nav and not first_btn.has_theme_stylebox_override("normal"), "動滑鼠後焦點高亮消失")
 	await _check_audio_settings()
 	for cid in Data.char_order:
 		await _run_character(cid)
@@ -224,7 +239,7 @@ func _run_character(cid: String) -> void:
 	main.screens._on_weapon_card_input(_click(), "W301", main.screens._weapon_sel)
 	main.screens.start_run.disconnect(record)
 	main.screens.start_run.connect(main._start)
-	_check(picked == ["W301"], "點選起手兵器出師")
+	_check(picked == ["W301"], "點選起手兵器入江湖")
 	main.hud.show_drop_compare(Game.make_weapon("W007", 2))
 	_check(main.hud.drop_panel.visible and main.hud.drop_panel.get_child_count() > 3, "掉落兵器比較面板")
 	main.hud.show_drop_compare(null)
