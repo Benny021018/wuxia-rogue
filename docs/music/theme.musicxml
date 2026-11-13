@@ -22,42 +22,42 @@
     </scaling>
   </defaults>
   <part-list>
-    <score-part id="Pa6ac162cbd3c2b11bb6da91cec3ea174">
+    <score-part id="P4d08de3b13df78af945c082c7ef81631">
       <part-name>erhu</part-name>
-      <score-instrument id="Ida72e995643ccab9be9901cd2e4186cd">
+      <score-instrument id="If7ae5caf7fae49b44e0342828d8ea84f">
         <instrument-name>erhu</instrument-name>
       </score-instrument>
     </score-part>
-    <score-part id="Pc3fa8b4201330a752b0221b6a1acc8f7">
+    <score-part id="Pdd026cf73b0f0ffcaaaee62e183aa5d0">
       <part-name>和弦</part-name>
     </score-part>
-    <score-part id="Pd84148d2358d2444ba11f78970fbc56c">
+    <score-part id="P7476adf4663e051889af28b1a985f297">
       <part-name>dizi</part-name>
-      <score-instrument id="I6910e048010f9e2c8b600d1015bb5a5d">
+      <score-instrument id="Ifaa41ff320e403b7d333c01679933ded">
         <instrument-name>dizi</instrument-name>
       </score-instrument>
     </score-part>
-    <score-part id="P385d0f2c5cbed6151c7caba757b86ca8">
+    <score-part id="P0fb29daa885a5240c4b257a882c9a05e">
       <part-name>violins</part-name>
-      <score-instrument id="Ic12838675479708f9343d8f2e788cc79">
+      <score-instrument id="I950ac9d9fd1ef9df7d488de74f09538f">
         <instrument-name>violins</instrument-name>
       </score-instrument>
     </score-part>
-    <score-part id="Pff029a848cc4a7156da365577aa73490">
+    <score-part id="Pcee6dab2bce068db1534cb038704317c">
       <part-name>horns</part-name>
-      <score-instrument id="I7588ce9691caf5d18a1c5c24a3ad3aed">
+      <score-instrument id="Ibe577ba57d2b620d2546796534bde39f">
         <instrument-name>horns</instrument-name>
       </score-instrument>
     </score-part>
-    <score-part id="P8ab333c5e162670c8bd3cb29eeb873ba">
+    <score-part id="P60bb7a3bc39f795ab122d3d9889bb639">
       <part-name>cello</part-name>
-      <score-instrument id="I29a4b903fb41d3d623d0f9fd440481c9">
+      <score-instrument id="Iadadda616e3681a4517042194883f75f">
         <instrument-name>cello</instrument-name>
       </score-instrument>
     </score-part>
   </part-list>
   <!--=========================== Part 1 ===========================-->
-  <part id="Pa6ac162cbd3c2b11bb6da91cec3ea174">
+  <part id="P4d08de3b13df78af945c082c7ef81631">
     <!--========================= Measure 1 ==========================-->
     <measure implicit="no" number="1">
       <attributes>
@@ -2455,7 +2455,7 @@
     </measure>
   </part>
   <!--=========================== Part 2 ===========================-->
-  <part id="Pc3fa8b4201330a752b0221b6a1acc8f7">
+  <part id="Pdd026cf73b0f0ffcaaaee62e183aa5d0">
     <!--========================= Measure 1 ==========================-->
     <measure implicit="no" number="1">
       <attributes>
@@ -4586,7 +4586,7 @@
     </measure>
   </part>
   <!--=========================== Part 3 ===========================-->
-  <part id="Pd84148d2358d2444ba11f78970fbc56c">
+  <part id="P7476adf4663e051889af28b1a985f297">
     <!--========================= Measure 1 ==========================-->
     <measure implicit="no" number="1">
       <attributes>
@@ -9279,7 +9279,7 @@
     </measure>
   </part>
   <!--=========================== Part 4 ===========================-->
-  <part id="P385d0f2c5cbed6151c7caba757b86ca8">
+  <part id="P0fb29daa885a5240c4b257a882c9a05e">
     <!--========================= Measure 1 ==========================-->
     <measure implicit="no" number="1">
       <attributes>
@@ -11660,7 +11660,7 @@
     </measure>
   </part>
   <!--=========================== Part 5 ===========================-->
-  <part id="Pff029a848cc4a7156da365577aa73490">
+  <part id="Pcee6dab2bce068db1534cb038704317c">
     <!--========================= Measure 1 ==========================-->
     <measure implicit="no" number="1">
       <attributes>
@@ -13783,7 +13783,7 @@
     </measure>
   </part>
   <!--=========================== Part 6 ===========================-->
-  <part id="P8ab333c5e162670c8bd3cb29eeb873ba">
+  <part id="P60bb7a3bc39f795ab122d3d9889bb639">
     <!--========================= Measure 1 ==========================-->
     <measure implicit="no" number="1">
       <attributes>

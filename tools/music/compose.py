@@ -17,6 +17,8 @@ HERO_1 = "A4:1.5 C5:.5 D5:2 | E5:1 G5:.5 E5:.5 D5:2 | C5:1 D5:.5 C5:.5 A4:1 G4:1
 HERO_2 = "A4:1.5 C5:.5 D5:2 | E5:1 G5:.5 A5:.5 G5:1 E5:1 | D5:1.5 E5:.5 D5:1 B4:1 | E5:4"
 # 天魔動機：主音 → 小二度（Bb，弗里幾亞色彩）→ 三全音下落到 E，再回主音。
 DEMON = "A2:2 Bb2:1 E2:1 | A2:4 | A2:2 Bb2:1 E2:1 | A2:2 r:2"
+# 序奏版：前四下吹完停一拍再吹後四下
+DEMON_INTRO = "A2:2 Bb2:1 E2:1 | A2:3 r:1 | A2:2 Bb2:1 E2:1 | A2:2 r:2"
 # 副歌：轉到關係大調色彩（F G Em Am），長音往上攀到 C6，再以 A 大三和弦收（光明感）。
 SOAR = "A5:3 G5:1 | E5:2 D5:2 | E5:1 G5:1 A5:1 B5:1 | C6:3 A5:1 | A5:1 G5:1 E5:1 G5:1 | D5:3 E5:.5 D5:.5 | D5:2 E5:2 | A5:4"
 
@@ -144,9 +146,9 @@ def timpani_roll(track, beat0, beats, note, v0, v1):
 # ================================================================== 天魔序奏（前 4 小節，Am Bb/A Am Bb/A）
 def intro_v0(s, I):
     """原版：低銅管奏天魔動機，弦樂顫弓。"""
-    mel(s.tracks["trombones"], DEMON, I, 78, 12)
-    mel(s.tracks["tuba"], DEMON, I, 72)
-    mel(s.tracks["contrabass"], DEMON, I, 70, 12)
+    mel(s.tracks["trombones"], DEMON_INTRO, I, 78, 12)
+    mel(s.tracks["tuba"], DEMON_INTRO, I, 72)
+    mel(s.tracks["contrabass"], DEMON_INTRO, I, 70, 12)
     drums(s.tracks["drums"], I, {"gong": [(0, .85)], "taiko_lo": [(0, .9)]})
     drums(s.tracks["drums"], I + 2, {"taiko_lo": [(0, .7)]})
     log = pad(s, s.tracks["tremolo"], I, I + 4, 3, 52, 70, 60, 50)

@@ -22,36 +22,36 @@
     </scaling>
   </defaults>
   <part-list>
-    <score-part id="P790a9264f60b7e64098c790327fef35b">
+    <score-part id="P1cdbc6d85c6dbc34c2bfdfa7d011da6a">
       <part-name>erhu</part-name>
-      <score-instrument id="Ie14b72fd04926614fa973f9da89ff6e0">
+      <score-instrument id="Ie6ca05c462e317377e434b40718b087c">
         <instrument-name>erhu</instrument-name>
       </score-instrument>
     </score-part>
-    <score-part id="P6d7a4817197abb2a1b17e8da66776e61">
+    <score-part id="P05ee12b477cd180db3ad079c17e20501">
       <part-name>和弦</part-name>
     </score-part>
-    <score-part id="Pfbf2770e11d10d3f1d9c82313ffe360e">
+    <score-part id="P895227802c32fdb3a0ae2e29ae81b2bf">
       <part-name>dizi</part-name>
-      <score-instrument id="Id883079bd1d7f607707e8b8c59e31f26">
+      <score-instrument id="I11a44100e46c7b4db6476ed3bf586a8b">
         <instrument-name>dizi</instrument-name>
       </score-instrument>
     </score-part>
-    <score-part id="P365cba71978baa90e7edefcf4284e69f">
+    <score-part id="Pa6b0e185e9e8b726f681f3828ac30f4e">
       <part-name>violins</part-name>
-      <score-instrument id="I32a81cf449a82fccee257027a1dc0123">
+      <score-instrument id="I3af4586b0e886bf6856287e4fed70a06">
         <instrument-name>violins</instrument-name>
       </score-instrument>
     </score-part>
-    <score-part id="P436671aac3dda9bfc3132726c9b9b34a">
+    <score-part id="P02aee4978e7ace3412d8bde5e027bcd2">
       <part-name>horns</part-name>
-      <score-instrument id="I6f0cce9bfe51e2e5c3f7fd09d1081218">
+      <score-instrument id="I57326b3187e8952e627390b0082355ee">
         <instrument-name>horns</instrument-name>
       </score-instrument>
     </score-part>
   </part-list>
   <!--=========================== Part 1 ===========================-->
-  <part id="P790a9264f60b7e64098c790327fef35b">
+  <part id="P1cdbc6d85c6dbc34c2bfdfa7d011da6a">
     <!--========================= Measure 1 ==========================-->
     <measure implicit="no" number="1">
       <attributes>
@@ -2218,7 +2218,7 @@
     </measure>
   </part>
   <!--=========================== Part 2 ===========================-->
-  <part id="P6d7a4817197abb2a1b17e8da66776e61">
+  <part id="P05ee12b477cd180db3ad079c17e20501">
     <!--========================= Measure 1 ==========================-->
     <measure implicit="no" number="1">
       <attributes>
@@ -3758,7 +3758,7 @@
     </measure>
   </part>
   <!--=========================== Part 3 ===========================-->
-  <part id="Pfbf2770e11d10d3f1d9c82313ffe360e">
+  <part id="P895227802c32fdb3a0ae2e29ae81b2bf">
     <!--========================= Measure 1 ==========================-->
     <measure implicit="no" number="1">
       <attributes>
@@ -7573,7 +7573,7 @@
     </measure>
   </part>
   <!--=========================== Part 4 ===========================-->
-  <part id="P365cba71978baa90e7edefcf4284e69f">
+  <part id="Pa6b0e185e9e8b726f681f3828ac30f4e">
     <!--========================= Measure 1 ==========================-->
     <measure implicit="no" number="1">
       <attributes>
@@ -9105,7 +9105,7 @@
     </measure>
   </part>
   <!--=========================== Part 5 ===========================-->
-  <part id="P436671aac3dda9bfc3132726c9b9b34a">
+  <part id="P02aee4978e7ace3412d8bde5e027bcd2">
     <!--========================= Measure 1 ==========================-->
     <measure implicit="no" number="1">
       <attributes>
