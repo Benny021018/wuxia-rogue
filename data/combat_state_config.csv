@@ -38,3 +38,8 @@ han_rage_bonus_pct,20,血怒傷害加成百分比
 air_tilt_deg,20,仰躺浮空時，臉部正向與天頂的夾角
 attack_fx_span_mult,1.55,近戰與飛行招式特效寬度倍率
 area_fx_span_mult,1.35,範圍招式內層特效寬度倍率
+lan_lives,3,擂台生命數
+lan_round_delay,3,開戰倒數秒數
+lan_arena_half,13,問劍坪半邊長度
+lan_spawn_gap,12,擂台開局間距
+lan_snapshot_hz,20,房主狀態更新頻率

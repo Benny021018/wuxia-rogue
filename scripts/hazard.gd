@@ -12,6 +12,7 @@ var _mesh: MeshInstance3D
 
 
 func configure(r: float, damage_per_sec: float, dur: float, to_player := true, color := Color(0.35, 0.7, 0.2, 0.35), clip: StringName = &"poison-cloud") -> void:
+	add_to_group("combat_fields")
 	radius = r
 	dps = damage_per_sec
 	duration = dur
@@ -36,8 +37,7 @@ func _physics_process(delta: float) -> void:
 		return
 	_tick = 0.0
 	if hurts_player:
-		var p = get_tree().get_first_node_in_group("player")
-		if p:
+		for p in get_tree().get_nodes_in_group("player"):
 			var d := Vector2(p.global_position.x - global_position.x, p.global_position.z - global_position.z).length()
 			if d <= radius:
 				p.take_damage(dps * 0.25, null, true)

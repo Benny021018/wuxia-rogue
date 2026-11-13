@@ -30,6 +30,11 @@ func _ready() -> void:
 	main._input(mv)
 	_check(not UIKit.kbd_nav and not first_btn.has_theme_stylebox_override("normal"), "動滑鼠後焦點高亮消失")
 	await _check_audio_settings()
+	main._open_lan()
+	var lan = main.get_node("LanSession")
+	_check(lan.heroes.item_count == Data.char_order.size() and lan.modes.item_count == 2, "局域網房間提供合作與三命單挑選項")
+	lan.leave()
+	_check(main.mode == "menu", "離開房間返回主選單")
 	_check_combat_state()
 	for cid in Data.char_order:
 		await _run_character(cid)

@@ -5,6 +5,7 @@ extends Control
 signal start_run(char_id: String, weapon_id: String)
 signal resume
 signal to_menu
+signal open_lan
 signal quit_game
 
 var _selected := "nangong"
@@ -77,6 +78,7 @@ func show_main() -> void:
 	_at(UIKit.button("操作說明", show_help.bind(false), 28, 380, 66), 1100, 496, 380, 60)
 	_at(UIKit.button("設定", show_settings.bind(false), 28, 380, 60), 1100, 572, 380, 60)
 	_at(UIKit.button("離開遊戲", func(): quit_game.emit(), 28, 380, 60), 1100, 648, 380, 60)
+	_at(UIKit.button("局域網連線", func(): open_lan.emit(), 28, 380, 60), 1100, 710, 380, 60)
 	var sparks := UIKit.fx()
 	sparks.add_embers(Rect2(0, 560, 1600, 340), 70)
 	sparks.drift = 26.0

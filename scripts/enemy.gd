@@ -635,7 +635,7 @@ func _shoot(speed_mps: float, amount: float, color: Color, cloud := false, arrow
 
 
 func _aoe_after(center: Vector3, r: float, delay: float, amount: float) -> void:
-	FX.warn_circle(world, center, r, delay)
+	world.warn_area(center, r, delay)
 	Sfx.play("aoe_warn", center)
 	await get_tree().create_timer(delay, false).timeout
 	if dead or not is_instance_valid(player):
@@ -774,7 +774,7 @@ func _b_boar(delta: float, flat: Vector3, dist: float) -> void:
 				Sfx.play("roar" if eid == "B06" or eid == "B02" else "enemy_windup", hit_center(), -4.0)
 				_state_t = 1.0
 				_move_dir = flat.normalized()
-				FX.warn_circle(world, global_position + _move_dir * 3.0, 0.8, 1.0)
+				world.warn_area(global_position + _move_dir * 3.0, 0.8, 1.0)
 		"windup":
 			_state_t -= delta
 			velocity.x = 0

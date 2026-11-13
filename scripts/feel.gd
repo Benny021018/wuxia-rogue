@@ -24,6 +24,8 @@ func k(key: String) -> float:
 
 ## 頓幀：秒數為真實時間；多段命中只延長到上限
 func hitstop(sec: float) -> void:
+	if multiplayer.has_multiplayer_peer() and not multiplayer.multiplayer_peer is OfflineMultiplayerPeer:
+		return
 	if sec <= 0.0 or not Settings.on("hitstop") or get_tree().paused:
 		return
 	var now := Time.get_ticks_msec()
