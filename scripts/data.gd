@@ -29,6 +29,9 @@ var sfx := {}               # id -> 音效設定（sfx.csv）
 var settings_cfg := {}      # key -> 設定預設值與範圍（settings_config.csv）
 var settings_order: Array = []
 var feel := {}              # 打擊感數值（feel_config.csv）
+var combat_state := {}      # 戰鬥狀態數值（combat_state_config.csv）
+var moves := {}             # move_id -> 招式（moves.csv），含 hits: Array（move_hits.csv）
+var char_moves := {}        # char_id -> {slot: move_id}
 var stages: Array = []      # index = stage-1
 var stage_report: Array = []
 var zones := {}             # "1".."20" -> layout
@@ -85,6 +88,15 @@ func _ready() -> void:
 		settings_cfg[r.key] = r
 		settings_order.append(r.key)
 	feel = _kv("feel_config")
+	combat_state = _kv("combat_state_config")
+	for r in _csv("moves"):
+		r["hits"] = []
+		moves[r.move_id] = r
+		if not char_moves.has(r.char_id):
+			char_moves[r.char_id] = {}
+		char_moves[r.char_id][r.slot] = r.move_id
+	for r in _csv("move_hits"):
+		moves[r.move_id].hits.append(r)
 	for r in _csv("meridians"):
 		meridians[r.meridian_id] = r
 		meridian_order.append(r.meridian_id)

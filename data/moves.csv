@@ -1,0 +1,34 @@
+move_id,char_id,slot,name_zh,action,cooldown_s,self_state,self_from_s,self_to_s,desc
+nan_n1,nangong,normal1,斜斬,attack,0,,0,0,普攻第一段
+nan_n2,nangong,normal2,橫斬,attack,0,,0,0,普攻第二段
+nan_n3,nangong,normal3,上撩,attack,0,,0,0,普攻第三段，對浮空目標可續連
+nan_n4,nangong,normal4,縱劈,attack,0,,0,0,普攻收尾，把敵人劈退
+nan_s1,nangong,skill1,挑月,skill1,4,,0,0,由下往上挑斬，把敵人挑上半空，連段起手
+nan_s2,nangong,skill2,疾風步,skill2,6,invincible,0.05,0.3,向前突進穿過敵人並斬擊，突進途中無敵
+nan_s3,nangong,skill3,追風連斬,skill3,8,,0,0,五連快斬，每一下都能把浮空的敵人托住
+nan_s4,nangong,skill4,落雁斬,skill4,8,,0,0,躍起下劈，把站著的敵人劈倒在地；倒地後再打就會浮空，可以接挑月重新起連段
+nan_s5,nangong,skill5,拔刀・一閃,skill5,12,armor,0,0.55,收刀蓄勢後一閃而過，蓄勢期間霸體，破除霸體
+nan_s6,nangong,skill6,殘影,skill6,14,invincible,0,0.4,架勢 0.4 秒無敵；期間被攻擊就閃到敵人身後反斬並挑空
+nan_s7,nangong,skill7,劍氣縱橫,skill7,10,,0,0,連揮三道劍氣，遠距離牽制
+nan_ult,nangong,ult,天劍・萬象歸一,ult,0,invincible,0,2.4,全程無敵。化作殘影連斬八次把敵人帶上空中，最後一劍劈落
+han_n1,han,normal1,橫掃,attack,0,,0,0,普攻第一段
+han_n2,han,normal2,回斬,attack,0,armor,0.1,0.45,普攻第二段，出招中霸體
+han_n3,han,normal3,重劈,attack,0,armor,0.1,0.6,普攻收尾，出招中霸體，把敵人劈倒
+han_s1,han,skill1,崩山,skill1,6,armor,0,0.5,巨劍砸地，震起周圍所有敵人
+han_s2,han,skill2,蠻牛衝撞,skill2,8,armor,0,0.7,肩撞突進，全程霸體，撞開並破除霸體
+han_s3,han,skill3,旋風斬,skill3,9,armor,0,1.1,持劍旋轉四圈，全程霸體
+han_s4,han,skill4,裂地斬,skill4,10,,0,0,劈出一道直線衝擊波，掃倒路徑上的敵人
+han_s5,han,skill5,血怒,skill5,20,armor,0,6.0,消耗 10% 生命，6 秒內霸體且傷害提高 20%
+han_s6,han,skill6,擒殺,skill6,12,armor,0,0.8,抓住面前的敵人舉起再砸下，破除霸體
+han_s7,han,skill7,天狼躍擊,skill7,12,armor,0.2,0.8,高高躍起砸向目標，落點周圍的敵人被震上半空
+han_ult,han,ult,魔狼噬天,ult,0,invincible,0,2.6,全程無敵。三記巨劍橫掃把敵人捲上空中，最後一擊劈裂地面
+tang_n1,tang,normal1,速射,attack,0,,0,0,點按射出一箭
+tang_n2,tang,normal2,滿弓,attack,0,,0,0,按住拉滿再放，傷害與硬直更高
+tang_s1,tang,skill1,燕返,skill1,5,invincible,0.15,0.5,一腳把近身的敵人踢上半空，自己後空翻拉開距離，翻身途中無敵
+tang_s2,tang,skill2,三連矢,skill2,5,,0,0,連射三箭
+tang_s3,tang,skill3,蝕骨毒霧,skill3,10,,0,0,擲出毒瓶，留下 5 秒毒霧（持續傷害，不造成硬直）
+tang_s4,tang,skill4,穿雲箭,skill4,10,,0,0,蓄力一箭貫穿整排敵人，破除霸體
+tang_s5,tang,skill5,天羅地網,skill5,14,,0,0,在腳下佈下機關，踩到的敵人被纏住
+tang_s6,tang,skill6,暴雨梨花,skill6,12,,0,0,朝天射出箭雨落在目標區域，能把浮空的敵人釘在半空
+tang_s7,tang,skill7,影遁,skill7,12,invincible,0,0.6,化作殘影衝刺一段距離，途中無敵；之後第一箭必定暴擊
+tang_ult,tang,ult,千機・漫天花雨,ult,0,invincible,0,2.5,全程無敵。躍上半空連射十二箭把敵人打浮空，最後一支爆裂箭炸落

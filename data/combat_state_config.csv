@@ -1,0 +1,16 @@
+key,value,note
+hit_down_time_s,1.2,倒地持續時間；期間沒再被打就起身
+getup_invincible_s,0.9,起身無敵時間（倒地結束、浮空落地都會觸發）
+down_hit_launch_h_m,1.0,倒地時被打到的最低浮空高度（招式本身的浮空高度更高就用招式的）
+air_hit_pop_h_m,0.6,浮空中被不帶浮空的招式打到時，往上彈的高度
+juggle_decay,0.85,浮空連段衰減：每多打一下，浮空高度乘這個比例（避免無限連）
+juggle_min_h_m,0.15,浮空高度衰減到這以下就不再往上彈
+air_gravity,22,浮空時的重力（公尺／秒²）
+air_min_time_s,0.12,起飛後至少這麼久才判定落地
+armor_break_s,2.5,常駐霸體（精英、首領）被破除後，這段時間沒有霸體
+armor_hitstop_s,0.05,霸體吃招時的頓幀（有受到衝擊感但不被打斷）
+hitstun_elite_mult,0.7,精英的硬直倍率
+hitstun_boss_mult,0.4,首領的硬直倍率（霸體被破除後才吃得到硬直）
+rage_max,100,大招所需怒氣
+rage_per_hit,2.5,每次命中獲得怒氣
+rage_per_hurt,4,每次受擊獲得怒氣

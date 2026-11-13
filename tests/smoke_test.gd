@@ -30,6 +30,7 @@ func _ready() -> void:
 	main._input(mv)
 	_check(not UIKit.kbd_nav and not first_btn.has_theme_stylebox_override("normal"), "動滑鼠後焦點高亮消失")
 	await _check_audio_settings()
+	_check_combat_state()
 	for cid in Data.char_order:
 		await _run_character(cid)
 	print("SMOKE_DONE errors=%d" % errors)
@@ -661,6 +662,73 @@ func _check_loot_and_shops(world, player) -> void:
 	Game.martial_order = old_order
 	Game.recompute()
 	await _frames(2)
+
+
+func _check_combat_state() -> void:
+	# 招式表：三個角色各有普攻、七個技能、一個大招
+	for cid in Data.char_order:
+		var slots: Dictionary = Data.char_moves.get(cid, {})
+		var ok := slots.has("normal1") and slots.has("ult")
+		for i in range(1, 8):
+			ok = ok and slots.has("skill%d" % i)
+		_check(ok, "%s 有普攻、七技能、大招" % Data.characters[cid].name_zh)
+	var hit := {"hitstun_s": 0.4, "launch": 0, "launch_h_m": 0, "break_armor": 0, "knockdown": 0}
+	var launcher := {"hitstun_s": 0.4, "launch": 1, "launch_h_m": 2.0, "break_armor": 0, "knockdown": 0}
+	var breaker := {"hitstun_s": 0.5, "launch": 0, "launch_h_m": 0, "break_armor": 1, "knockdown": 0}
+	var sweep := {"hitstun_s": 0.5, "launch": 0, "launch_h_m": 0, "break_armor": 0, "knockdown": 1}
+	var S := CombatState.S
+	var c := CombatState.new()
+	# 受擊：硬直期間不能操控，時間到恢復
+	c.apply_hit(hit)
+	_check(c.state() == S.HIT and not c.can_act(), "被打進入受擊，無法操控")
+	c.tick(0.39, true)
+	_check(c.state() == S.HIT, "硬直時間內維持受擊")
+	c.tick(0.02, true)
+	_check(c.state() == S.NORMAL and c.can_act(), "硬直結束回到正常")
+	# 霸體：受傷但不被打斷；破霸體的招式才打得斷
+	c.give_armor(1.0)
+	var r: Dictionary = c.apply_hit(hit)
+	_check(c.state() == S.ARMOR and r.taken and r.absorbed and c.can_act(), "霸體吃招不進入受擊，仍可操控")
+	r = c.apply_hit(breaker)
+	_check(c.state() == S.HIT and not r.absorbed, "破霸體的招式打斷霸體")
+	c.reset()
+	# 無敵：打不到
+	c.give_invincible(0.5)
+	r = c.apply_hit(launcher)
+	_check(c.state() == S.INVINCIBLE and not r.taken and c.can_act(), "無敵時打不到，可操控")
+	c.reset()
+	# 浮空：不能操控；追打再彈起且逐次衰減；落地起身無敵
+	r = c.apply_hit(launcher)
+	var v0: float = r.launch_v
+	_check(c.state() == S.AIR and not c.can_act() and v0 > 0.0, "浮空招把目標打上半空")
+	c.tick(0.2, false)
+	var r1: Dictionary = c.apply_hit(hit)
+	var r2: Dictionary = c.apply_hit(hit)
+	_check(r1.launch_v > 0.0 and r2.launch_v < r1.launch_v and c.state() == S.AIR, "浮空追打會再彈起，高度逐次衰減")
+	c.tick(0.2, true)
+	_check(c.state() == S.INVINCIBLE and c.can_act(), "浮空落地觸發起身無敵")
+	c.tick(Data.combat_state.getup_invincible_s + 0.01, true)
+	_check(c.state() == S.NORMAL, "起身無敵結束回到正常")
+	# 倒地：不能操控；被打就浮空；沒被打則起身無敵
+	c.apply_hit(sweep)
+	_check(c.state() == S.DOWN and not c.can_act(), "擊倒招讓目標倒地")
+	r = c.apply_hit(hit)
+	_check(c.state() == S.AIR and r.launch_v > 0.0, "倒地時再被打到就浮空")
+	c.reset()
+	c.apply_hit(sweep)
+	c.tick(Data.combat_state.hit_down_time_s + 0.01, true)
+	_check(c.state() == S.INVINCIBLE, "倒地結束沒被打，起身無敵")
+	# 常駐霸體（精英、首領）：破除後有空窗，之後恢復
+	var e := CombatState.new()
+	e.armor_always = true
+	e.apply_hit(hit)
+	_check(e.state() == S.ARMOR, "精英常駐霸體")
+	e.apply_hit(breaker)
+	e.tick(1.0, true)
+	e.apply_hit(hit)
+	_check(e.state() == S.HIT, "霸體被破除後的空窗內會吃硬直")
+	e.tick(Data.combat_state.armor_break_s, true)
+	_check(e.state() == S.ARMOR, "空窗結束恢復霸體")
 
 
 func _check_audio_settings() -> void:
