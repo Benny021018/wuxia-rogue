@@ -6,3 +6,6 @@ export/
 
 __pycache__/
 *.pyc
+
+# 敵人身體是中間檔，用 tools/build_enemy_bodies.py 從素材包重建
+assets/models/enemy-bodies/

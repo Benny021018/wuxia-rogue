@@ -4,11 +4,11 @@ H01,Hit,Hit_Chest,0.24,0.5,0.55,715244
 H01,Death,Death01,0.32,0.5,0.55,715244
 H01,Walk,Jog_Fwd_Loop,0.8,0.5,0.55,715244
 H01,Slash,Sword_Regular_A,0.74,0.473,0.47,715244
-H02,Idle,Ranged_Bow_Idle,1.96,0.5,0.55,415c52
+H02,Idle,legacy:Idle,1.96,0.5,0.5,415c52
 H02,Hit,Hit_Chest,0.24,0.5,0.55,415c52
 H02,Death,Death01,0.32,0.5,0.55,415c52
 H02,Walk,Walk_Loop,0.89,0.5,0.55,415c52
-H02,Shoot,Ranged_Bow_Draw,1.8,0.5,0.55,415c52
+H02,Shoot,legacy:Shoot,1.8,0.5,0.5,415c52
 H03,Idle,Idle_Shield_Loop,2.12,0.5,0.55,535968
 H03,Hit,Hit_Chest,0.24,0.5,0.55,535968
 H03,Death,Death01,0.32,0.5,0.55,535968

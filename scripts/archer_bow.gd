@@ -48,7 +48,7 @@ static func make_arrow() -> Node3D:
 
 func bind(skel: Skeleton3D) -> void:
 	skeleton = skel
-	for hand in ["LeftHand","RightHand"]:
+	for hand in (["hand_l","hand_r"] if skel.find_bone("hand_l") >= 0 else ["LeftHand","RightHand"]):
 		hands.append(skel.find_bone(hand))
 	for side in 2:
 		for i in 4:

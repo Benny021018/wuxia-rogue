@@ -519,7 +519,7 @@ func _spawn_rest_stop(shrine_pos: Vector3) -> void:
 		if shrine_pos.x >= room.x0 and shrine_pos.x <= room.x0 + room.w:
 			r = room
 	var smith_at := _stall_spot(r, shrine_pos, [])
-	smith_node = _rest_npc(SMITH_PROP, smith_at, "鐵匠\n［F］強化／重鑄", Color(1.0, 0.62, 0.3))
+	smith_node = _rest_npc(SMITH_PROP, smith_at, "鐵匠\n［F］淬煉／重鑄", Color(1.0, 0.62, 0.3))
 	merchant_node = _rest_npc(MERCHANT_PROP, _stall_spot(r, shrine_pos, [smith_at]), "商人\n［F］購買武學", Color(0.95, 0.85, 0.5))
 	Game.restock_merchant()
 

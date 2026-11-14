@@ -128,14 +128,17 @@ func _run_character(cid: String) -> void:
 			sample.free()
 		for id in ["H01", "H02", "H03", "H07", "H08"]:
 			var enemy = world.spawn_enemy(id, Vector3(-10, 0, 0), false)
-			var parts: Array = enemy._visual.find_children("Smart_*", "MeshInstance3D", true, false)
-			_check(parts.size() == 1 and enemy._body_mat.vertex_color_use_as_albedo, "%s 模型與攻擊預警材質" % id)
+			var parts: Array = enemy._flash_meshes
+			_check(parts.size() >= 3 and parts.all(func(m): return m.material_overlay == enemy._body_mat), "%s 換成配裝角色，所有部位都有攻擊預警光" % id)
 			var motion: AnimationPlayer = enemy._anim
 			_check(motion != null and motion.has_animation("Walk") and motion.has_animation("Shoot" if id == "H02" else "Slash"), "%s 的移動與攻擊動作可播放" % id)
-			if parts.size() == 1:
-				var part: MeshInstance3D = parts[0]
-				var bounds := part.global_transform * part.get_aabb()
-				_check(absf(bounds.size.y - 1.8 * enemy.size) < 0.02 and absf(bounds.position.y) < 0.02, "%s 站姿與膠囊對齊" % id)
+			var low := INF
+			var high := -INF
+			for part in parts:
+				var bounds: AABB = part.global_transform * part.get_aabb()
+				low = minf(low, bounds.position.y)
+				high = maxf(high, bounds.end.y)
+			_check(absf(low) < 0.25 and high - low > 1.4 * enemy.size and high - low < 2.3 * enemy.size, "%s 站在地上、身高與膠囊相近（%.2f～%.2f）" % [id, low, high])
 			if id == "H02":
 				_check_draw(enemy, world)
 			enemy.queue_free()
@@ -1013,7 +1016,7 @@ func _check_hit_reactions(world) -> void:
 	await _frames(3)
 	_check(e._impact_pivot.position.length() > .01 and e._flash.albedo_color.a > 0, "盾擋也晃動泛紅")
 	await _frames(32)
-	_check(e._flash_meshes[0].material_overlay == null, "泛紅結束還原原本外觀")
+	_check(e._flash_meshes[0].material_overlay == e._body_mat, "泛紅結束還原原本外觀（換回起手光疊層）")
 	_check(e._impact_pivot.transform.is_equal_approx(Transform3D.IDENTITY) and e.global_position.is_equal_approx(origin), "連擊後完全回正，碰撞位置不漂移")
 	e.queue_free()
 
@@ -1446,7 +1449,7 @@ func _check_third_person(world, player) -> void:
 		if e.cs.state() == S.AIR and e.global_position.y > 0.5:
 			launched = true
 			break
-	_check(launched and _face_points_up(e._visual.find_children("*", "Skeleton3D", true, false)[0], Vector3.FORWARD), "挑月浮空時，敵人頭部朝向天空")
+	_check(launched and _face_points_up(e._visual.find_children("*", "Skeleton3D", true, false)[0], Vector3.BACK), "挑月浮空時，敵人頭部朝向天空")
 	# 浮空追打
 	var hp0: float = e.hp
 	player.deal(e, 10.0, false, 1.0, Vector3.INF, {"hitstun_s": 0.2, "launch": 0})

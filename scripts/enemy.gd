@@ -168,26 +168,34 @@ func _ready() -> void:
 		_bow = Bow.new()
 		_impact_pivot.add_child(_bow)
 		_bow.bind(_skeleton)
-	var mesh: MeshInstance3D = model.find_children("*", "MeshInstance3D", true, false)[0]
-	var material := mesh.get_active_material(0)
-	_body_mat = material.duplicate() if material else StandardMaterial3D.new()
-	mesh.set_surface_override_material(0, _body_mat)
+	# 起手光：身體由多個部位、多張貼圖組成，所以用一層疊加材質（加色）統一發光，
+	# 平常加黑色＝看不出來；受擊閃白暫時換成 _flash，結束後換回來
+	_body_mat = StandardMaterial3D.new()
+	_body_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	_body_mat.albedo_color = Color.BLACK
+	_body_mat.metallic_specular = 0.0
+	_body_mat.roughness = 1.0
+	_body_mat.emission_energy_multiplier = 0.55
 	if eid in ["H01","H07","H08"]:
 		var wrist := BoneAttachment3D.new()
 		_skeleton.add_child(wrist)
-		wrist.bone_name = "RightHand"
+		wrist.bone_name = "hand_r" if _skeleton.find_bone("hand_r") >= 0 else "RightHand"
 		var sword := preload("res://assets/models/weapons/Tachi.glb").instantiate()
 		wrist.add_child(sword)
 		sword.find_child("Saya",true,false).hide()
-		sword.rotation_degrees = Vector3(-20,0,0)
-		sword.scale = Vector3.ONE * (.72 if eid=="H01" else .9)
+		var g: Array = preload("res://scripts/fighter_model.gd").GRIP["W001"]
+		sword.position = g[0]
+		sword.rotation_degrees = g[1]
+		sword.scale = Vector3.ONE * (.82 if eid=="H01" else 1.0)
 	if eid == "Z06":
 		var core := FX.sphere(0.35, Color(0.3, 1.0, 0.4), 3.0)
 		core.position = Vector3(0, 1.6 * size * 0.5 + 0.6, 0.45 * size)
 		_visual.add_child(core)
 	_flash.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_flash.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_flash_meshes = _visual.find_children("*", "MeshInstance3D", true, false)
+	_flash_meshes = _visual.find_children("*", "MeshInstance3D", true, false).filter(func(m): return m.get_parent() is Skeleton3D)
+	for mesh in _flash_meshes:
+		mesh.material_overlay = _body_mat
 	if rank != "minion":
 		_label = FX.label3d(row.name_zh, 64, Color(1, 0.85, 0.6) if rank == "elite" else Color(1, 0.4, 0.3))
 		_label.position.y = 2.2 * size + 0.3
@@ -216,11 +224,11 @@ func _physics_process(delta: float) -> void:
 	if _pose:
 		if cs.base == CombatState.S.AIR:
 			_pose.rotation.x = CombatState.airborne_pitch()
-			if _anim and (_anim.assigned_animation != &"Idle" or _anim.is_playing()):
-				_anim.play(&"Idle", 0)
+			if _anim and (_anim.assigned_animation != &"Hit" or _anim.is_playing()):
+				# 浮空：停在受擊第一格（仰頭、手腳收起）；新骨架的靜止姿勢是 T 字，不能 reset 骨頭
+				_anim.play(&"Hit", 0)
 				_anim.seek(0, true)
 				_anim.pause()
-				_skeleton.reset_bone_poses()
 		else:
 			_pose.rotation.x = lerp_angle(_pose.rotation.x, -PI / 2.0 if lying else 0.0, minf(1.0, delta * 16.0))
 		_pose.position.y = lerpf(_pose.position.y, 0.35 * size if lying else 0.0, minf(1.0, delta * 16.0))
@@ -1477,7 +1485,7 @@ func _react_to_hit(away: Vector3, weight: float, guard: bool) -> void:
 	_recoil.parallel().tween_property(_flash, "albedo_color:a", 0.0, fade * .5)
 	_recoil.tween_callback(func():
 		for mesh in _flash_meshes:
-			mesh.material_overlay = null)
+			mesh.material_overlay = _body_mat)
 
 
 ## 被玩家擊中：回傳實際造成的傷害
