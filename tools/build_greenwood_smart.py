@@ -99,9 +99,6 @@ def fit(key,target):
             group=o.vertex_groups.new(name=b.name)
             for idx in np.flatnonzero(weights[:,j]):group.add([int(idx)],float(weights[idx,j]),'REPLACE')
         o.data.update()
-        sys.path.insert(0,str(ROOT/'tools'))
-        from sculpt_camp_faces import sculpt
-        sculpt(o,key)
         o.parent=rig;o.matrix_parent_inverse=rig.matrix_world.inverted();mod=o.modifiers.new('Skin','ARMATURE');mod.object=rig
     else:
         if target[0]>target[1]*1.7 and dims[1]>dims[0]:
