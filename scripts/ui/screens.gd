@@ -104,7 +104,7 @@ func show_help() -> void:
 	var bindings := [["WASD", "移動"], ["滑鼠", "視角"], ["空白鍵", "跳躍"], ["Shift", "閃避（短暫無敵）"],
 			["左鍵", "普攻，連按接連段"], ["右鍵 Q E R 1 2 3", "七個技能"], ["V", "大招（怒氣滿）"]]
 	if not network_match:
-		bindings.append_array([["F", "參悟、鐵匠、商人"], ["K", "經脈"], ["Tab", "武學與門派"]])
+		bindings.append_array([["F", "參悟、撿配件、鐵匠、商人"], ["K", "經脈"], ["Tab", "武學與門派"]])
 	bindings.append(["Esc", "開啟選單" if network_match else "暫停"])
 	for pair in bindings:
 		var row := HBoxContainer.new()
@@ -436,35 +436,40 @@ func _inventory_character(x: float, y: float, w: float, h: float) -> void:
 	var lines: Array = ["生命　%d" % int(Game.max_hp()), "暴擊率　%.0f%%" % (float(Data.gacha.base_crit_rate_pct) + Game.st("crit_rate_pct")),
 		"暴擊傷害　%.0f%%" % (float(Data.gacha.base_crit_dmg_pct) + Game.st("crit_dmg_pct"))]
 	for key in ["dmg_pct", "atk_speed_pct", "lifesteal_pct", "dmg_reduction_pct", "dodge_pct", "move_speed_pct", "area_pct", "range_pct", "hp_regen", "gold_gain_pct", "xiuwei_gain_pct", "luck"]:
-		if Game.st(key) != 0.0 and lines.size() < 9:
+		if Game.st(key) != 0.0 and lines.size() < 8:
 			lines.append("%s　+%s" % [Data.stat_names.get(key, key), ("%.2f" % Game.st(key)).rstrip("0").rstrip(".")])
 	var stats := UIKit.box_text("system", "\n".join(lines), 17, "屬性", HORIZONTAL_ALIGNMENT_LEFT)
 	stats.set_padding(18, 20)
 	stats.get_meta("label").vertical_alignment = VERTICAL_ALIGNMENT_TOP
-	_at(stats, x + 30, y + 276, w - 70, 246)
-	_at(UIKit.label("武器　Q／滾輪切換", 15, UIKit.GREY), x + 30, y + 536, w - 60, 24)
-	for i in 2:
-		var row_y := y + 566 + i * 50
-		var wpn = Game.weapons[i]
-		var row := UIKit.box("slant")
-		row.slant = 12
-		row.fill = UIKit.INK2
-		row.border = (UIKit.TEAL if i == Game.active_weapon else UIKit.BONE) if wpn != null else UIKit.DIM
-		_at(row, x + 26, row_y, w - 66, 40)
-		_at(UIKit.label(Game.slot_name(i), 14, UIKit.TEAL if i == Game.active_weapon else UIKit.GREY), x + 46, row_y + 9, 70, 24)
-		if wpn == null:
-			_at(UIKit.label("（空）", 18, UIKit.DIM, HORIZONTAL_ALIGNMENT_LEFT, true), x + 116, row_y + 6, 200, 30)
+	_at(stats, x + 30, y + 272, w - 70, 240)
+	# 兵器與配件（docs/ui-drafts/05-martial-panel.svg）
+	var wpn: Dictionary = Game.weapons[0]
+	var rows: Array = [["兵器", Data.weapons[wpn.id].name_zh, "淬煉+%d" % int(wpn.lv) if int(wpn.lv) < Game.MAX_LV else "器靈覺醒", UIKit.BONE, ""]]
+	for slot in Game.GEAR_SLOTS:
+		var g = Game.gear.get(slot)
+		if g == null:
+			rows.append([Game.gear_slot_name(slot), "尚未取得", "", UIKit.DIM, ""])
 			continue
-		var wl := UIKit.label(Data.weapons[wpn.id].name_zh, 19, UIKit.BONE, HORIZONTAL_ALIGNMENT_LEFT, true)
-		var tips: Array = []
-		for a in wpn.get("affixes", []):
+		var tips: Array = ["◇ " + Data.affix_text(g.base)]
+		for a in g.get("affixes", []):
 			tips.append("◆ " + Data.affix_text(a))
-		wl.tooltip_text = "%s　淬煉+%d\n%s" % [Data.weapons[wpn.id].name_zh, int(wpn.lv), "\n".join(tips) if not tips.is_empty() else "（沒有詞條）"]
-		wl.mouse_filter = Control.MOUSE_FILTER_PASS
-		_at(wl, x + 116, row_y + 5, 170, 30)
-		if not tips.is_empty():
-			_at(UIKit.label("詞條 %d" % tips.size(), 13, UIKit.TEAL), x + 230, row_y + 11, 70, 20)
-		_at(UIKit.label("淬煉+%d" % int(wpn.lv), 15, UIKit.EMBER if int(wpn.lv) > 1 else UIKit.GREY, HORIZONTAL_ALIGNMENT_RIGHT), x + w - 150, row_y + 9, 90, 24)
+		var gname: String = Data.accessories[g.id].name_zh
+		rows.append([Game.gear_slot_name(slot), gname, "詞條 %d" % g.affixes.size(), UIKit.rarity_color(Game.gear_quality(g)), "%s　%s\n%s" % [gname, UIKit.rarity_name(Game.gear_quality(g)), "\n".join(tips)]])
+	for i in rows.size():
+		var r: Array = rows[i]
+		var row_y := y + 536 + i * 34
+		var box := UIKit.box("slant")
+		box.slant = 10
+		box.fill = UIKit.INK2
+		box.border = r[3] if r[3] != UIKit.DIM else Color("#3a363e")
+		_at(box, x + 26, row_y, w - 66, 30)
+		_at(UIKit.label(r[0], 13, UIKit.TEAL if i == 0 else UIKit.GREY), x + 44, row_y + 6, 50, 20)
+		var nl := UIKit.label(r[1], 16, r[3], HORIZONTAL_ALIGNMENT_LEFT, true)
+		if r[4] != "":
+			nl.tooltip_text = r[4]
+			nl.mouse_filter = Control.MOUSE_FILTER_PASS
+		_at(nl, x + 96, row_y + 2, 170, 26)
+		_at(UIKit.label(r[2], 13, UIKit.EMBER if i == 0 else UIKit.GREY, HORIZONTAL_ALIGNMENT_RIGHT), x + w - 156, row_y + 6, 100, 20)
 
 
 func _inventory_martial(x: float, y: float, w: float, h: float) -> void:

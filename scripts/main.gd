@@ -187,13 +187,21 @@ func _process(_delta: float) -> void:
 	match t[0]:
 		"drop":
 			var item: Dictionary = t[1].get_meta("item")
-			var wname: String = Data.weapons[item.id].name_zh
-			if Game.weapons[1] == null:
-				text = "［F］撿起 %s（放進副武器）" % wname
+			if item.get("kind", "") == "gear":
+				var gname: String = Data.accessories[item.id].name_zh
+				var worn = Game.gear.get(item.slot)
+				if worn == null:
+					text = "［F］戴上%s（%s）" % [gname, Game.gear_slot_name(item.slot)]
+				else:
+					text = "［F］撿起%s，換下身上的%s" % [gname, Data.accessories[worn.id].name_zh]
 			else:
-				text = "［F］撿起 %s（換掉手上的 %s）" % [wname, Data.weapons[Game.current_weapon().id].name_zh]
+				var wname: String = Data.weapons[item.id].name_zh
+				if Game.weapons[1] == null:
+					text = "［F］撿起 %s（放進副武器）" % wname
+				else:
+					text = "［F］撿起 %s（換掉手上的 %s）" % [wname, Data.weapons[Game.current_weapon().id].name_zh]
 		"smith":
-			text = "［F］鐵匠：強化武器、重鑄詞條"
+			text = "［F］鐵匠：淬煉兵器、重鑄配件"
 		"merchant":
 			text = "［F］商人：購買武學"
 	hud.set_prompt(text)
@@ -207,10 +215,16 @@ func _on_interact() -> void:
 		"drop":
 			var item: Dictionary = world.take_drop(t[1])
 			Sfx.play("pickup")
-			var old = Game.pick_up(item)
-			if old != null:
-				world.spawn_drop(player.global_position + player.global_basis.z * -1.2, old)
-			Game.message.emit("撿起：%s　詞條 %d" % [Data.weapons[item.id].name_zh, item.get("affixes", []).size()])
+			if item.get("kind", "") == "gear":
+				var old_gear = Game.equip_gear(item)
+				if old_gear != null:
+					world.spawn_drop(player.global_position + player.global_basis.z * -1.2, old_gear)
+				Game.message.emit("配件：%s　%s" % [Data.accessories[item.id].name_zh, UIKit.rarity_name(Game.gear_quality(item))])
+			else:
+				var old = Game.pick_up(item)
+				if old != null:
+					world.spawn_drop(player.global_position + player.global_basis.z * -1.2, old)
+				Game.message.emit("撿起：%s　詞條 %d" % [Data.weapons[item.id].name_zh, item.get("affixes", []).size()])
 		"shrine":
 			mode = "gacha"
 			get_tree().paused = true

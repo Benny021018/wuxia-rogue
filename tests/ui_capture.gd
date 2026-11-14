@@ -27,7 +27,8 @@ func _ready() -> void:
 	player.invuln_t = 1.0e9
 	Game.gold = 236
 	Game.shrine_charges = 1
-	Game.weapons[1] = {"id": "W007", "lv": 1}
+	Game.gear.charm = Game.make_gear("G01", 2)
+	Game.gear.jade = Game.make_gear("G08", 3)
 	Game.weapons[0].lv = 3
 	for pair in [["M007", 2], ["M006", 1], ["M002", 3]]:
 		Game.martial[pair[0]] = pair[1]
@@ -112,7 +113,7 @@ func _ready() -> void:
 	main.shop.visible = false
 	get_tree().paused = false
 	main.mode = "play"
-	world.spawn_drop(player.global_position + player.global_basis.z * -1.0, {"id": "W007", "lv": 1, "affixes": [{"id": "A02", "v": 8.0}, {"id": "A11", "v": 12.0}, {"id": "A05", "v": 2.4}], "reforges": 0})
+	world.spawn_drop(player.global_position + player.global_basis.z * -1.0, Game.make_gear("G09", 3))
 	await _shot("09-drop-compare", 8)
 	for d in world.drops:
 		d.queue_free()

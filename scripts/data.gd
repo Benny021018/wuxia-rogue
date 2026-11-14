@@ -10,6 +10,8 @@ var combat := {}            # key -> value
 var shop := {}              # key -> value（掉落、鐵匠、商人）
 var affixes := {}           # affix_id -> row（武器詞條）
 var affix_order: Array = []
+var accessories := {}       # acc_id -> row（配件：護符、腰牌、玉珮）
+var accessory_order: Array = []
 var characters := {}        # char_id -> row
 var char_order: Array = []
 var passives: Array = []
@@ -61,6 +63,9 @@ func _ready() -> void:
 	for r in _csv("weapon_affixes"):
 		affixes[r.affix_id] = r
 		affix_order.append(r.affix_id)
+	for r in _csv("accessories"):
+		accessories[r.acc_id] = r
+		accessory_order.append(r.acc_id)
 	for r in _csv("characters"):
 		characters[r.char_id] = r
 		char_order.append(r.char_id)

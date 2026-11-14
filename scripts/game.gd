@@ -29,6 +29,8 @@ var wheel_last := {}                   # 上一次轉輪的結果 {stops, outcom
 var refreshes_this_stage := 0
 var gold := 0.0
 var weapons: Array = [null, null]      # 0＝主武器、1＝副武器，每格 {id, lv, affixes, reforges}
+const GEAR_SLOTS := ["charm", "token", "jade"]
+var gear := {"charm": null, "token": null, "jade": null}   # 配件：每格 {kind, id, slot, base, affixes, reforges}
 var active_weapon := 0                 # 目前手上的武器格；同時只用一把
 var merchant_stock: Array = []         # 商人上架的武學 [{id, rarity, sold}]
 var martial := {}                      # martial_id -> lv
@@ -88,6 +90,7 @@ func new_run(cid: String, start_wid := "", is_duel := false) -> void:
 	var first: String = start_wid if start_wid != "" else String(Data.characters[cid].weapon_id)
 	weapons = [make_weapon(first, 0), null]
 	active_weapon = 0
+	gear = {"charm": null, "token": null, "jade": null}
 	merchant_stock = []
 	running = true
 	recompute()
@@ -142,6 +145,14 @@ func recompute() -> void:
 	var held = current_weapon()
 	if held != null:
 		for a in held.get("affixes", []):
+			s[Data.affixes[a.id].stat_id] += float(a.v)
+	# 配件：本體屬性＋詞條
+	for slot in GEAR_SLOTS:
+		var g = gear.get(slot)
+		if g == null:
+			continue
+		s[Data.affixes[g.base.id].stat_id] += float(g.base.v)
+		for a in g.get("affixes", []):
 			s[Data.affixes[a.id].stat_id] += float(a.v)
 	# 武學
 	for mid in martial:
@@ -342,15 +353,15 @@ func make_weapon(wid: String, affix_n: int) -> Dictionary:
 	return {"id": wid, "lv": 1, "affixes": roll_affixes(wid, affix_n), "reforges": 0}
 
 
-func roll_affixes(wid: String, n: int) -> Array:
-	## 抽 n 條不重複的詞條；近戰、遠程限定詞條只出現在對應武器
+func roll_affixes(wid: String, n: int, exclude: Array = []) -> Array:
+	## 抽 n 條不重複的詞條；近戰、遠程限定詞條只出現在對應武器；exclude 裡的詞條不抽
 	var kind: String = Data.weapons[wid].range_type
 	var items: Array = []
 	var weights: Array = []
 	for aid in Data.affix_order:
 		var row: Dictionary = Data.affixes[aid]
 		var rt: String = row.range_type
-		if rt == "melee" and kind == "ranged" or rt == "ranged" and kind == "melee":
+		if rt == "melee" and kind == "ranged" or rt == "ranged" and kind == "melee" or exclude.has(aid):
 			continue
 		items.append(aid)
 		weights.append(float(row.weight))
@@ -360,14 +371,73 @@ func roll_affixes(wid: String, n: int) -> Array:
 		var k := items.find(aid)
 		items.remove_at(k)
 		weights.remove_at(k)
-		var row: Dictionary = Data.affixes[aid]
-		var tier := affix_tier(row)
-		var lo: float = float(row.min) * tier
-		var hi: float = float(row.max) * tier
-		var v := rng.randf_range(lo, hi)
-		v = snappedf(v, 0.01 if hi < 1.0 else (0.1 if hi <= 5.0 else 1.0))
-		out.append({"id": aid, "v": v})
+		out.append({"id": aid, "v": roll_affix_value(aid)})
 	return out
+
+
+func roll_affix_value(aid: String) -> float:
+	var row: Dictionary = Data.affixes[aid]
+	var tier := affix_tier(row)
+	var lo: float = float(row.min) * tier
+	var hi: float = float(row.max) * tier
+	var v := rng.randf_range(lo, hi)
+	return snappedf(v, 0.01 if hi < 1.0 else (0.1 if hi <= 5.0 else 1.0))
+
+
+# ------------------------------------------------------------------ 配件（護符、腰牌、玉珮）
+static func gear_slot_name(slot: String) -> String:
+	return {"charm": "護符", "token": "腰牌", "jade": "玉珮"}.get(slot, slot)
+
+
+static func gear_quality(item: Dictionary) -> String:
+	## 品質＝詞條數：1 凡品、2 良品、3 神兵、4 絕世（顏色沿用 rarity.csv）
+	var n: int = clampi(item.get("affixes", []).size(), 1, 4)
+	return ["common", "rare", "epic", "legendary"][n - 1]
+
+
+func make_gear(acc_id: String, affix_n: int) -> Dictionary:
+	var row: Dictionary = Data.accessories[acc_id]
+	var base := String(row.base_affix)
+	return {"kind": "gear", "id": acc_id, "slot": String(row.slot), "base": {"id": base, "v": roll_affix_value(base)},
+		"affixes": roll_affixes(String(weapons[0].id), affix_n, [base]), "reforges": 0}
+
+
+func roll_gear_drop(rank: String) -> Dictionary:
+	## 擊殺掉落配件：依敵人階級決定機率與詞條數；沒掉回傳空字典
+	var chance := Data.cfg("drop_chance_" + rank) * (1.0 + st("luck") * Data.cfg("drop_luck_scale"))
+	if rng.randf() >= chance or Data.accessory_order.is_empty():
+		return {}
+	var aid: String = Data.accessory_order[rng.randi() % Data.accessory_order.size()]
+	return make_gear(aid, affix_count(rank))
+
+
+func equip_gear(item: Dictionary):
+	## 戴上配件；回傳被換下的那件（或 null）
+	var old = gear.get(item.slot)
+	gear[item.slot] = item
+	recompute()
+	return old
+
+
+func gear_reforge_cost(slot: String) -> int:
+	var g = gear.get(slot)
+	if g == null or g.get("affixes", []).is_empty():
+		return -1
+	return int(round(Data.cfg("reforge_cost_base") * pow(1.0 + Data.cfg("reforge_cost_growth"), int(g.get("reforges", 0))) * price_mult()))
+
+
+func reforge_gear(slot: String) -> bool:
+	## 本體不變，◆ 詞條全部重抽（條數不變）
+	var c := gear_reforge_cost(slot)
+	if c < 0 or gold < c:
+		return false
+	gold -= c
+	var g: Dictionary = gear[slot]
+	g.affixes = roll_affixes(String(weapons[0].id), g.affixes.size(), [String(g.base.id)])
+	g.reforges = int(g.get("reforges", 0)) + 1
+	gold_changed.emit()
+	recompute()
+	return true
 
 
 func affix_tier(row: Dictionary) -> float:
@@ -391,16 +461,6 @@ func affix_count(source: String) -> int:
 		return 1
 	var idx: Array = range(w.size())
 	return int(_pick_weighted(idx, w)) + 1
-
-
-func roll_weapon_drop(rank: String) -> Dictionary:
-	## 擊殺掉落：依敵人階級決定機率與詞條數；沒掉回傳空字典
-	var chance := Data.cfg("drop_chance_" + rank) * (1.0 + st("luck") * Data.cfg("drop_luck_scale"))
-	if rng.randf() >= chance:
-		return {}
-	# 武器不分品質：三把起手武器等機率
-	var wid: String = FEATURED_WEAPONS[rng.randi() % FEATURED_WEAPONS.size()]
-	return make_weapon(wid, affix_count(rank))
 
 
 func pick_up(item: Dictionary):

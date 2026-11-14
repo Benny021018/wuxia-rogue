@@ -279,19 +279,25 @@ func _run_character(cid: String) -> void:
 	await _frames(2)
 	_check(main.hud.banner_burst.visible and main.hud.msg_box.get_child_count() > 0, "鎖陣橫幅與系統訊息")
 	# 掉落比較、鐵匠、商人
-	main.hud.show_drop_compare(Game.make_weapon("W007", 2))
-	_check(main.hud.drop_panel.visible and main.hud.drop_panel.get_child_count() > 3, "掉落兵器比較面板")
+	var hud_texts: Array = main.hud.find_children("*", "Label", true, false).map(func(l): return l.text)
+	_check(not hud_texts.any(func(t): return String(t).contains("切換主副武器")), "戰鬥 HUD 不再顯示武器卡與切換提示")
+	main.hud.show_drop_compare(Game.make_gear("G09", 3))
+	_check(main.hud.drop_panel.visible and main.hud.drop_panel.get_child_count() > 3, "配件掉落比較面板")
 	main.hud.show_drop_compare(null)
 	Game.gold = 5000.0
-	Game.weapons = [Game.make_weapon("W001", 0), Game.make_weapon("W007", 2)]
+	Game.weapons = [Game.make_weapon("W001", 0), null]
+	Game.gear = {"charm": Game.make_gear("G01", 2), "token": null, "jade": null}
 	Game.recompute()
 	main.open_shop("smith")
 	await _frames(2)
-	var lv0: int = Game.weapons[1].lv
-	main.shop._on_upgrade(1)
-	_check(Game.weapons[1].lv == lv0 + 1 and main.mode == "shop", "鐵匠頁強化副武器")
-	main.shop._on_reforge(1)
-	_check(Game.weapons[1].reforges == 1, "鐵匠頁重鑄副武器詞條")
+	var smith_texts: Array = main.shop.body.find_children("*", "Label", true, false).map(func(l): return l.text)
+	_check(smith_texts.has("尚未取得") and smith_texts.has("平安符"), "鐵匠頁列出三個配件欄（沒有的顯示尚未取得）")
+	var lv0: int = Game.weapons[0].lv
+	main.shop._on_upgrade(0)
+	_check(Game.weapons[0].lv == lv0 + 1 and main.mode == "shop", "鐵匠頁淬煉兵器")
+	var base0: Dictionary = Game.gear.charm.base.duplicate()
+	main.shop._on_reforge_gear("charm")
+	_check(Game.gear.charm.reforges == 1 and Game.gear.charm.base == base0 and Game.gear.charm.affixes.size() == 2, "鐵匠頁重鑄配件：本體不變、詞條數不變")
 	main.shop._on_close()
 	main.open_shop("merchant")
 	Game.restock_merchant()
@@ -578,8 +584,27 @@ func _check_loot_and_shops(world, player) -> void:
 	var pw: Array = Game._pool(Data.weapons["W001"].rarity, "W", {})
 	_check(pw[0].is_empty(), "角色固定兵器：悟道碑不再出武器候選")
 	Game.weapons = keep_w
-	var boss_drop: Dictionary = Game.roll_weapon_drop("boss")
-	_check(boss_drop.is_empty(), "不再掉落武器（首領也不掉）")
+	# 配件：首領必掉、本體不跟詞條重複、戴上後屬性生效、換下回傳舊的
+	var boss_drop: Dictionary = Game.roll_gear_drop("boss")
+	_check(boss_drop.get("kind", "") == "gear" and boss_drop.affixes.size() >= 3, "首領必掉配件，至少 3 條詞條")
+	var g1: Dictionary = Game.make_gear("G09", 4)
+	_check(not g1.affixes.any(func(a): return a.id == g1.base.id), "配件的詞條不會跟本體屬性重複")
+	Game.gear = {"charm": null, "token": null, "jade": null}
+	Game.recompute()
+	var dmg0 := Game.st("dmg_pct")
+	_check(Game.equip_gear(g1) == null and Game.st("dmg_pct") > dmg0, "戴上墨玉珮，本體的傷害加成生效")
+	var g2: Dictionary = Game.make_gear("G08", 1)
+	_check(Game.equip_gear(g2) == g1 and Game.gear.jade == g2, "同一欄換上新配件，回傳舊的")
+	_check(Game.gear_quality(g2) == "common" and Game.gear_quality(g1) == "legendary", "配件品質依詞條數：1 凡品、4 絕世")
+	var gnode: Node3D = world.spawn_drop(player.global_position, g1)
+	main.mode = "play"
+	main._on_interact()
+	_check(Game.gear.jade == g1 and world.drops.size() == 1 and world.drops[0].get_meta("item") == g2, "撿起配件戴上，換下的掉在地上")
+	for d in world.drops:
+		d.queue_free()
+	world.drops = []
+	Game.gear = {"charm": null, "token": null, "jade": null}
+	Game.recompute()
 	# 手上那把的詞條才生效
 	Game.weapons = [Game.make_weapon("W001", 0), {"id": "W007", "lv": 1, "affixes": [{"id": "A01", "v": 10.0}], "reforges": 0}]
 	Game.active_weapon = 0

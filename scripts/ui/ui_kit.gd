@@ -401,6 +401,10 @@ static func rarity_color(rarity: String) -> Color:
 	return Data.rarity_color(rarity)
 
 
+static func rarity_name(rarity: String) -> String:
+	return String(Data.rarity.get(rarity, {}).get("name_zh", rarity))
+
+
 ## 切換「鍵盤操作中」狀態，並刷新目前焦點按鈕的外觀
 static func set_kbd_nav(on: bool, vp: Viewport) -> void:
 	if kbd_nav == on:

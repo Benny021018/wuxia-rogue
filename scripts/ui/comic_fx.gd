@@ -184,6 +184,40 @@ func add_weapon_icon(center: Vector2, weapon_class: String, scale := 1.0, color 
 	return self
 
 
+func add_gear_icon(center: Vector2, slot: String, scale := 1.0, color := UIKit.BONE) -> ComicFX:
+	## 配件剪影（docs/ui-drafts/10-smith.svg）：護符＝摺紙符、腰牌＝圓角牌、玉珮＝環形玉
+	var c := center
+	var s := scale
+	match slot:
+		"charm":
+			add_outline(PackedVector2Array([c + Vector2(-22, -34) * s, c + Vector2(22, -34) * s, c + Vector2(22, 30) * s, c + Vector2(0, 40) * s, c + Vector2(-22, 30) * s]), color, 4.0 * s)
+			add_line(PackedVector2Array([c + Vector2(-10, -20) * s, c + Vector2(10, -20) * s]), UIKit.BLOOD, 4.0 * s)
+			add_line(PackedVector2Array([c + Vector2(0, -26) * s, c + Vector2(0, 20) * s]), UIKit.BLOOD, 4.0 * s)
+			add_line(PackedVector2Array([c + Vector2(-12, 4) * s, c + Vector2(12, 4) * s]), UIKit.BLOOD, 4.0 * s)
+		"token":
+			add_line(PackedVector2Array([c + Vector2(0, -44) * s, c + Vector2(0, -34) * s]), color, 3.0 * s)
+			var plate := PackedVector2Array()
+			for i in 24:
+				var a := TAU * i / 24.0
+				var q := Vector2(cos(a), sin(a))
+				plate.append(c + Vector2(signf(q.x) * 12.0 + q.x * 12.0, signf(q.y) * 21.0 + q.y * 12.0) * s + Vector2(0, -1) * s)
+			add_outline(plate, color, 4.0 * s)
+			for k in 3:
+				var yy := -14.0 + k * 14.0
+				add_line(PackedVector2Array([c + Vector2(-12, yy) * s, c + Vector2(12 if k < 2 else 6, yy) * s]), UIKit.GOLD, 4.0 * s)
+		_:
+			add_line(PackedVector2Array([c + Vector2(0, -44) * s, c + Vector2(0, -30) * s]), color, 3.0 * s)
+			for r in [[30.0, 10.0, Color(UIKit.TEAL, 0.85)], [30.0, 2.0, color], [12.0, 2.0, color]]:
+				var ring := PackedVector2Array()
+				for i in 41:
+					ring.append(c + Vector2.from_angle(TAU * i / 40.0) * float(r[0]) * s)
+				add_line(ring, r[2], float(r[1]) * s)
+			add_line(PackedVector2Array([c + Vector2(0, 30) * s, c + Vector2(0, 46) * s]), UIKit.BLOOD, 3.0 * s)
+			add_line(PackedVector2Array([c + Vector2(-6, 46) * s, c + Vector2(0, 58) * s, c + Vector2(6, 46) * s]), UIKit.BLOOD, 3.0 * s)
+	queue_redraw()
+	return self
+
+
 func _draw() -> void:
 	for op in _ops:
 		match op[0]:

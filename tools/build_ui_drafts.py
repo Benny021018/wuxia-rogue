@@ -620,22 +620,9 @@ def s03_hud():
     b.append(text(224, 872, "銀兩 236", 18, GOLD, SANS, 900, extra=f'stroke="{INK}" stroke-width="4" paint-order="stroke"'))
     b.append(f'<rect x="322" y="856" width="122" height="22" fill="{EMBER}"/>')
     b.append(text(383, 872, "免費參悟 ×1", 14, INK, SANS, 900, "middle"))
-    # 右下：雙武器
-    for i, (key, name, lv, kind, rar) in enumerate([("主武器", "太刀", 2, "tachi", "common"), ("副武器", "竹弓", 1, "bow", "common")]):
-        x, y = 1110 + i * 240, 770
-        col = RARITY[rar][1]
-        b.append(slant(x, y, 226, 104, 18, INK, col if i == 0 else "#55505a", 3, 'opacity=".9"'))
-        b.append(weapon_icon(x + 74, y + 44, kind, 0.95, BONE))
-        b.append(f'<rect x="{x+18}" y="{y-12}" width="64" height="24" fill="{BONE if i==0 else GREY}"/>')
-        b.append(text(x + 50, y + 6, key, 14, INK, SANS, 900, "middle"))
-        b.append(text(x + 210, y + 84, name, 20, BONE, SERIF, 900, "end"))
-        b.append(text(x + 210, y + 32, f"淬煉+{lv}", 15, EMBER if lv else GREY, SANS, 900, "end"))
-        b.append(pips(x + 132, y + 50, lv, 5, 8, EMBER, (5,)))
-    b.append(f'<rect x="1110" y="752" width="226" height="6" fill="{TEAL}" filter="url(#glowTeal)"/>')
-    b.append(text(1576, 892, "Q／滾輪 切換主副武器", 14, GREY, SANS, 700, "end", f'stroke="{INK}" stroke-width="4" paint-order="stroke"'))
     # 下方提示
     b.append(system_box(640, 650, 320, 48, ["［E］參悟　悟道碑已浮現"], 18, dark=True, align="middle"))
-    b.append(note(30, 230, ["稿註：鎖陣橫幅、首領條、提示同時出現僅為示意；", "實際依事件淡入淡出。傷害數字：一般白、暴擊橘紅＋白框、", "格擋青色。同時只拿一把武器，上緣青線＝手上那把。"]))
+    b.append(note(30, 230, ["稿註：鎖陣橫幅、首領條、提示同時出現僅為示意；", "實際依事件淡入淡出。傷害數字：一般白、暴擊橘紅＋白框、", "格擋青色。角色固定一把兵器，右下不再顯示武器卡；", "配件與淬煉在 Tab 面板與鐵匠處查看。"]))
     return doc("\n".join(b), "03 戰鬥 HUD")
 
 
@@ -748,14 +735,15 @@ def s05_panel():
     b.append(text(x + 290, y + 228, "一流・第二重", 15, INK, SANS, 900, "middle"))
     stats = ["生命　188", "暴擊率　33%", "暴擊傷害　150%", "傷害　+10", "吸血　+7.5", "移動速度　+12", "閃避　+10"]
     b.append(system_box(x + 30, y + 262, w - 70, 240, stats, 17, tag="屬性"))
-    b.append(text(x + 30, y + 548, "武器", 16, GREY, SANS, 900))
-    for i, (hand, n, lv, rar) in enumerate([("主武器", "巨劍", 1, "legendary"), ("副武器", "竹弓", 1, "common")]):
-        yy = y + 566 + i * 50
-        col = RARITY[rar][1]
-        b.append(slant(x + 26, yy, w - 66, 40, 12, INK2, col, 2))
-        b.append(text(x + 46, yy + 27, hand, 14, TEAL if i == 0 else GREY, SANS, 900))
-        b.append(text(x + 110, yy + 28, n, 19, col, SERIF, 900))
-        b.append(text(x + w - 56, yy + 27, f"淬煉+{lv}", 15, EMBER if lv else GREY, SANS, 900, "end"))
+    gear = gear_rows()
+    rows = [("兵器", "巨劍", "淬煉+2", BONE, None), ("護符", gear["G01"]["name_zh"], "詞條 2", RARITY["rare"][1], "charm"),
+            ("腰牌", "—", "", "#55505a", "token"), ("玉珮", gear["G08"]["name_zh"], "詞條 3", RARITY["epic"][1], "jade")]
+    for i, (tag, n, info, col, slot) in enumerate(rows):
+        yy = y + 536 + i * 34
+        b.append(slant(x + 26, yy, w - 66, 30, 10, INK2, col if n != "—" else "#3a363e", 2))
+        b.append(text(x + 44, yy + 21, tag, 13, TEAL if i == 0 else GREY, SANS, 900))
+        b.append(text(x + 96, yy + 22, n if n != "—" else "尚未取得", 16, col if n != "—" else "#55505a", SERIF, 900))
+        b.append(text(x + w - 56, yy + 21, info, 13, EMBER if i == 0 else GREY, SANS, 900, "end"))
     # 中：武學
     x, y, w, h = 450, 130, 620, 680
     b.append(slant(x, y, w, h, 24, INK, BONE, 3))
@@ -924,41 +912,64 @@ def s08_start_weapon():
     return doc("\n".join(b), "08 起手兵器")
 
 
+GEAR_SLOT = {"charm": "護符", "token": "腰牌", "jade": "玉珮"}
+QUALITY = {1: "common", 2: "rare", 3: "epic", 4: "legendary"}
+
+
+def gear_icon(x, y, slot, s=1.0, color=BONE):
+    """配件圖示：護符＝摺紙符、腰牌＝圓角牌、玉珮＝環形玉"""
+    sw = 4 * s
+    if slot == "charm":
+        return (f'<g transform="translate({x} {y}) scale({s})"><path d="M-22,-34 H22 V30 L0,40 L-22,30 Z" fill="none" stroke="{color}" stroke-width="4"/>'
+                f'<path d="M-10,-20 H10 M0,-26 V20 M-12,4 H12" stroke="{BLOOD}" stroke-width="4"/></g>')
+    if slot == "token":
+        return (f'<g transform="translate({x} {y}) scale({s})"><path d="M0,-44 V-34" stroke="{color}" stroke-width="3"/>'
+                f'<rect x="-24" y="-34" width="48" height="66" rx="12" fill="none" stroke="{color}" stroke-width="4"/>'
+                f'<path d="M-12,-14 H12 M-12,0 H12 M-12,14 H6" stroke="{GOLD}" stroke-width="4"/></g>')
+    return (f'<g transform="translate({x} {y}) scale({s})"><path d="M0,-44 V-30" stroke="{color}" stroke-width="3"/>'
+            f'<circle cx="0" cy="0" r="30" fill="none" stroke="{TEAL}" stroke-width="10" opacity=".85"/>'
+            f'<circle cx="0" cy="0" r="30" fill="none" stroke="{color}" stroke-width="2"/><circle cx="0" cy="0" r="12" fill="none" stroke="{color}" stroke-width="2"/>'
+            f'<path d="M0,30 V46 M-6,46 L0,58 L6,46" stroke="{BLOOD}" stroke-width="3" fill="none"/></g>')
+
+
+def gear_rows():
+    """accessories.csv：acc_id -> row"""
+    return _csv("accessories", "acc_id")
+
+
 def s09_drop():
-    weapons = _csv("weapons", "weapon_id")
+    gear = gear_rows()
     b = []
     b.append(f'<image href="{asset("scene")}" x="0" y="0" width="{W}" height="{H}" preserveAspectRatio="xMidYMid slice"/>')
     b.append(f'<rect width="{W}" height="{H}" fill="url(#vignette)" opacity=".8"/>')
-    # 地上的掉落（光柱＋名牌）
-    col = RARITY["common"][1]
-    b.append(f'<rect x="792" y="250" width="16" height="230" fill="{TEAL}" opacity=".35" filter="url(#glowTeal)"/>')
-    b.append(f'<g transform="rotate(-24 800 470)">{weapon_icon(800, 470, "bow", 0.9, BONE)}</g>')
-    b.append(text(800, 236, "竹弓　詞條 3", 22, BONE, SERIF, 900, "middle", f'stroke="{INK}" stroke-width="6" paint-order="stroke"'))
+    col = RARITY["epic"][1]
+    b.append(f'<rect x="792" y="250" width="16" height="230" fill="{col}" opacity=".45" filter="url(#glowTeal)"/>')
+    b.append(gear_icon(800, 450, "jade", 0.9, BONE))
+    b.append(text(800, 236, "墨玉珮　神兵", 22, col, SERIF, 900, "middle", f'stroke="{INK}" stroke-width="6" paint-order="stroke"'))
     b.append(crosshair(800, 450))
-    # 比較面板
-    drop = [("A02", 8), ("A11", 12), ("A05", 2.4)]
-    held = [("A01", 9)]
+    drop = ("G09", "epic", 6.5, [("A03", 14), ("A05", 2.4), ("A09", 8)])
+    held = ("G08", "rare", 5.2, [("A13", 10)])
     px, py = 380, 540
     b.append(slant(px, py, 840, 196, 24, INK, BONE, 3, 'opacity=".94"'))
-    for j, (title, wid, lv, affs, tag, hi) in enumerate([("地上", "W007", 1, drop, "撿起", True), ("手上・主武器", "W001", 3, held, "換下", False)]):
-        w = weapons[wid]
-        x = px + 40 + j * 400
+    for j_, (title, item, hi) in enumerate([("地上", drop, True), ("身上・玉珮", held, False)]):
+        gid, q, base, affs = item
+        g = gear[gid]
+        qn, qc = RARITY[q]
+        x = px + 40 + j_ * 400
         b.append(f'<rect x="{x}" y="{py+18}" width="{len(title)*16+20}" height="26" fill="{TEAL if hi else GREY}"/>')
         b.append(text(x + 10, py + 37, title, 16, INK, SANS, 900))
-        b.append(text(x, py + 82, w["name_zh"], 30, BONE, SERIF, 900))
-        b.append(text(x + len(w["name_zh"]) * 31 + 12, py + 80, f'淬煉+{lv}　{w["class"]}・{RANGE_ZH[w["range_type"]]}', 15, EMBER if lv > 1 else GREY, SANS, 900))
+        b.append(text(x, py + 80, g["name_zh"], 28, qc, SERIF, 900))
+        b.append(text(x + len(g["name_zh"]) * 29 + 12, py + 78, qn, 15, qc, SANS, 900))
+        b.append(text(x + 2, py + 108, "◇ " + affix_line(g["base_affix"], base) + "（本體）", 16, BONE, SANS, 700))
         for k, (aid, v) in enumerate(affs):
-            b.append(text(x + 2, py + 116 + k * 26, "◆ " + affix_line(aid, v), 17, TEAL if hi else "#c9c2cb", SANS, 700))
-        if not affs:
-            b.append(text(x + 2, py + 116, "（沒有詞條）", 17, GREY, SANS, 700))
+            b.append(text(x + 2, py + 134 + k * 24, "◆ " + affix_line(aid, v), 16, TEAL if hi else "#c9c2cb", SANS, 700))
     b.append(f'<path d="M{px+410},{py+20} L{px+398},{py+176}" stroke="{GREY}" stroke-width="2"/>')
     b.append(text(px + 404, py + 104, "⇄", 30, BONE, SANS, 900, "middle"))
-    b.append(system_box(530, 752, 540, 48, ["［E］撿起竹弓，換下手上的太刀"], 18, dark=True, align="middle"))
-    b.append(text(800, 830, "換下的兵器會掉在原地，可以再撿回來；副武器格空著時直接放進副武器", 15, BONE, SANS, 700, "middle", f'stroke="{INK}" stroke-width="4" paint-order="stroke"'))
-    # 角落 HUD（簡）
+    b.append(system_box(530, 752, 540, 48, ["［F］撿起墨玉珮，換下身上的青玉珮"], 18, dark=True, align="middle"))
+    b.append(text(800, 830, "換下的配件掉在原地，可以再撿回來；該欄空著時直接戴上", 15, BONE, SANS, 700, "middle", f'stroke="{INK}" stroke-width="4" paint-order="stroke"'))
     b.append(narration(1190, 26, 380, 64, ["綠林山寨・第 4 區　聚義廳前"], 21))
-    b.append(note(30, 30, ["稿註：靠近掉落兵器才出現這個比較面板，", "離開就收起。詞條較好的一方用青色標出。"]))
-    return doc("\n".join(b), "09 掉落比較")
+    b.append(note(30, 30, ["稿註：精英、首領必掉配件（小怪偶爾掉）。靠近才出現比較面板，", "只跟同一欄（護符／腰牌／玉珮）比。品質＝詞條數：凡品 1、良品 2、神兵 3、絕世 4。"]))
+    return doc("\n".join(b), "09 配件掉落比較")
 
 
 def _shop_frame(b, title_text, coin_text):
@@ -971,43 +982,60 @@ def _shop_frame(b, title_text, coin_text):
 
 def s10_smith():
     weapons = _csv("weapons", "weapon_id")
+    gear = gear_rows()
     b = []
-    _shop_frame(b, "鐵匠・強化與重鑄", "持有 236 銀兩")
+    _shop_frame(b, "鐵匠・淬煉與重鑄", "持有 236 銀兩")
     b.append(f'<g transform="translate(1440 130)">{burst(0, 0, 90, 60, 16, 0.3, BONE, INK, 4, 11)}</g>')
     b.append(brush_title(1440, 146, "鏘！", 44, BLOOD, INK, 7, "middle", -8))
-    slots = [("主武器", "W001", 3, [("A01", 9), ("A03", 12)], 0, True), ("副武器", "W007", 1, [], 0, False)]
-    for i, (slot, wid, lv, affs, reforges, active) in enumerate(slots):
-        w = weapons[wid]
-        name, col = RARITY[w["rarity"]]
-        x, y, cw, ch = 170 + i * 660, 190, 600, 600
-        k = 28
-        outline = f"M{x},{y} H{x+cw-k} L{x+cw},{y+k} V{y+ch} H{x+k} L{x},{y+ch-k} Z"
-        b.append(f'<path d="{outline}" fill="#0f0d12" stroke="{BONE}" stroke-width="3"/>')
-        b.append(f'<rect x="{x+22}" y="{y-12}" width="{len(slot + ("・手上" if active else ""))*16+28}" height="26" fill="{TEAL if active else GREY}"/>')
-        b.append(text(x + 36, y + 7, slot + ("・手上" if active else ""), 15, INK, SANS, 900))
-        b.append(weapon_badge(x + 30, y + 40, 150, ICON_KIND[w["class"]]))
-        b.append(brush_title(x + 206, y + 106, w["name_zh"], 48, BONE, INK, 8, "start", -2))
-        b.append(seal(x + cw - 64, y + 70, w["class"], 22, BLOOD, 5))
-        b.append(text(x + 208, y + 146, f'{w["class"]}・{RANGE_ZH[w["range_type"]]}', 17, GREY, SERIF, 900))
-        b.append(pips(x + 216, y + 178, lv, 5, 12, EMBER, (5,)))
-        b.append(text(x + 330, y + 184, f"淬煉 +{lv}", 18, EMBER, SANS, 900))
-        # 強化
-        d0 = round(float(w["dmg"]) * (1 + 0.15 * (lv - 1)))
-        d1 = round(float(w["dmg"]) * (1 + 0.15 * lv))
-        b.append(system_box(x + 30, y + 224, cw - 60, 92, [f"淬煉 +{lv} → +{lv+1}", f"每段傷害 {d0} → {d1}"], 18, tag="強化"))
-        b.append(button(x + 330, y + 334, 240, 52, "強化（52 銀兩）", "hover" if active else "normal", 20))
-        # 詞條
-        b.append(text(x + 32, y + 426, "詞條", 18, TEAL, SERIF, 900))
-        if affs:
-            for j, (aid, v) in enumerate(affs):
-                b.append(text(x + 34, y + 458 + j * 28, "◆ " + affix_line(aid, v), 18, BONE, SANS, 700))
-            b.append(button(x + 330, y + 520, 240, 52, "重鑄詞條（15 銀兩）", "normal", 19))
-            b.append(text(x + 34, y + 568, "詞條數不變，全部重新抽；重鑄越多次越貴", 13, GREY, SANS, 700))
-        else:
-            b.append(text(x + 34, y + 458, "起手兵器沒有詞條，無法重鑄", 17, GREY, SANS, 700))
-            b.append(button(x + 330, y + 520, 240, 52, "重鑄詞條", "disabled", 19))
+    # 左：兵器淬煉
+    w = weapons["W001"]
+    lv = 3
+    x, y, cw, ch = 110, 190, 560, 600
+    k = 28
+    b.append(f'<path d="M{x},{y} H{x+cw-k} L{x+cw},{y+k} V{y+ch} H{x+k} L{x},{y+ch-k} Z" fill="#0f0d12" stroke="{BONE}" stroke-width="3"/>')
+    b.append(f'<rect x="{x+22}" y="{y-12}" width="108" height="26" fill="{TEAL}"/>')
+    b.append(text(x + 36, y + 7, "兵器淬煉", 15, INK, SANS, 900))
+    b.append(weapon_badge(x + 30, y + 40, 150, ICON_KIND[w["class"]]))
+    b.append(brush_title(x + 206, y + 106, w["name_zh"], 48, BONE, INK, 8, "start", -2))
+    b.append(seal(x + cw - 64, y + 70, w["class"], 22, BLOOD, 5))
+    b.append(text(x + 208, y + 146, f'{w["class"]}・{RANGE_ZH[w["range_type"]]}', 17, GREY, SERIF, 900))
+    b.append(pips(x + 216, y + 178, lv, 5, 12, EMBER, (5,)))
+    b.append(text(x + 330, y + 184, f"淬煉 +{lv}", 18, EMBER, SANS, 900))
+    d0 = round(float(w["dmg"]) * (1 + 0.15 * (lv - 1)))
+    d1 = round(float(w["dmg"]) * (1 + 0.15 * lv))
+    b.append(system_box(x + 30, y + 240, cw - 60, 92, [f"淬煉 +{lv} → +{lv+1}", f"每段傷害 {d0} → {d1}"], 18, tag="強化"))
+    b.append(button(x + 290, y + 350, 240, 52, "淬煉（52 銀兩）", "hover", 20))
+    b.append(text(x + 32, y + 470, "淬煉到 +5 器靈覺醒。兵器本身沒有詞條，", 15, GREY, SANS, 700))
+    b.append(text(x + 32, y + 496, "詞條改由打倒精英、首領掉落的配件提供。", 15, GREY, SANS, 700))
+    # 右：配件重鑄
+    x, y, cw, ch = 710, 190, 780, 600
+    b.append(f'<path d="M{x},{y} H{x+cw-k} L{x+cw},{y+k} V{y+ch} H{x+k} L{x},{y+ch-k} Z" fill="#0f0d12" stroke="{BONE}" stroke-width="3"/>')
+    b.append(f'<rect x="{x+22}" y="{y-12}" width="108" height="26" fill="{TEAL}"/>')
+    b.append(text(x + 36, y + 7, "配件重鑄", 15, INK, SANS, 900))
+    rows = [("charm", "G01", "rare", 7.5, [("A01", 14), ("A08", 6)], "18 銀兩", "normal"),
+            ("token", None, None, 0, [], "", "disabled"),
+            ("jade", "G08", "epic", 5.2, [("A04", 52), ("A02", 11), ("A15", 0.3)], "23 銀兩", "normal")]
+    for i, (slot, gid, q, base, affs, price, state) in enumerate(rows):
+        yy = y + 30 + i * 186
+        b.append(f'<rect x="{x+24}" y="{yy}" width="{cw-48}" height="168" fill="{INK2}" stroke="{"#3a363e" if gid is None else RARITY[q][1]}" stroke-width="2"/>')
+        b.append(gear_icon(x + 84, yy + 84, slot, 0.95, BONE if gid else "#4a464e"))
+        b.append(f'<rect x="{x+36}" y="{yy+10}" width="52" height="22" fill="{GREY}"/>')
+        b.append(text(x + 62, yy + 27, GEAR_SLOT[slot], 14, INK, SANS, 900, "middle"))
+        if gid is None:
+            b.append(text(x + 160, yy + 74, "尚未取得", 24, "#55505a", SERIF, 900))
+            b.append(text(x + 160, yy + 106, "打倒精英或首領有機會掉落", 15, GREY, SANS, 700))
+            b.append(button(x + cw - 284, yy + 104, 236, 48, "重鑄", "disabled", 19))
+            continue
+        g = gear[gid]
+        qn, qc = RARITY[q]
+        b.append(text(x + 160, yy + 44, g["name_zh"], 26, qc, SERIF, 900))
+        b.append(text(x + 160 + len(g["name_zh"]) * 27 + 10, yy + 42, qn, 15, qc, SANS, 900))
+        b.append(text(x + 162, yy + 74, "◇ " + affix_line(g["base_affix"], base) + "（本體，重鑄不變）", 15, BONE, SANS, 700))
+        for k2, (aid, v) in enumerate(affs):
+            b.append(text(x + 162, yy + 100 + k2 * 22, "◆ " + affix_line(aid, v), 15, TEAL, SANS, 700))
+        b.append(button(x + cw - 284, yy + 104, 236, 48, f"重鑄（{price}）", state, 19))
     b.append(button(700, 836, 200, 50, "離開", "normal", 22))
-    b.append(note(20, 20, ["稿註：強化價格隨淬煉等級與區域成長；", "器靈覺醒（+5）後強化按鈕改為「已覺醒」。"]))
+    b.append(note(20, 20, ["稿註：兵器固定一把，鐵匠只負責淬煉；配件的本體屬性不變，", "重鑄只重抽 ◆ 詞條（條數不變），同一件越重鑄越貴。"]))
     return doc("\n".join(b), "10 鐵匠")
 
 
