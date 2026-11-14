@@ -108,6 +108,23 @@ func _run_character(cid: String) -> void:
 			var gate_mesh: MeshInstance3D = meshes[0]
 			var bounds := gate_mesh.global_transform * gate_mesh.get_aabb()
 			_check(bounds.size.distance_to(Vector3(0.6, 4, 6)) < 0.03 and absf(bounds.position.y) < 0.01, "寨門與門洞對齊")
+		var planned := {}
+		for motion_row in Data._csv("enemy_motion"):
+			if not planned.has(motion_row.enemy_id):
+				planned[motion_row.enemy_id] = []
+			planned[motion_row.enemy_id].append(motion_row.action)
+		for monster_id in Data.enemies:
+			var pack: PackedScene = load("res://assets/models/enemy-motion/%s.glb" % monster_id)
+			var sample := pack.instantiate()
+			var library: AnimationPlayer = sample.find_child("AnimationPlayer", true, false)
+			var listed := Array(library.get_animation_list())
+			listed.erase("RESET")
+			listed.sort()
+			planned[monster_id].sort()
+			_check(listed == planned[monster_id], "%s 僅收錄遊戲動作" % monster_id)
+			for clip in listed:
+				_check(library.get_animation(clip).get_track_count() > 0, "%s 的 %s 有動作軌" % [monster_id, clip])
+			sample.free()
 		for id in ["H01", "H02", "H03", "H07", "H08"]:
 			var enemy = world.spawn_enemy(id, Vector3(-10, 0, 0), false)
 			var parts: Array = enemy._visual.find_children("Smart_*", "MeshInstance3D", true, false)
@@ -857,7 +874,7 @@ func _check_draw(enemy, world) -> void:
 	var start_gap: float = enemy._bow.palm(0).distance_to(enemy._bow.palm(1))
 	enemy._behaviour(ai.windup_s - ai.lock_s + .05, flat, 12)
 	var full_gap: float = enemy._bow.palm(0).distance_to(enemy._bow.palm(1))
-	_check(shots.is_empty() and enemy._lock.is_finite() and full_gap > start_gap + .2, "鎖定時弓已拉開、方向固定，箭仍在弦上")
+	_check(shots.is_empty() and enemy._lock.is_finite() and full_gap > start_gap + .2, "鎖定時弓已拉開、方向固定，箭仍在弦上（%.2f → %.2f 公尺）" % [start_gap, full_gap])
 	enemy._behaviour(.02, Vector3.FORWARD * 2, 2)
 	_check(enemy._rstate == "aim", "鎖定後即使被逼近也照樣放箭（給玩家閃避的窗口）")
 	enemy._behaviour(ai.lock_s, flat, 12)

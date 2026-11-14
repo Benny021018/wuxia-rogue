@@ -3,19 +3,7 @@ extends CharacterBody3D
 
 const PROJ := preload("res://scripts/projectile.gd")
 const HAZARD := preload("res://scripts/hazard.gd")
-const BANDIT_MODELS := {
-	"H01": preload("res://assets/models/greenwood/H01.glb"),
-	"H02": preload("res://assets/models/greenwood/H02.glb"),
-	"H03": preload("res://assets/models/greenwood/H03.glb"),
-	"H07": preload("res://assets/models/greenwood/H07.glb"),
-	"H08": preload("res://assets/models/greenwood/H08.glb"),
-}
 const GRAVITY := 18.0
-const MAP_COLORS := {
-	"greenwood": Color(0.55, 0.4, 0.28), "darkmoon": Color(0.16, 0.16, 0.2),
-	"corpse_sect": Color(0.45, 0.55, 0.45), "heavenly_demon": Color(0.55, 0.12, 0.12),
-}
-
 var eid := ""
 var row := {}
 var rank := "minion"
@@ -44,6 +32,7 @@ var _flash := StandardMaterial3D.new()
 var _flash_meshes: Array[Node] = []
 var _hit_side := 1.0
 var _impact_pivot := Node3D.new()
+var _skeleton: Skeleton3D
 var _anim: AnimationPlayer
 var _atk_cd := 0.8
 var _swing_dir := Vector3.FORWARD
@@ -140,33 +129,36 @@ func _ready() -> void:
 	add_child(_pose)
 	_pose.add_child(_impact_pivot)
 	_impact_pivot.add_child(_visual)
-	if BANDIT_MODELS.has(eid):
-		var model: Node3D = BANDIT_MODELS[eid].instantiate()
-		_visual.add_child(model)
-		model.scale = Vector3.ONE * size
-		_anim = model.find_child("AnimationPlayer", true, false)
-		for clip in [&"Walk", &"Idle"]:
-			_anim.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
-		_anim.play(&"Idle")
-		if eid == "H02":
-			_bow = Bow.new()
-			_impact_pivot.add_child(_bow)
-			_bow.bind(model.find_children("*","Skeleton3D",true,false)[0])
-		# 每個敵人各自控制蓄力發光，避免整群共用同一材質。
-		var mesh: MeshInstance3D = model.find_children("*", "MeshInstance3D", true, false)[0]
-		_body_mat = mesh.get_active_material(0).duplicate()
-		mesh.set_surface_override_material(0, _body_mat)
-		if eid in ["H01","H07","H08"]:
-			var wrist := BoneAttachment3D.new()
-			model.find_children("*","Skeleton3D",true,false)[0].add_child(wrist)
-			wrist.bone_name = "RightHand"
-			var sword := preload("res://assets/models/weapons/Tachi.glb").instantiate()
-			wrist.add_child(sword)
-			sword.find_child("Saya",true,false).hide()
-			sword.rotation_degrees = Vector3(-20,0,0)
-			sword.scale = Vector3.ONE * (.72 if eid=="H01" else .9)
-	else:
-		_build_graybox()
+	var scene: PackedScene = load("res://assets/models/enemy-motion/%s.glb" % eid)
+	var model := scene.instantiate() as Node3D
+	_visual.add_child(model)
+	model.scale = Vector3.ONE * size
+	_anim = model.find_child("AnimationPlayer", true, false)
+	for clip in [&"Idle", &"Walk"]:
+		_anim.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
+	_anim.play(&"Idle")
+	_skeleton = model.find_children("*", "Skeleton3D", true, false)[0]
+	if eid == "H02":
+		_bow = Bow.new()
+		_impact_pivot.add_child(_bow)
+		_bow.bind(_skeleton)
+	var mesh: MeshInstance3D = model.find_children("*", "MeshInstance3D", true, false)[0]
+	var material := mesh.get_active_material(0)
+	_body_mat = material.duplicate() if material else StandardMaterial3D.new()
+	mesh.set_surface_override_material(0, _body_mat)
+	if eid in ["H01","H07","H08"]:
+		var wrist := BoneAttachment3D.new()
+		_skeleton.add_child(wrist)
+		wrist.bone_name = "RightHand"
+		var sword := preload("res://assets/models/weapons/Tachi.glb").instantiate()
+		wrist.add_child(sword)
+		sword.find_child("Saya",true,false).hide()
+		sword.rotation_degrees = Vector3(-20,0,0)
+		sword.scale = Vector3.ONE * (.72 if eid=="H01" else .9)
+	if eid == "Z06":
+		var core := FX.sphere(0.35, Color(0.3, 1.0, 0.4), 3.0)
+		core.position = Vector3(0, 1.6 * size * 0.5 + 0.6, 0.45 * size)
+		_visual.add_child(core)
 	_flash.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_flash.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_flash_meshes = _visual.find_children("*", "MeshInstance3D", true, false)
@@ -182,43 +174,6 @@ func _ready() -> void:
 	_skill_cd = randf_range(1.5, 4.0)
 	if rank == "boss":
 		world.boss_spawned(self)
-
-
-func _build_graybox() -> void:
-	var base_col: Color = MAP_COLORS.get(row.map_id, Color.GRAY)
-	var tint := float(hash(eid) % 100) / 100.0 * 0.25 - 0.12
-	base_col = base_col.lightened(tint) if tint > 0.0 else base_col.darkened(-tint)
-	if rank == "elite":
-		base_col = base_col.lerp(Color(0.8, 0.2, 0.15), 0.35)
-	elif rank == "boss":
-		base_col = base_col.lerp(Color(0.15, 0.12, 0.1), 0.4)
-	var mi := MeshInstance3D.new()
-	if _flying:
-		var sm := SphereMesh.new()
-		sm.radius = 0.35
-		sm.height = 0.5
-		mi.mesh = sm
-		mi.position.y = 0.4
-	else:
-		var cm := CapsuleMesh.new()
-		cm.radius = 0.4 * size
-		cm.height = 1.8 * size
-		mi.mesh = cm
-		mi.position.y = 0.9 * size
-	_body_mat = FX.mat(base_col)
-	mi.material_override = _body_mat
-	_visual.add_child(mi)
-	var eyes := FX.box(Vector3(0.4 * size, 0.08 * size, 0.08), Color(0.9, 0.95, 0.4) if map_is("corpse_sect") else Color(1, 0.2, 0.15), 3.0)
-	eyes.position = Vector3(0, (0.55 if _flying else 1.45) * size, -0.36 * size)
-	_visual.add_child(eyes)
-	if eid == "Z06":      # 鬼面屍王：背後的罩門
-		var core := FX.sphere(0.35, Color(0.3, 1.0, 0.4), 3.0)
-		core.position = Vector3(0, 1.6 * size * 0.5 + 0.6, 0.45 * size)
-		_visual.add_child(core)
-
-
-func map_is(m: String) -> bool:
-	return row.map_id == m
 
 
 func hit_center() -> Vector3:
@@ -239,6 +194,7 @@ func _physics_process(delta: float) -> void:
 				_anim.play(&"Idle", 0)
 				_anim.seek(0, true)
 				_anim.pause()
+				_skeleton.reset_bone_poses()
 		else:
 			_pose.rotation.x = lerp_angle(_pose.rotation.x, -PI / 2.0 if lying else 0.0, minf(1.0, delta * 16.0))
 		_pose.position.y = lerpf(_pose.position.y, 0.35 * size if lying else 0.0, minf(1.0, delta * 16.0))
@@ -267,7 +223,7 @@ func _physics_process(delta: float) -> void:
 		if dist > 0.05:
 			rotation.y = atan2(-flat.x, -flat.z)
 	_behaviour(delta, flat, dist)
-	if _anim and _draw < 0.0 and _anim.current_animation not in [&"Slash", &"Shoot"]:
+	if _draw < 0.0 and (not _anim.is_playing() or _anim.current_animation in [&"Walk", &"Idle"]):
 		var moving := Vector2(velocity.x, velocity.z).length() > 0.15
 		var clip := &"Walk" if moving else &"Idle"
 		if _anim.current_animation != clip or not _anim.is_playing():
@@ -431,7 +387,7 @@ func _melee(delta: float, dist: float, mult := 1.0) -> void:
 		Sfx.play("enemy_windup", hit_center())
 		_body_mat.emission_enabled = true
 		_body_mat.emission = Color(1, 0.3, 0.2)
-		if _anim:
+		if not _anim.is_playing() or _anim.current_animation in [&"Walk", &"Idle", &"Slash"]:
 			_anim.play(&"Slash", 0.05)
 
 
@@ -460,6 +416,8 @@ func _cancel_draw() -> void:
 
 # ------------------------------------------------------------------ 遠程 AI
 func _ranged_cancel(retry: float) -> void:
+	if _anim.current_animation == &"Shoot":
+		_anim.play(&"Idle", .1)
 	_cancel_draw()
 	_body_mat.emission_enabled = false
 	_lock = Vector3.INF
@@ -540,9 +498,10 @@ func _ranged(delta: float, flat: Vector3, dist: float) -> void:
 			Sfx.play("archer_draw" if eid == "H02" else "enemy_windup", hit_center())
 			velocity.x = 0
 			velocity.z = 0
+			_anim.play(&"Shoot", 0 if _bow else 0.05)
 			if _bow:
 				_draw = 0.0
-				_anim.play(&"Shoot")
+				_anim.seek(0, true)
 				_anim.pause()
 
 
@@ -636,6 +595,7 @@ func _shoot(speed_mps: float, amount: float, color: Color, cloud := false, arrow
 
 
 func _aoe_after(center: Vector3, r: float, delay: float, amount: float) -> void:
+	_anim.play(&"Burst", .05)
 	world.warn_area(center, r, delay)
 	Sfx.play("aoe_warn", center)
 	await get_tree().create_timer(delay, false).timeout
@@ -651,6 +611,7 @@ func _aoe_after(center: Vector3, r: float, delay: float, amount: float) -> void:
 
 
 func _summon(id: String, n: int, cap: int) -> void:
+	_anim.play(&"Summon", .08)
 	summons = summons.filter(func(s): return is_instance_valid(s) and not s.dead)
 	for i in n:
 		if summons.size() >= cap:
@@ -753,6 +714,7 @@ func _b_hopper(delta: float, flat: Vector3, dist: float) -> void:
 			if _state_t <= 0.0:
 				_visual.scale = Vector3.ONE
 				_state = "hop"
+				_anim.play(&"Leap", .05)
 				var d := flat.normalized() * minf(dist, 6.0) / 0.8
 				velocity = Vector3(d.x, 7.0, d.z)
 		"hop":
@@ -784,6 +746,7 @@ func _b_boar(delta: float, flat: Vector3, dist: float) -> void:
 			if _state_t <= 0.0:
 				_visual.position.z = 0
 				_state = "charge"
+				_anim.play(&"Charge", .05)
 				_state_t = 1.4
 				_charge_hit = false
 		"charge":
@@ -814,6 +777,7 @@ func _b_crow(delta: float, flat: Vector3, dist: float) -> void:
 			velocity.y = (target_y - global_position.y) * 2.0
 			if _skill_cd <= 0.0 and dist < 12.0:
 				_state = "dive"
+				_anim.play(&"Dive", .05)
 				_state_t = 1.5
 				_charge_hit = false
 		"dive":
@@ -847,6 +811,7 @@ func _b_tiger(delta: float, flat: Vector3, dist: float) -> void:
 			if _state_t <= 0.0:
 				_visual.scale = Vector3.ONE
 				_state = "hop"
+				_anim.play(&"Leap", .05)
 				var d := flat.normalized() * dist / 0.8
 				velocity = Vector3(d.x, 6.0, d.z)
 		"hop":
@@ -878,6 +843,7 @@ func _b_blade(delta: float, flat: Vector3, dist: float) -> void:
 			if _state_t <= 0.0:
 				_body_mat.emission_enabled = false
 				_state = "dash"
+				_anim.play(&"Dash", .05)
 				_state_t = 0.45
 				_shoot(18.0, dmg * 1.2, Color(1, 0.2, 0.2))
 		"dash":
@@ -894,6 +860,7 @@ func _b_blade(delta: float, flat: Vector3, dist: float) -> void:
 func _b_final(delta: float, flat: Vector3, dist: float) -> void:
 	var ratio := hp / max_hp
 	if _phase == 1 and ratio <= 0.66:
+		_anim.play(&"Realm", .08)
 		_phase = 2
 		Sfx.play("chant", global_position, 2.0, 0.8)
 		Game.message.emit("天魔：天魔領域！")
@@ -919,6 +886,8 @@ func _b_final(delta: float, flat: Vector3, dist: float) -> void:
 
 
 func _raise_corpse() -> void:
+	if _rstate == "move":
+		_anim.play(&"Summon", .08)
 	var pos: Vector3 = world.take_corpse_near(global_position, 12.0)
 	if pos == Vector3.INF:
 		pos = global_position + Vector3(randf_range(-2, 2), 0, randf_range(-2, 2))
@@ -997,6 +966,8 @@ func stun(t: float) -> void:
 
 ## 只動顯示層：腳下碰撞與敵人正在播放的招式保持同步。
 func _react_to_hit(away: Vector3, weight: float, guard: bool) -> void:
+	if _draw < 0 and (_anim.current_animation in [&"Idle", &"Walk", &"Hit"] or not _anim.is_playing()):
+		_anim.play(&"Hit", .03)
 	if _recoil:
 		_recoil.kill()
 	var right := global_basis.x
@@ -1159,10 +1130,7 @@ func _death_fling() -> void:
 	var dist := float(Data.feel.death_fling_m) * _knock_mass() ** 0.5
 	var local_away := global_basis.inverse() * _away
 	# 擊殺也會打飛。飛行方向只控制位移，仰面角度由外觀節點統一負責。
-	if _anim:
-		_anim.play(&"Idle", 0)
-		_anim.seek(0, true)
-		_anim.pause()
+	_anim.play(&"Death", 0)
 	var t := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 	t.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	t.tween_property(_impact_pivot, "scale", Vector3(1.25, .7, 1.25), .05)
