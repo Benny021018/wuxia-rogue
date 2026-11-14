@@ -181,32 +181,17 @@
 <text x="224" y="872" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="18" font-weight="900" fill="#f2cf3a" text-anchor="start" stroke="#0b0a0d" stroke-width="4" paint-order="stroke">銀兩 236</text>
 <rect x="322" y="856" width="122" height="22" fill="#ff4a17"/>
 <text x="383" y="872" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="900" fill="#0b0a0d" text-anchor="middle" >免費參悟 ×1</text>
-<path d="M1128,770 H1336 L1318,874 H1110 Z" fill="#0b0a0d" stroke="#a9a4ac" stroke-width="3" opacity=".9"/>
-<g transform="translate(1184 814) scale(0.95) rotate(-28)" fill="#f3ede4"><path d="M-46,4 Q0,-6 50,-14 L54,-12 Q4,0 -44,8 Z"/><rect x="-60" y="2" width="16" height="6"/><rect x="-46" y="-2" width="4" height="16"/></g>
-<rect x="1128" y="758" width="64" height="24" fill="#f3ede4"/>
-<text x="1160" y="776" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="900" fill="#0b0a0d" text-anchor="middle" >主武器</text>
-<text x="1320" y="854" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="20" font-weight="900" fill="#f3ede4" text-anchor="end" >太刀</text>
-<text x="1320" y="802" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="900" fill="#ff4a17" text-anchor="end" >淬煉+2</text>
-<rect x="1238.8" y="816.8" width="6.4" height="6.4" fill="#ff4a17"/><rect x="1254.8" y="816.8" width="6.4" height="6.4" fill="#ff4a17"/><rect x="1270.8" y="816.8" width="6.4" height="6.4" fill="#2e2a31"/><rect x="1286.8" y="816.8" width="6.4" height="6.4" fill="#2e2a31"/><rect x="1301.6" y="815.6" width="8.8" height="8.8" transform="rotate(45 1306 820)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/>
-<path d="M1368,770 H1576 L1558,874 H1350 Z" fill="#0b0a0d" stroke="#55505a" stroke-width="3" opacity=".9"/>
-<g transform="translate(1424 814) scale(0.95)" fill="none" stroke="#f3ede4" stroke-width="5"><path d="M-8,-44 Q34,0 -8,44"/><path d="M-8,-44 L-8,44" stroke-width="1.5"/><path d="M-30,0 H34" stroke-width="2.5"/><path d="M34,0 l-8,-5 m8,5 l-8,5" stroke-width="2.5"/></g>
-<rect x="1368" y="758" width="64" height="24" fill="#8d8790"/>
-<text x="1400" y="776" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="900" fill="#0b0a0d" text-anchor="middle" >副武器</text>
-<text x="1560" y="854" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="20" font-weight="900" fill="#f3ede4" text-anchor="end" >竹弓</text>
-<text x="1560" y="802" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="900" fill="#ff4a17" text-anchor="end" >淬煉+1</text>
-<rect x="1478.8" y="816.8" width="6.4" height="6.4" fill="#ff4a17"/><rect x="1494.8" y="816.8" width="6.4" height="6.4" fill="#2e2a31"/><rect x="1510.8" y="816.8" width="6.4" height="6.4" fill="#2e2a31"/><rect x="1526.8" y="816.8" width="6.4" height="6.4" fill="#2e2a31"/><rect x="1541.6" y="815.6" width="8.8" height="8.8" transform="rotate(45 1546 820)" fill="#2e2a31" stroke="#555" stroke-width="1.5"/>
-<rect x="1110" y="752" width="226" height="6" fill="#16c6cc" filter="url(#glowTeal)"/>
-<text x="1576" y="892" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="700" fill="#8d8790" text-anchor="end" stroke="#0b0a0d" stroke-width="4" paint-order="stroke">Q／滾輪 切換主副武器</text>
 <path d="M650,650 H950 L960,660 V688 L950,698 H650 L640,688 V660 Z" fill="#16131a" stroke="#16c6cc" stroke-width="3.5"/>
 <path d="M635,659 V645 H649" fill="none" stroke="#16c6cc" stroke-width="3"/>
 <path d="M965,659 V645 H951" fill="none" stroke="#16c6cc" stroke-width="3"/>
 <path d="M635,689 V703 H649" fill="none" stroke="#16c6cc" stroke-width="3"/>
 <path d="M965,689 V703 H951" fill="none" stroke="#16c6cc" stroke-width="3"/>
 <text x="800.0" y="680.48" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="18" font-weight="700" fill="#f3ede4" text-anchor="middle" >［E］參悟　悟道碑已浮現</text>
-<g opacity=".95"><rect x="30" y="230" width="375" height="76" fill="#ffe94d"/>
+<g opacity=".95"><rect x="30" y="230" width="375" height="96" fill="#ffe94d"/>
 <text x="42" y="253.0" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="700" fill="#0b0a0d" text-anchor="start" >稿註：鎖陣橫幅、首領條、提示同時出現僅為示意；</text>
 <text x="42" y="273.02" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="700" fill="#0b0a0d" text-anchor="start" >實際依事件淡入淡出。傷害數字：一般白、暴擊橘紅＋白框、</text>
-<text x="42" y="293.04" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="700" fill="#0b0a0d" text-anchor="start" >格擋青色。同時只拿一把武器，上緣青線＝手上那把。</text>
+<text x="42" y="293.04" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="700" fill="#0b0a0d" text-anchor="start" >格擋青色。角色固定一把兵器，右下不再顯示武器卡；</text>
+<text x="42" y="313.06" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="700" fill="#0b0a0d" text-anchor="start" >配件與淬煉在 Tab 面板與鐵匠處查看。</text>
 </g>
 <rect width="1600" height="900" filter="url(#grain)" pointer-events="none"/>
 </svg>

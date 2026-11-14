@@ -61,7 +61,8 @@ var shrine_node: Node3D
 var shrine_room := -1
 var smith_node: Node3D           # 休息區的鐵匠（stages.csv 的 rest_stop）
 var merchant_node: Node3D        # 休息區的商人
-var drops: Array = []            # 地上的掉落武器（meta "item"）
+var drops: Array = []            # 地上的掉落配件（meta "item"）
+var allow_drops := true          # 區網模式不掉配件（雙方的養成各自計算）
 
 
 func _ready() -> void:
@@ -580,6 +581,8 @@ func _rest_npc(model: PackedScene, pos: Vector3, title: String, color: Color) ->
 
 # ------------------------------------------------------------------ 掉落武器
 func spawn_drop(pos: Vector3, item: Dictionary) -> Node3D:
+	if item.get("kind", "") == "gear":
+		return _spawn_gear_drop(pos, item)
 	var row: Dictionary = Data.weapons[item.id]
 	var col := UIKit.TEAL.lerp(UIKit.BONE, 0.3)
 	var d := Node3D.new()
@@ -597,6 +600,58 @@ func spawn_drop(pos: Vector3, item: Dictionary) -> Node3D:
 	beam.position.y = 1.2
 	d.add_child(beam)
 	var lab := FX.label3d("%s　詞條 %d" % [row.name_zh, item.get("affixes", []).size()], 40, col)
+	lab.position.y = 2.1
+	d.add_child(lab)
+	d.set_meta("item", item)
+	d.set_meta("label", lab)
+	drops.append(d)
+	return d
+
+
+## 配件掉落：品質色的光柱、旋轉的小玉／符／牌、名牌
+func _spawn_gear_drop(pos: Vector3, item: Dictionary) -> Node3D:
+	var row: Dictionary = Data.accessories[item.id]
+	var q := Game.gear_quality(item)
+	var col: Color = UIKit.rarity_color(q)
+	var d := Node3D.new()
+	add_child(d)
+	d.global_position = Vector3(pos.x, 0.0, pos.z)
+	Sfx.play("loot_drop", d.global_position)
+	var spin := Node3D.new()
+	spin.position.y = 0.9
+	d.add_child(spin)
+	var body: MeshInstance3D
+	match String(item.slot):
+		"jade":
+			var t := TorusMesh.new()
+			t.inner_radius = 0.12
+			t.outer_radius = 0.24
+			body = MeshInstance3D.new()
+			body.mesh = t
+			body.rotation_degrees.x = 90
+		"token":
+			var b := BoxMesh.new()
+			b.size = Vector3(0.28, 0.4, 0.05)
+			body = MeshInstance3D.new()
+			body.mesh = b
+		_:
+			var b2 := BoxMesh.new()
+			b2.size = Vector3(0.22, 0.42, 0.02)
+			body = MeshInstance3D.new()
+			body.mesh = b2
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = col.lerp(UIKit.BONE, 0.3)
+	mat.emission_enabled = true
+	mat.emission = col
+	mat.emission_energy_multiplier = 1.4
+	body.material_override = mat
+	spin.add_child(body)
+	var tw := spin.create_tween().set_loops()
+	tw.tween_property(spin, "rotation:y", TAU, 2.4).from(0.0)
+	var beam := FX.cylinder(0.05, 2.4, Color(col, 0.6), 2.0)
+	beam.position.y = 1.2
+	d.add_child(beam)
+	var lab := FX.label3d("%s　%s" % [row.name_zh, UIKit.rarity_name(q)], 40, col)
 	lab.position.y = 2.1
 	d.add_child(lab)
 	d.set_meta("item", item)
@@ -648,7 +703,7 @@ func warn_area(pos: Vector3, radius: float, duration: float) -> void:
 
 func on_enemy_died(e) -> void:
 	enemy_defeated.emit(e.eid)
-	var item := Game.roll_weapon_drop(String(Data.enemies[e.eid].rank))
+	var item := Game.roll_gear_drop(String(Data.enemies[e.eid].rank)) if allow_drops else {}
 	if not item.is_empty():
 		spawn_drop(e.global_position, item)
 	corpses.append(e.global_position)

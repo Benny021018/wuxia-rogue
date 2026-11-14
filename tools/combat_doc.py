@@ -1,4 +1,4 @@
-"""由 data/moves.csv、move_hits.csv、combat_state_config.csv 產生 docs/combat-design.md。
+"""由 data/moves.csv、move_hits.csv、combat_state_config.csv、enemy_moves.csv、enemy_roles.csv、boss_phases.csv 產生 docs/combat-design.md。
 
     python3 tools/combat_doc.py
 """
@@ -9,6 +9,9 @@ rd = lambda n: list(csv.DictReader((ROOT / "data" / f"{n}.csv").open(encoding="u
 moves, hits, cfg = rd("moves"), rd("move_hits"), {r["key"]: r for r in rd("combat_state_config")}
 chars = {r["char_id"]: r for r in rd("characters")}
 feel = {r["key"]: r for r in rd("feel_config")}
+ccfg = {r["key"]: r for r in rd("combat_config")}
+enemies = rd("enemies")
+emoves, eroles, bphases = rd("enemy_moves"), {r["role"]: r for r in rd("enemy_roles")}, rd("boss_phases")
 KEYS = {"attack": "左鍵", "skill1": "右鍵", "skill2": "Q", "skill3": "E", "skill4": "R", "skill5": "1", "skill6": "2", "skill7": "3", "ult": "V"}
 WEAPON = {"nangong": "太刀", "han": "巨劍", "tang": "柳葉飛刀"}
 STYLE = {"nangong": "快、連段長、擅長把敵人挑空追打；靠無敵招閃避，破霸體手段少（拔刀・一閃、大招）。",
@@ -58,8 +61,9 @@ L = ["# 《天魔劫》戰鬥設計文件", "",
      "8. [浮空與連段](#8-浮空與連段)",
      "9. [1v1 單挑與雙人合作](#9-1v1-單挑與雙人合作)",
      "10. [完整招式表](#10-完整招式表)",
-     "11. [操作](#11-操作)",
-     "12. [附錄：資料與實作](#12-附錄資料與實作)", "",
+     "11. [敵人 AI](#11-敵人-ai)",
+     "12. [操作](#12-操作)",
+     "13. [附錄：資料與實作](#13-附錄資料與實作)", "",
      "## 1. 設計目標", "",
      "- **每一下攻擊都有明確後果。** 打中之後對手會硬直多久、會不會浮空、會不會倒地，都由招式資料決定，玩家可以預期。",
      "- **連段可以很長，但一定會結束。** 浮空高度逐下衰減，起身有無敵，被連的人總有機會回到場上。",
@@ -195,11 +199,71 @@ for cid in ("nangong", "han", "tang"):
             cd = "怒氣滿"
         L.append(f"| {key_of(m)} | {m['name_zh']} | {cd} | {ss} | {dm} | {stun} | {launch} | {push} | {br} | {kd} | {m['desc']} |")
     L.append("")
-L += ["## 11. 操作", "",
+a = lambda k: ("%g" % float(ccfg[k]["value"]))
+ENAME = {r["enemy_id"]: r["name_zh"] for r in enemies}
+RANKN = {"minion": "小怪預設", "elite": "精英預設", "boss": "首領預設", "*": "專屬技能"}
+FORM = {"flank": "側翼包圍", "front": "前排擋路", "ranged": "遠程（找掩護）", "none": "自由行動"}
+yes = lambda v: "✓" if v == "1" else ""
+L += ["## 11. 敵人 AI", "",
+      "敵人跟玩家用同一套六種狀態，也被同一套攻擊屬性打。這一節是敵人怎麼決定「什麼時候、誰、用哪一招」打玩家。", "",
+      "### 群戰：出手權與外圈包圍", "",
+      f"- **出手權**：同一時間能起手的近戰小怪最多 {a('ai_tokens_base')} 隻，每往後一張地圖多 {a('ai_tokens_per_map')} 隻，上限 {a('ai_tokens_max')} 隻。精英、首領、遠程不佔出手權。",
+      f"- **輪流**：出完招交回出手權，至少休息 {a('ai_token_rest_s')} 秒才能再拿；拿著卻 {a('ai_token_hold_s')} 秒沒出手也要讓出來。",
+      f"- **外圈**：沒拿到出手權的小怪站在外圈（距離見下表），在玩家鏡頭前方 {a('ai_ring_spread_deg')}° 內平均散開，左右小幅晃動，沿圓周移動、不穿過玩家。",
+      "- **目的**：玩家看得清楚誰要出手；被圍住時不會同時挨五刀，靠受擊保護硬撐。", "",
+      "### 看玩家狀態", "",
+      "| 玩家狀態 | 敵人反應 |", "|---|---|",
+      f"| 無敵（起身、閃避） | 不起手；貼身的退開 {a('ai_backoff_m')} 公尺 |",
+      f"| 霸體或放大招 | 怕霸體的小怪交回出手權，退到 {a('ai_armor_retreat_m')} 公尺外 |",
+      "| 浮空或倒地 | 一般敵人不追打；刺客、高手、獵殺型會搶出手權追擊 |",
+      f"| 出長招（{a('ai_punish_move_s')} 秒以上） | 多給 {a('ai_punish_extra_tokens')} 個出手權，懲罰硬直長的招式 |", "",
+      "### 鏡頭外", "",
+      f"第三人稱看不到背後。鏡頭外的敵人每次想出手只有 {float(ccfg['ai_offscreen_attack_chance']['value']) * 100:g}% 機率真的出手（沒出手就等 {a('ai_offscreen_retry_s')} 秒再判斷），起手時間 ×{a('ai_offscreen_windup_mult')}，並保留起手音效當提示。遠程與專屬技能一樣適用。區網對方沒有鏡頭資訊，改用面向判斷，超過 {a('ai_behind_deg')}° 算在背後。", "",
+      "### 被連段與反擊", "",
+      f"- **跳開**：小怪被連打 {a('ai_combo_escape_hits')} 下以上，硬直結束時有 {float(ccfg['ai_escape_chance']['value']) * 100:g}% 機率往後跳開（{a('ai_escape_speed')} 公尺／秒，{a('ai_escape_time_s')} 秒），讓連段有收尾的理由。",
+      f"- **反擊**：精英與首領被破霸體後，空窗一結束就準備反擊；{a('ai_counter_window_s')} 秒內走得到玩家身邊就放出「反擊」（破霸體）。首領自己放技能留下的破綻不會觸發反擊。", "",
+      "### 起手光", "",
+      "起手時身上發光，顏色告訴玩家這一招的性質：**金色＝破霸體**（不能用霸體硬吃）、**暗紅＝擊倒或挑空**、**橘紅＝一般攻擊**。", "",
+      "### 定位分工", "",
+      "| 定位 | 敵人 | 出手權 | 外圈距離 | 站位 | 追擊浮空倒地 | 怕霸體 | 被連後跳開 |", "|---|---|---|---|---|---|---|---|"]
+for role, r in eroles.items():
+    who = "、".join(e["name_zh"] for e in enemies if e["role"] == role)
+    if not who:
+        continue
+    L.append(f"| {role} | {who} | {yes(r['token'])} | {r['ring_m'] + ' m' if float(r['ring_m']) > 0 else '—'} | {FORM[r['formation']]} | {yes(r['pursue_down'])} | {yes(r['fear_armor'])} | {yes(r['escape'])} |")
+L += ["", f"遠程敵人附近有刀盾手時，會站到刀盾手背後 {a('ai_cover_offset_m')} 公尺處，刀盾手則擋在玩家與遠程隊友之間。", "",
+      "### 首領階段", "",
+      "首領依血量換階段：技能變快、移動變快、起手變短，並解鎖新招式。每次放完範圍技或召喚，都會留下**破綻**：霸體消失、原地停一小段，這是玩家輸出的時機。", "",
+      "| 首領 | 階段 | 血量低於 | 技能速度 | 移動速度 | 起手時間 | 破綻 | 台詞 |", "|---|---|---|---|---|---|---|---|"]
+for r in bphases:
+    L.append(f"| {ENAME[r['enemy_id']]} | {r['phase']} | {float(r['hp_below']) * 100:g}% | ×{r['skill_rate']} | ×{r['speed_mult']} | ×{r['windup_mult']} | {r['opening_s']} 秒 | {r['message'] or '—'} |")
+L += ["", "### 敵人招式表", "",
+      "硬直與擊退留空的招式用階級預設（小怪、精英、首領各一組，見附錄）。「接」是打完之後立刻接出的下一招。", "",
+      "| 敵人 | 招式 | 階段 | 起手 | 範圍 | 傷害 | 硬直 | 浮空 | 擊退 | 破霸體 | 擊倒 | 收招 | 冷卻 | 接 |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+for m in emoves:
+    if m["kind"] == "skill":
+        continue
+    who = ENAME.get(m["enemy_id"], RANKN.get(m["enemy_id"], m["enemy_id"]))
+    nm = m["name_zh"] + ("（反擊）" if m["kind"] == "counter" else "")
+    rng = f"+{m['reach_add_m']} m／{m['arc_deg']}°"
+    st = (m["hitstun_s"] + " 秒") if m["hitstun_s"] else "預設"
+    pu = (m["push_m"] + " m") if m["push_m"] else "預設"
+    la = (m["launch_h_m"] + " m") if m["launch"] == "1" else "—"
+    cd = (m["cd_s"] + " 秒") if float(m["cd_s"]) > 0 else "—"
+    chain = next((x["name_zh"] for x in emoves if x["enemy_id"] == m["enemy_id"] and x["move_id"] == m["chain"]), "") if m["chain"] else ""
+    L.append(f"| {who} | {nm} | {m['min_phase']} | {m['windup_s']} 秒 | {rng} | ×{m['dmg_mult']} | {st} | {la} | {pu} | {yes(m['break_armor'])} | {yes(m['knockdown'])} | {m['recover_s']} 秒 | {cd} | {chain} |")
+L += ["", "專屬技能（跳擊、衝撞、俯衝、撲擊、突進斬）的命中屬性：", "",
+      "| 技能 | 硬直 | 擊退 | 擊倒 |", "|---|---|---|---|"]
+for m in emoves:
+    if m["kind"] == "skill":
+        L.append(f"| {m['name_zh']} | {m['hitstun_s']} 秒 | {m['push_m']} m | {yes(m['knockdown'])} |")
+L += ["",
+      f"範圍招的「範圍」是在敵人本身攻擊距離上再加多少公尺、扇形幾度。同一隻敵人兩招之間至少隔 {a("ai_attack_gap_s")} 秒（連招除外）。", ""]
+L += ["## 12. 操作", "",
       "| 按鍵 | 功能 |", "|---|---|", "| WASD／滑鼠 | 移動／轉動鏡頭（越肩第三人稱） |", "| 左鍵 | 普攻（連按接下一段） |",
       "| 右鍵、Q、E、R、1、2、3 | 技能一～七 |", "| V | 大招 |", "| Shift | 閃避（短暫無敵） |", "| 空白鍵 | 跳 |", "| F | 互動（參悟、鐵匠、商人） |", "| K | 經脈 |", "",
       "每個角色固定一把兵器，技能開局全部可用，只受冷卻限制。", "",
-      "## 12. 附錄：資料與實作", "",
+      "## 13. 附錄：資料與實作", "",
       "| 內容 | 位置 |", "|---|---|",
       "| 招式（動作、時間、位移、冷卻、自身狀態） | `data/moves.csv` |",
       "| 每一段判定的五個屬性與傷害 | `data/move_hits.csv` |",
@@ -207,11 +271,16 @@ L += ["## 11. 操作", "",
       "| 擊退衰減與減免、頓幀、震屏 | `data/feel_config.csv` |",
       "| 六種狀態的邏輯（玩家與敵人共用） | `scripts/combat_state.gd` |",
       "| 招式執行（連段、輸入緩衝、冷卻、怒氣） | `scripts/move_runner.gd` |",
+      "| 敵人招式與專屬技能的命中屬性 | `data/enemy_moves.csv` |",
+      "| 敵人定位分工 | `data/enemy_roles.csv` |",
+      "| 首領階段 | `data/boss_phases.csv` |",
+      "| 敵人 AI 數值（出手權、外圈、鏡頭外、跳開、反擊） | `data/combat_config.csv` 的 `ai_*` |",
+      "| 敵人 AI（玩家與敵人共用的狀態以外的部分） | `scripts/enemy.gd` |",
       "| 區網連線 | `scripts/lan_session.gd` |",
       "| 自動化測試 | `tests/smoke_test.gd`、`tests/lan_integration.gd` |", "",
       "改完資料表後執行 `python3 tools/combat_doc.py` 重新產生這份文件。", "",
       "**尚未完成**", "",
-      "- 敵人各招式個別設定五個屬性（目前依階級與攻擊種類給預設值）。",
+      "- 敵人的遠程攻擊與範圍技（預警圈）還是用設定表的共用值，沒有逐招設定。",
       "- 鎖定目標。",
       "- 數值為初版，尚未做完整的對戰平衡。", "",
       "**素材來源**", "",

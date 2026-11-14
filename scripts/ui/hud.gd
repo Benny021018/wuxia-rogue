@@ -1,5 +1,5 @@
 extends Control
-## 戰鬥 HUD：生命、真氣與境界、銀兩、主副武器、武學、區域資訊、首領血條、橫幅與訊息
+## 戰鬥 HUD：生命、真氣與境界、銀兩、技能列、武學、區域資訊、首領血條、橫幅與訊息、配件掉落比較
 ## 版面對照 docs/ui-drafts/03-hud.svg
 
 var player
@@ -14,8 +14,6 @@ var realm_text: Label
 var gold_text: Label
 var free_chip: ComicBox
 var free_text: Label
-var weapon_cards: Array = []          # 每格 {root, name, lv, pips, icon, tag}
-var swap_hint: Label
 var zone_box: ComicBox
 var enemy_box: ComicBox
 var enemy_text: Label
@@ -37,7 +35,6 @@ var prompt_box: ComicBox
 var drop_panel: Control
 var _drop_key := ""
 var _martial_key := ""
-var _weapon_key := ""
 var _banner_tween: Tween
 
 
@@ -46,7 +43,6 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_build_crosshair()
 	_build_vitals()
-	_build_weapons()
 	_build_skills()
 	_build_zone()
 	_build_boss()
@@ -71,7 +67,6 @@ func _ready() -> void:
 	Game.martial_breakthrough.connect(func(mid, lv, desc): show_banner("%s・%s" % [Data.martial[mid].name_zh, "小成" if lv == 3 else "圓滿"], desc, "break"))
 	Game.bond_activated.connect(func(sid, tier, nm): show_banner("門派傳承：%s" % nm, "%s 第%d階" % [Data.sects[sid].name_zh, tier], "break"))
 	Game.realm_broken.connect(func(lv, rn, eff): show_banner("突破・%s" % rn, eff, "break"))
-	Game.weapon_switched.connect(func(_slot): _weapon_key = "")
 	# 受傷：畫面邊緣紅光（強度依傷害比例）
 	hurt_vignette = UIKit.vignette(1.0)
 	hurt_vignette.modulate = Color(UIKit.BLOOD, 0.0)
@@ -247,46 +242,6 @@ func _refresh_skills() -> void:
 		u.name.modulate.a = 0.5 if frac > 0.0 else 1.0
 
 
-func _build_weapons() -> void:
-	for i in 2:
-		var x := 1110.0 + i * 240.0
-		var y := 770.0
-		var root := Control.new()
-		root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_at(root, x, y - 20, 240, 130, 1, 1)
-		var card := UIKit.box("slant")
-		card.slant = 18
-		UIKit.place(card, 0, 0, 0, 20, 226, 104)
-		root.add_child(card)
-		var active_line := ColorRect.new()
-		active_line.color = UIKit.TEAL
-		UIKit.place(active_line, 0, 0, 0, 2, 226, 6)
-		root.add_child(active_line)
-		var icon := ComicFX.new()
-		UIKit.place(icon, 0, 0, 30, 30, 100, 90)
-		root.add_child(icon)
-		var tag := UIKit.box("chip", "", 0)
-		tag.set_padding(1, 8)
-		var tag_text := UIKit.label(Game.slot_name(i), 14, UIKit.INK, HORIZONTAL_ALIGNMENT_CENTER)
-		tag_text.autowrap_mode = TextServer.AUTOWRAP_OFF
-		tag.add_child(tag_text)
-		UIKit.place(tag, 0, 0, 18, 8, 10, 24)
-		root.add_child(tag)
-		var lv := UIKit.label("", 15, UIKit.EMBER, HORIZONTAL_ALIGNMENT_RIGHT)
-		UIKit.place(lv, 0, 0, 96, 34, 114, 22)
-		root.add_child(lv)
-		var nm := UIKit.label("", 20, UIKit.BONE, HORIZONTAL_ALIGNMENT_RIGHT, true)
-		nm.autowrap_mode = TextServer.AUTOWRAP_OFF
-		UIKit.place(nm, 0, 0, 60, 84, 150, 32)
-		root.add_child(nm)
-		var pips := ComicFX.new()
-		UIKit.place(pips, 0, 0, 124, 62, 100, 16)
-		root.add_child(pips)
-		weapon_cards.append({"root": root, "card": card, "line": active_line, "icon": icon, "tag": tag, "tag_text": tag_text, "lv": lv, "name": nm, "pips": pips})
-	swap_hint = UIKit.outlined(UIKit.label("Q／滾輪 切換主副武器", 14, UIKit.GREY, HORIZONTAL_ALIGNMENT_RIGHT), 4)
-	_at(swap_hint, 1250, 878, 326, 20, 1, 1)
-
-
 func _build_zone() -> void:
 	zone_box = UIKit.box_text("narration", "", 21)
 	zone_box.set_padding(10, 18)
@@ -369,7 +324,6 @@ func _process(_delta: float) -> void:
 		free_text.text = "　".join(chips)
 		free_chip.reset_size()
 	_update_reticle()
-	_refresh_weapons()
 	_refresh_martial()
 	if is_instance_valid(opponent):
 		boss_box.visible = true
@@ -382,43 +336,6 @@ func _process(_delta: float) -> void:
 		boss_bar.value = boss.hp
 	else:
 		boss_box.visible = false
-
-
-func _refresh_weapons() -> void:
-	var key := "%d|%s" % [Game.active_weapon, str(Game.weapons)]
-	if key == _weapon_key:
-		return
-	_weapon_key = key
-	var has_sub := Game.weapons[1] != null
-	swap_hint.visible = has_sub
-	for i in 2:
-		var c: Dictionary = weapon_cards[i]
-		var w = Game.weapons[i]
-		var on := i == Game.active_weapon
-		c.root.visible = w != null or i == 0      # 角色固定一把兵器：空的副武器格不顯示
-		c.root.modulate = Color(1, 1, 1, 1.0 if on else 0.6)
-		c.line.visible = on
-		c.tag.fill = UIKit.BONE if on else UIKit.GREY
-		c.tag.border = c.tag.fill
-		c.icon.clear()
-		c.pips.clear()
-		if w == null:
-			c.card.border = Color("#3a363e")
-			c.card.fill = Color(UIKit.INK, 0.6)
-			c.name.text = "（空）"
-			c.name.add_theme_color_override("font_color", UIKit.DIM)
-			c.lv.text = ""
-			continue
-		var row: Dictionary = Data.weapons[w.id]
-		c.card.border = UIKit.BONE if on else Color("#55505a")
-		c.card.fill = Color(UIKit.INK, 0.9)
-		c.name.text = row.name_zh
-		c.name.add_theme_color_override("font_color", UIKit.BONE)
-		var lv := int(w.lv)
-		c.lv.text = "淬煉+%d" % lv if lv < Game.MAX_LV else "器靈覺醒"
-		c.lv.add_theme_color_override("font_color", UIKit.EMBER if lv > 1 else UIKit.GREY)
-		c.pips.add_pips(Vector2(8, 8), lv, Game.MAX_LV, 8.0, UIKit.EMBER, [Game.MAX_LV])
-		c.icon.add_weapon_icon(Vector2(44, 44), String(row["class"]))
 
 
 func _refresh_martial() -> void:
@@ -502,8 +419,13 @@ func show_drop_compare(item) -> void:
 	back.fill = Color(UIKit.INK, 0.94)
 	back.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	drop_panel.add_child(back)
-	var into_sub: bool = Game.weapons[1] == null
-	var sides := [["地上", item, true], ["副武器格" if into_sub else "手上・%s" % Game.slot_name(Game.active_weapon), null if into_sub else Game.current_weapon(), false]]
+	var is_gear: bool = item.get("kind", "") == "gear"
+	var sides: Array
+	if is_gear:
+		sides = [["地上", item, true], ["身上・%s" % Game.gear_slot_name(item.slot), Game.gear.get(item.slot), false]]
+	else:
+		var into_sub: bool = Game.weapons[1] == null
+		sides = [["地上", item, true], ["副武器格" if into_sub else "手上・%s" % Game.slot_name(Game.active_weapon), null if into_sub else Game.current_weapon(), false]]
 	for j in 2:
 		var x := 40.0 + j * 400.0
 		var w = sides[j][1]
@@ -518,9 +440,12 @@ func show_drop_compare(item) -> void:
 		UIKit.place(tag, 0, 0, x, 18, 10, 26)
 		drop_panel.add_child(tag)
 		if w == null:
-			var empty := UIKit.label("（空，撿起後直接放進來）", 20, UIKit.GREY, HORIZONTAL_ALIGNMENT_LEFT, true)
+			var empty := UIKit.label("（空，撿起後直接戴上）" if is_gear else "（空，撿起後直接放進來）", 20, UIKit.GREY, HORIZONTAL_ALIGNMENT_LEFT, true)
 			UIKit.place(empty, 0, 0, x, 62, 360, 30)
 			drop_panel.add_child(empty)
+			continue
+		if is_gear:
+			_gear_side(w, x, hi)
 			continue
 		var row: Dictionary = Data.weapons[w.id]
 		var nm := UIKit.label(row.name_zh, 30, UIKit.BONE, HORIZONTAL_ALIGNMENT_LEFT, true)
@@ -546,6 +471,27 @@ func show_drop_compare(item) -> void:
 	var arrow := UIKit.label("⇄", 30, UIKit.BONE, HORIZONTAL_ALIGNMENT_CENTER)
 	UIKit.place(arrow, 0, 0, 384, 80, 40, 40)
 	drop_panel.add_child(arrow)
+
+
+## 掉落比較的一側：配件名稱（品質色）、本體屬性、◆ 詞條（docs/ui-drafts/09-drop-compare.svg）
+func _gear_side(g: Dictionary, x: float, hi: bool) -> void:
+	var q := Game.gear_quality(g)
+	var qc := UIKit.rarity_color(q)
+	var gname: String = Data.accessories[g.id].name_zh
+	var nm := UIKit.label(gname, 28, qc, HORIZONTAL_ALIGNMENT_LEFT, true)
+	nm.autowrap_mode = TextServer.AUTOWRAP_OFF
+	UIKit.place(nm, 0, 0, x, 52, 200, 40)
+	drop_panel.add_child(nm)
+	var ql := UIKit.label(UIKit.rarity_name(q), 15, qc)
+	UIKit.place(ql, 0, 0, x + gname.length() * 29 + 12, 64, 80, 22)
+	drop_panel.add_child(ql)
+	var lines: Array = ["◇ %s（本體）" % Data.affix_text(g.base)]
+	for a in g.get("affixes", []):
+		lines.append("◆ " + Data.affix_text(a))
+	var al := UIKit.label("\n".join(lines), 16, UIKit.TEAL if hi else Color("#c9c2cb"))
+	al.add_theme_constant_override("line_spacing", 1)
+	UIKit.place(al, 0, 0, x + 2, 94, 370, 100)
+	drop_panel.add_child(al)
 
 
 func set_hint(t: String) -> void:

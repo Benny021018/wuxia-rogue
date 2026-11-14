@@ -107,15 +107,22 @@
 <text x="90" y="546.62" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="17" font-weight="700" fill="#0b0a0d" text-anchor="start" >吸血　+7.5</text>
 <text x="90" y="572.12" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="17" font-weight="700" fill="#0b0a0d" text-anchor="start" >移動速度　+12</text>
 <text x="90" y="597.62" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="17" font-weight="700" fill="#0b0a0d" text-anchor="start" >閃避　+10</text>
-<text x="70" y="678" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="16" font-weight="900" fill="#8d8790" text-anchor="start" >武器</text>
-<path d="M78,696 H380 L368,736 H66 Z" fill="#16131a" stroke="#ff8a1e" stroke-width="2" />
-<text x="86" y="723" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="900" fill="#16c6cc" text-anchor="start" >主武器</text>
-<text x="150" y="724" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="19" font-weight="900" fill="#ff8a1e" text-anchor="start" >巨劍</text>
-<text x="364" y="723" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="900" fill="#ff4a17" text-anchor="end" >淬煉+1</text>
-<path d="M78,746 H380 L368,786 H66 Z" fill="#16131a" stroke="#a9a4ac" stroke-width="2" />
-<text x="86" y="773" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="14" font-weight="900" fill="#8d8790" text-anchor="start" >副武器</text>
-<text x="150" y="774" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="19" font-weight="900" fill="#a9a4ac" text-anchor="start" >竹弓</text>
-<text x="364" y="773" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="15" font-weight="900" fill="#ff4a17" text-anchor="end" >淬煉+1</text>
+<path d="M76,666 H380 L370,696 H66 Z" fill="#16131a" stroke="#f3ede4" stroke-width="2" />
+<text x="84" y="687" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="900" fill="#16c6cc" text-anchor="start" >兵器</text>
+<text x="136" y="688" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="16" font-weight="900" fill="#f3ede4" text-anchor="start" >巨劍</text>
+<text x="364" y="687" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="900" fill="#ff4a17" text-anchor="end" >淬煉+2</text>
+<path d="M76,700 H380 L370,730 H66 Z" fill="#16131a" stroke="#27b8d6" stroke-width="2" />
+<text x="84" y="721" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="900" fill="#8d8790" text-anchor="start" >護符</text>
+<text x="136" y="722" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="16" font-weight="900" fill="#27b8d6" text-anchor="start" >平安符</text>
+<text x="364" y="721" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="900" fill="#8d8790" text-anchor="end" >詞條 2</text>
+<path d="M76,734 H380 L370,764 H66 Z" fill="#16131a" stroke="#3a363e" stroke-width="2" />
+<text x="84" y="755" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="900" fill="#8d8790" text-anchor="start" >腰牌</text>
+<text x="136" y="756" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="16" font-weight="900" fill="#55505a" text-anchor="start" >尚未取得</text>
+<text x="364" y="755" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="900" fill="#8d8790" text-anchor="end" ></text>
+<path d="M76,768 H380 L370,798 H66 Z" fill="#16131a" stroke="#9a5cf0" stroke-width="2" />
+<text x="84" y="789" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="900" fill="#8d8790" text-anchor="start" >玉珮</text>
+<text x="136" y="790" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="16" font-weight="900" fill="#9a5cf0" text-anchor="start" >青玉珮</text>
+<text x="364" y="789" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="13" font-weight="900" fill="#8d8790" text-anchor="end" >詞條 3</text>
 <path d="M474,130 H1070 L1046,810 H450 Z" fill="#0b0a0d" stroke="#f3ede4" stroke-width="3" />
 <text x="490" y="176" font-family="'Noto Serif CJK TC','Noto Serif TC','Source Han Serif TC','PMingLiU',serif" font-size="26" font-weight="900" fill="#f3ede4" text-anchor="start" >武學</text>
 <text x="556" y="176" font-family="'Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif" font-size="22" font-weight="900" fill="#ff4a17" text-anchor="start" >5 / 8</text>

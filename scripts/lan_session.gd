@@ -227,6 +227,7 @@ func _begin(kind: String, first: String, second: String) -> void:
 	panel.hide()
 	backdrop.hide()
 	world = WORLD.new()
+	world.allow_drops = false
 	add_child(world)
 	var ids := [first,second]
 	for i in 2:

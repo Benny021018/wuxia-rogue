@@ -1,5 +1,5 @@
 extends Control
-## 休息區：鐵匠（主武器或副武器各自強化、重鑄詞條）與商人（隨機上架武學）
+## 休息區：鐵匠（兵器淬煉、配件重鑄）與商人（隨機上架武學）
 ## 版面對照 docs/ui-drafts/10-smith.svg、11-merchant.svg
 
 signal closed
@@ -75,14 +75,11 @@ func _refresh() -> void:
 		body.remove_child(c)
 		c.queue_free()
 	if kind == "smith":
-		UIKit.set_title(title_node, "鐵匠・強化與重鑄")
+		UIKit.set_title(title_node, "鐵匠・淬煉與重鑄")
 		coin_label.text = "持有 %d 銀兩" % int(Game.gold)
 		clang.visible = true
-		if Game.weapons[1] == null:
-			_smith_slot(0, 500.0)          # 角色固定一把兵器：置中顯示
-		else:
-			for i in 2:
-				_smith_slot(i, 170.0 + i * 660.0)
+		_smith_weapon(110.0)
+		_smith_gear(710.0)
 	else:
 		UIKit.set_title(title_node, "商人・武學")
 		coin_label.text = "持有 %d 銀兩　｜　武學 %d / %d" % [int(Game.gold), Game.martial.size(), Game.martial_slots()]
@@ -105,29 +102,29 @@ func _refresh() -> void:
 
 
 # ------------------------------------------------------------------ 鐵匠
-func _smith_slot(slot: int, x: float) -> void:
-	var y := 190.0
-	var cw := 600.0
-	var ch := 600.0
+func _card(x: float, y: float, cw: float, ch: float, label: String) -> void:
 	var k := 28.0
-	var w = Game.weapons[slot]
-	var active := slot == Game.active_weapon
 	var outline := PackedVector2Array([Vector2(0, 0), Vector2(cw - k, 0), Vector2(cw, k), Vector2(cw, ch), Vector2(k, ch), Vector2(0, ch - k)])
 	var card := ComicFX.new()
 	card.add_poly(outline, Color("#0f0d12"))
-	card.add_outline(outline, UIKit.BONE if w != null else Color("#3a363e"), 3.0)
+	card.add_outline(outline, UIKit.BONE, 3.0)
 	_put(card, x, y, cw, ch)
 	var tag := UIKit.box("chip", "", 0)
-	tag.fill = UIKit.TEAL if active else UIKit.GREY
+	tag.fill = UIKit.TEAL
 	tag.border = tag.fill
 	tag.set_padding(2, 12)
-	var tl := UIKit.label(Game.slot_name(slot) + ("・手上" if active else ""), 15, UIKit.INK)
+	var tl := UIKit.label(label, 15, UIKit.INK)
 	tl.autowrap_mode = TextServer.AUTOWRAP_OFF
 	tag.add_child(tl)
 	_put(tag, x + 22, y - 12, 10, 26)
-	if w == null:
-		_put(UIKit.label("（這一格還沒有兵器）", 22, UIKit.DIM, HORIZONTAL_ALIGNMENT_CENTER, true), x, y + ch / 2.0 - 20, cw, 40)
-		return
+
+
+## 左：兵器淬煉（角色固定一把兵器，兵器本身沒有詞條）
+func _smith_weapon(x: float) -> void:
+	var y := 190.0
+	var cw := 560.0
+	_card(x, y, cw, 600.0, "兵器淬煉")
+	var w: Dictionary = Game.weapons[0]
 	var row: Dictionary = Data.weapons[w.id]
 	var lv := int(w.lv)
 	var badge := ComicFX.new()
@@ -138,37 +135,78 @@ func _smith_slot(slot: int, x: float) -> void:
 	badge.add_weapon_icon(Vector2(75, 75), String(row["class"]), 150.0 / 110.0)
 	badge.add_outline(sq, UIKit.BONE, 2.0)
 	_put(badge, x + 30, y + 40, 150, 150)
-	_put(UIKit.title(row.name_zh, 48, UIKit.BONE, 8, false, -2, HORIZONTAL_ALIGNMENT_LEFT), x + 200, y + 46, 320, 70)
-	var s := UIKit.seal(String(row["class"]), UIKit.BLOOD, 22, 5)
-	_put(s, x + cw - 64 - s.size.x / 2.0, y + 52, s.size.x, s.size.y)
+	_put(UIKit.title(row.name_zh, 48, UIKit.BONE, 8, false, -2, HORIZONTAL_ALIGNMENT_LEFT), x + 200, y + 46, 280, 70)
+	var sl := UIKit.seal(String(row["class"]), UIKit.BLOOD, 22, 5)
+	_put(sl, x + cw - 64 - sl.size.x / 2.0, y + 52, sl.size.x, sl.size.y)
 	_put(UIKit.label("%s・%s" % [row["class"], RANGE_ZH[row.range_type]], 17, UIKit.GREY, HORIZONTAL_ALIGNMENT_LEFT, true), x + 208, y + 124, 200, 26)
 	var p := ComicFX.new()
 	p.add_pips(Vector2(0, 0), lv, Game.MAX_LV, 12.0, UIKit.EMBER, [Game.MAX_LV])
 	_put(p, x + 216, y + 178, 110, 1)
 	_put(UIKit.label("淬煉 +%d" % lv if lv < Game.MAX_LV else "器靈覺醒", 18, UIKit.EMBER), x + 330, y + 166, 160, 26)
-	# 強化
-	var up_cost := Game.upgrade_cost(slot)
+	var up_cost := Game.upgrade_cost(0)
 	var d0 := roundi(Game.weapon_hit_dmg(w.id, lv))
 	var info := "淬煉 +%d → +%d\n每段傷害 %d → %d" % [lv, lv + 1, d0, roundi(Game.weapon_hit_dmg(w.id, lv + 1))] if up_cost >= 0 else "已達器靈覺醒\n每段傷害 %d" % d0
 	var box := UIKit.box_text("system", info, 18, "強化", HORIZONTAL_ALIGNMENT_LEFT)
 	box.set_padding(12, 20)
-	_put(box, x + 30, y + 224, cw - 60, 92)
-	var up := UIKit.button("強化（%d 銀兩）" % up_cost if up_cost >= 0 else "已覺醒", _on_upgrade.bind(slot), 20, 240, 52)
+	_put(box, x + 30, y + 240, cw - 60, 92)
+	var up := UIKit.button("淬煉（%d 銀兩）" % up_cost if up_cost >= 0 else "已覺醒", _on_upgrade.bind(0), 20, 240, 52)
 	up.disabled = up_cost < 0 or Game.gold < up_cost
-	_put(up, x + 330, y + 334, 240, 52)
-	# 詞條
-	_put(UIKit.label("詞條", 18, UIKit.TEAL, HORIZONTAL_ALIGNMENT_LEFT, true), x + 32, y + 408, 80, 28)
-	var affixes: Array = w.get("affixes", [])
-	var re_cost := Game.reforge_cost(slot)
-	if affixes.is_empty():
-		_put(UIKit.label("起手兵器沒有詞條，無法重鑄", 17, UIKit.GREY), x + 34, y + 444, 400, 26)
-	for j in affixes.size():
-		_put(UIKit.label("◆ " + Data.affix_text(affixes[j]), 18, UIKit.BONE), x + 34, y + 440 + j * 28, 300, 26)
-	var re := UIKit.button("重鑄詞條（%d 銀兩）" % re_cost if re_cost >= 0 else "重鑄詞條", _on_reforge.bind(slot), 19, 240, 52)
-	re.disabled = re_cost < 0 or Game.gold < re_cost
-	_put(re, x + 330, y + 520, 240, 52)
-	if not affixes.is_empty():
-		_put(UIKit.label("詞條數不變，全部重新抽；重鑄越多次越貴", 13, UIKit.GREY), x + 34, y + 556, 290, 20)
+	_put(up, x + 290, y + 350, 240, 52)
+	_put(UIKit.label("淬煉到 +5 器靈覺醒。兵器本身沒有詞條，\n詞條改由打倒精英、首領掉落的配件提供。", 15, UIKit.GREY), x + 32, y + 460, cw - 64, 60)
+
+
+## 右：配件重鑄（護符、腰牌、玉珮；本體不變，只重抽 ◆ 詞條）
+func _smith_gear(x: float) -> void:
+	var y := 190.0
+	var cw := 780.0
+	_card(x, y, cw, 600.0, "配件重鑄")
+	for i in Game.GEAR_SLOTS.size():
+		var slot: String = Game.GEAR_SLOTS[i]
+		var g = Game.gear.get(slot)
+		var yy := y + 30.0 + i * 186.0
+		var frame := UIKit.box("chip", "", 0)
+		frame.fill = UIKit.INK2
+		frame.border = UIKit.rarity_color(Game.gear_quality(g)) if g != null else Color("#3a363e")
+		_put(frame, x + 24, yy, cw - 48, 168)
+		var icon := ComicFX.new()
+		icon.add_gear_icon(Vector2(60, 84), slot, 0.95, UIKit.BONE if g != null else UIKit.DIM)
+		_put(icon, x + 24, yy, 120, 168)
+		var tag := UIKit.box("chip", "", 0)
+		tag.fill = UIKit.GREY
+		tag.border = tag.fill
+		tag.set_padding(1, 8)
+		var tl := UIKit.label(Game.gear_slot_name(slot), 14, UIKit.INK)
+		tl.autowrap_mode = TextServer.AUTOWRAP_OFF
+		tag.add_child(tl)
+		_put(tag, x + 36, yy + 10, 10, 22)
+		var re := UIKit.button("重鑄", _on_reforge_gear.bind(slot), 19, 236, 48)
+		_put(re, x + cw - 284, yy + 104, 236, 48)
+		if g == null:
+			re.disabled = true
+			_put(UIKit.label("尚未取得", 24, UIKit.DIM, HORIZONTAL_ALIGNMENT_LEFT, true), x + 160, yy + 44, 300, 36)
+			_put(UIKit.label("打倒精英或首領有機會掉落", 15, UIKit.GREY), x + 160, yy + 90, 400, 22)
+			continue
+		var q := Game.gear_quality(g)
+		var qc := UIKit.rarity_color(q)
+		var gname: String = Data.accessories[g.id].name_zh
+		_put(UIKit.label(gname, 26, qc, HORIZONTAL_ALIGNMENT_LEFT, true), x + 160, yy + 14, 260, 40)
+		_put(UIKit.label(UIKit.rarity_name(q), 15, qc), x + 160 + gname.length() * 27 + 10, yy + 26, 80, 22)
+		_put(UIKit.label("◇ %s（本體，重鑄不變）" % Data.affix_text(g.base), 15, UIKit.BONE), x + 162, yy + 58, 520, 22)
+		var affixes: Array = g.get("affixes", [])
+		for k in affixes.size():
+			_put(UIKit.label("◆ " + Data.affix_text(affixes[k]), 15, UIKit.TEAL), x + 162, yy + 84 + k * 22, 330, 22)
+		var cost := Game.gear_reforge_cost(slot)
+		re.text = "重鑄（%d 銀兩）" % cost if cost >= 0 else "重鑄"
+		re.disabled = cost < 0 or Game.gold < cost
+
+
+func _on_reforge_gear(slot: String) -> void:
+	if Game.reforge_gear(slot):
+		Sfx.play("reforge")
+		_clang()
+	else:
+		Sfx.play("ui_error")
+	_refresh()
 
 
 func _on_upgrade(slot: int) -> void:
