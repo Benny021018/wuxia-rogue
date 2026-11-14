@@ -101,6 +101,7 @@ func _run_character(cid: String) -> void:
 		await _check_game_feel(world, player)
 		await _check_third_person(world, player)
 		await _check_knockback(world, player)
+		await _check_enemy_ai(world, player)
 		var gate = world.rooms[0].gate_out
 		var meshes := (gate as Node).find_children("*", "MeshInstance3D", true, false)
 		_check(meshes.size() == 1, "山寨門只有一個可見模型")
@@ -846,6 +847,7 @@ func _check_draw(enemy, world) -> void:
 			shots.append(child)
 	world.child_entered_tree.connect(capture)
 	var ai: Dictionary = enemy.ai
+	enemy.view_override = 1          # 這段只測弓手的出手流程，不受鏡頭外規則影響
 	_check(ai.windup_s >= 1.0 and ai.lock_s > 0.2 and ai.lock_s < ai.windup_s, "弓手起手至少 1 秒，最後一段才鎖定")
 	_check(ai.cd_min_s >= 2.0 and ai.attack_chance < 1.0, "弓手出手間隔拉長，不會每次輪到就射")
 	ai.attack_chance = 1.0
@@ -918,6 +920,7 @@ func _check_cover_tactics(world, player) -> void:
 	var archer = world.spawn_enemy("H02",Vector3(26,0,0),false)
 	archer._aim_cd = 0
 	archer.ai.attack_chance = 1.0
+	archer.view_override = 1
 	await _frames(3)
 	_check(not archer._clear_shot() and archer._rstate == "move" and archer.velocity.slide(Vector3.UP).length() > .1, "隔著路障先換位，不原地拉弓")
 	var bolt = preload("res://scripts/projectile.gd").new()
@@ -1097,6 +1100,253 @@ func _check_knockback(world, player) -> void:
 func _physics(n: int) -> void:
 	for i in n:
 		await get_tree().physics_frame
+
+
+# 敵人 AI：招式表、出手權、外圈包圍、看玩家狀態、鏡頭外、跳開、反擊、首領階段、站位分工
+func _check_enemy_ai(world, player) -> void:
+	var S := CombatState.S
+	# ---- 資料
+	for id in Data.enemies:
+		var r: Dictionary = Data.enemies[id]
+		_check(Data.enemy_roles.has(r.role), "%s 的定位「%s」在 enemy_roles.csv" % [id, r.role])
+		var table: Dictionary = Data.enemy_moves.get(id, Data.enemy_moves.get(r.rank, {}))
+		var melee := 0
+		for mid in table:
+			var mv: Dictionary = table[mid]
+			if mv.kind == "melee" and float(mv.weight) > 0.0:
+				melee += 1
+			if mv.chain != "":
+				_check(table.has(mv.chain), "%s 的 %s 接的 %s 存在" % [id, mid, mv.chain])
+		_check(melee > 0, "%s 至少有一招近戰" % id)
+		if r.rank == "boss":
+			var ph: Array = Data.boss_phases.get(id, [])
+			_check(ph.size() >= 2, "首領 %s 有分階段" % id)
+			for i in range(1, ph.size()):
+				_check(float(ph[i].hp_below) < float(ph[i - 1].hp_below), "%s 第 %d 階段的血量門檻遞減" % [id, i + 1])
+	for key in ["hop", "charge", "dive", "pounce", "dash"]:
+		_check(Data.enemy_moves.get("*", {}).has(key), "專屬技能 %s 有命中屬性" % key)
+	for rk in ["elite", "boss"]:
+		_check(Data.enemy_moves[rk].has("counter"), "%s 有反擊招" % rk)
+
+	# ---- 場地
+	Feel.reset()
+	player.cs.reset()
+	player.runner.interrupt()
+	player.invuln_t = 0.0
+	player.hit_guard = 0.0
+	player.velocity = Vector3.ZERO
+	# 找一塊四周 7 公尺都沒有牆的空地（嘍囉要能在外圈繞、往後跳）
+	var home: Vector3 = player.global_position
+	var open := home
+	for gx in range(-4, 5):
+		for gz in range(-4, 5):
+			var cand: Vector3 = home + Vector3(gx * 4.0, 0, gz * 4.0)
+			var xf := Transform3D(Basis(), cand + Vector3.UP * 0.1)
+			if player.test_move(Transform3D(Basis(), home + Vector3.UP * 0.1), cand - home):
+				continue
+			var clear := true
+			for k in 8:
+				var dv := Vector3(cos(TAU * k / 8.0), 0, sin(TAU * k / 8.0)) * 7.0
+				if player.test_move(xf, dv):
+					clear = false
+					break
+			if clear:
+				open = cand
+				break
+		if open != home:
+			break
+	player.global_position = open + Vector3.UP * 0.1
+	await _physics(2)
+	var c: Vector3 = player.global_position
+	var made: Array = []
+	var spawn := func(id: String, pos: Vector3):
+		var e = world.spawn_enemy(id, pos, false)
+		e.view_override = 1
+		e.max_hp = 1.0e7
+		e.hp = 1.0e7
+		made.append(e)
+		return e
+	var keep_dmg := {}
+
+	# ---- 出手權：六個嘍囉同時圍上來，同一時間出手的不超過上限
+	var pack: Array = []
+	for i in 6:
+		var a := TAU * i / 6.0
+		pack.append(spawn.call("H01", c + Vector3(cos(a), 0, sin(a)) * 2.4))
+	var limit: int = pack[0].token_limit()
+	var max_busy := 0
+	var max_tokens := 0
+	var starts := 0
+	for f in 300:
+		player.hp = Game.max_hp()
+		player.invuln_t = 0.0
+		for e in pack:
+			if e._windup > 0.0 and is_equal_approx(e._windup, e._windup_total):
+				starts += 1
+		await get_tree().physics_frame
+		var busy := 0
+		var tokens := 0
+		for e in pack:
+			if e._windup > 0.0 or e._recover_t > 0.0:
+				busy += 1
+			if e._token:
+				tokens += 1
+		max_busy = maxi(max_busy, busy)
+		max_tokens = maxi(max_tokens, tokens)
+	_check(max_tokens <= limit and max_busy <= limit, "同時出手的嘍囉不超過出手權上限 %d（最多 %d 人起手、%d 人拿出手權）" % [limit, max_busy, max_tokens])
+	_check(starts >= 3, "嘍囉輪流上前出手（起手 %d 次）" % starts)
+	var ring_ok := 0
+	var waiting := 0
+	for e in pack:
+		if not e._token and e._windup <= 0.0 and e._recover_t <= 0.0:
+			waiting += 1
+			var d: float = (e.global_position - player.global_position).slide(Vector3.UP).length()
+			if d > float(e.role.ring_m) - Data.cfg("ai_ring_band_m") - 0.8:
+				ring_ok += 1
+	_check(waiting > 0 and ring_ok >= waiting - 1, "沒輪到的嘍囉在外圈等（%d／%d 在外圈）" % [ring_ok, waiting])
+
+	# ---- 玩家無敵（起身、閃避）時不起手
+	for e in pack:
+		e._abort_move()
+	player.cs.give_invincible(1.5)
+	var started := false
+	for f in 60:
+		player.hp = Game.max_hp()
+		await get_tree().physics_frame
+		for e in pack:
+			if e._windup > 0.0:
+				started = true
+	_check(not started, "玩家無敵時敵人不起手")
+	player.cs.reset()
+
+	# ---- 玩家開霸體：怕霸體的嘍囉退到外面
+	player.cs.give_armor(3.0)
+	for f in 120:
+		player.hp = Game.max_hp()
+		await get_tree().physics_frame
+	var near := 0
+	for e in pack:
+		if (e.global_position - player.global_position).slide(Vector3.UP).length() < Data.cfg("ai_armor_retreat_m") - 1.2:
+			near += 1
+	_check(near == 0 and not pack.any(func(e): return e._token), "玩家霸體時嘍囉交回出手權、退到 %.1f 公尺外（太近的 %d 隻）" % [Data.cfg("ai_armor_retreat_m"), near])
+	player.cs.reset()
+
+	# ---- 玩家倒地：一般嘍囉不追打，刺客會搶著追擊
+	player.cs.base = S.DOWN
+	player.cs.t = 5.0
+	var assassin = spawn.call("H06", c + Vector3(1.5, 0, 0))
+	pack[0]._abort_move()
+	pack[0]._token = true
+	pack[0]._atk_cd = 0.0
+	_check(not pack[0]._may_attack(), "玩家倒地時一般嘍囉不追打")
+	assassin._token_rest = 0.0
+	_check(assassin._take_token(assassin._player_view()) and assassin._may_attack(), "刺客在玩家倒地時搶出手權追擊")
+	player.cs.reset()
+	assassin._release_token(0.0)
+
+	# ---- 鏡頭外：起手變長
+	var e0 = pack[1]
+	e0._abort_move()
+	e0.view_override = -1
+	var slash: Dictionary = e0._move_table().slash
+	e0._start_move(slash)
+	_check(absf(e0._windup_total - float(slash.windup_s) * Data.cfg("ai_offscreen_windup_mult")) < 0.01, "鏡頭外起手 ×%.1f" % Data.cfg("ai_offscreen_windup_mult"))
+	e0._abort_move()
+	e0.view_override = 1
+	# 判斷畫面內外：鏡頭正前方算在內，正後方算在外
+	var probe = pack[2]
+	probe.view_override = 0
+	var fwd: Vector3 = player.aim_flat()
+	probe.global_position = player.cam.global_position + fwd * 6.0 - Vector3.UP * player.cam.global_position.y
+	var inside: bool = probe._onscreen()
+	probe.global_position = player.cam.global_position - fwd * 4.0 - Vector3.UP * player.cam.global_position.y
+	_check(inside and not probe._onscreen(), "鏡頭前方算畫面內、背後算畫面外")
+	probe.view_override = 1
+
+	# ---- 被連打後跳開
+	var keep_esc: float = Data.combat.ai_escape_chance
+	Data.combat.ai_escape_chance = 1.0
+	var vic = pack[3]
+	vic._abort_move()
+	vic.global_position = player.global_position + fwd * 2.0
+	await _physics(2)
+	var d0: float = (vic.global_position - player.global_position).slide(Vector3.UP).length()
+	vic._combo_taken = int(Data.cfg("ai_combo_escape_hits"))
+	vic.stun(0.05)
+	var hopped := false
+	for f in 20:
+		await get_tree().physics_frame
+		hopped = hopped or vic._evade_t > 0.0
+	var d1: float = (vic.global_position - player.global_position).slide(Vector3.UP).length()
+	_check(hopped and d1 > d0 + 1.0, "被連打 %d 下後起身往後跳開（%.1f → %.1f 公尺）" % [int(Data.cfg("ai_combo_escape_hits")), d0, d1])
+	Data.combat.ai_escape_chance = keep_esc
+
+	for e in pack:
+		e.queue_free()
+	assassin.queue_free()
+	await _physics(2)
+
+	# ---- 精英：霸體空窗結束時反擊；連招會接下去
+	var blade = spawn.call("H07", player.global_position + fwd * 1.8)
+	await _physics(2)
+	blade._broken_by_hit = true
+	blade.cs.armor_broken_t = 0.05
+	var countered := false
+	for f in 60:
+		player.hp = Game.max_hp()
+		player.invuln_t = 0.0
+		player.cs.reset()
+		await get_tree().physics_frame
+		if blade._mv.get("kind", "") == "counter":
+			countered = true
+			break
+	_check(countered, "精英的霸體空窗結束後反擊")
+	blade._abort_move()
+	blade._mv_cds.clear()
+	blade._atk_cd = 0.0
+	blade._start_move(blade._move_table().slash)
+	var chained := false
+	for f in 90:
+		player.hp = Game.max_hp()
+		player.invuln_t = 0.0
+		player.cs.reset()
+		await get_tree().physics_frame
+		if blade._mv.get("move_id", "") == "slash3":
+			chained = true
+			break
+	_check(chained, "血刀客三連斬一路接到第三下")
+	blade.queue_free()
+
+	# ---- 首領階段與破綻
+	var boss = spawn.call("H08", player.global_position + fwd * 12.0)
+	await _physics(2)
+	_check(boss._phase == 1 and boss.cs.has_armor(), "首領開場第一階段、常駐霸體")
+	boss.hp = boss.max_hp * 0.4
+	await _physics(2)
+	_check(boss._phase == 2 and float(boss.phase_row.skill_rate) > 1.0, "首領血量過半進第二階段，技能變快")
+	boss._open_window()
+	_check(not boss.cs.has_armor() and boss._recover_t > 0.0, "首領放完技能有破綻：霸體消失、原地停頓")
+	boss.queue_free()
+
+	# ---- 刀盾手站在玩家與弓手之間；弓手躲在刀盾手後面
+	var archer = spawn.call("H02", player.global_position + fwd * 9.0)
+	var shield = spawn.call("H03", player.global_position + fwd.rotated(Vector3.UP, 1.2) * 4.0)
+	await _physics(2)
+	var ang: float = shield._formation_angle(0.0)
+	var want: Vector3 = archer.global_position - player.global_position
+	_check(absf(wrapf(ang - atan2(want.x, want.z), -PI, PI)) < 0.2, "刀盾手選擇擋在弓手前面")
+	var cover: Vector3 = archer._cover_point()
+	var sv: Vector3 = (shield.global_position - player.global_position).slide(Vector3.UP).normalized()
+	_check(cover.is_finite() and (cover - shield.global_position).slide(Vector3.UP).normalized().dot(sv) > 0.95, "弓手的掩護點在刀盾手背後")
+	archer.queue_free()
+	shield.queue_free()
+
+	await _physics(2)
+	player.global_position = home
+	player.cs.reset()
+	player.hp = Game.max_hp()
+	player.invuln_t = 0.0
+	Feel.reset()
 
 
 # 取動畫與所有父節點變換後的世界頭部朝向。

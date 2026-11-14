@@ -24,6 +24,9 @@ var maps := {}              # map_id -> row
 var map_order: Array = []
 var enemies := {}           # enemy_id -> row
 var ranged_ai := {}         # enemy_id -> 遠程 AI 參數（ranged_ai.csv）
+var enemy_moves := {}       # enemy_id（或 minion／elite／boss／*）-> {move_id: row}（enemy_moves.csv）
+var enemy_roles := {}       # role -> row（enemy_roles.csv）
+var boss_phases := {}       # enemy_id -> 依階段排序的 rows（boss_phases.csv）
 var music := {}             # key（menu 或 map_id）-> 配樂設定（music.csv）
 var sfx := {}               # id -> 音效設定（sfx.csv）
 var settings_cfg := {}      # key -> 設定預設值與範圍（settings_config.csv）
@@ -80,6 +83,18 @@ func _ready() -> void:
 		enemies[r.enemy_id] = r
 	for r in _csv("ranged_ai"):
 		ranged_ai[r.enemy_id] = r
+	for r in _csv("enemy_moves"):
+		if not enemy_moves.has(r.enemy_id):
+			enemy_moves[r.enemy_id] = {}
+		enemy_moves[r.enemy_id][r.move_id] = r
+	for r in _csv("enemy_roles"):
+		enemy_roles[r.role] = r
+	for r in _csv("boss_phases"):
+		if not boss_phases.has(r.enemy_id):
+			boss_phases[r.enemy_id] = []
+		boss_phases[r.enemy_id].append(r)
+	for k in boss_phases:
+		boss_phases[k].sort_custom(func(a, b): return int(a.phase) < int(b.phase))
 	for r in _csv("music"):
 		music[r.key] = r
 	for r in _csv("sfx"):

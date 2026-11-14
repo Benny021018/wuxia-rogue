@@ -74,6 +74,28 @@ var _stuck_t := 0.0
 var _knock := Vector3.ZERO          # 擊退速度（逐幀衰減）
 var _away := Vector3.FORWARD        # 最後一次被打的方向（玩家 → 敵人）
 var cs := CombatState.new()         # 六種狀態（與玩家共用，見 docs/combat-design.md）
+# 近戰戰術（docs/combat-design.md「敵人 AI」）：出手權、外圈包圍、招式表、反擊、首領階段
+var role := {}                      # enemy_roles.csv
+var _token := false                 # 拿著近戰出手權
+var _token_t := 0.0                 # 拿著出手權多久了
+var _token_rest := 0.0              # 交回出手權後的休息
+var _mv := {}                       # 正在出的招（enemy_moves.csv）
+var _mv_root := ""                  # 連招的第一招（冷卻記在它身上）
+var _mv_cds := {}                   # move_id -> 剩餘冷卻
+var _windup_total := 0.0
+var _recover_t := 0.0
+var _offscreen_t := 0.0
+var _slot_angle := NAN              # 外圈分配到的角度（NAN = 沒有分配）
+var _slot_t := 0.0
+var _sway := 0.0
+var _combo_taken := 0               # 這次被連打了幾下
+var _was_stunned := false
+var _evade_t := 0.0
+var _evade_dir := Vector3.ZERO
+var _counter_t := 0.0               # >0：霸體空窗剛結束，可以反擊
+var _broken_by_hit := false
+var phase_row := {}                 # boss_phases.csv 目前階段
+var view_override := 0              # 測試用：1 = 一定在畫面內，-1 = 一定在畫面外，0 = 依鏡頭判斷
 var _pose: Node3D                   # 倒地／浮空時把整個外觀放平
 var last_hit_metal := false         # 最後一擊打在盾牌／鎧甲上（音效用金屬層）
 
@@ -101,6 +123,10 @@ func setup(id: String, stg: int, w, pos: Vector3) -> void:
 		_armor = 15.0 * pow(Data.cfg("enemy_hp_growth"), stg - 1)
 	hit_radius = 0.45 * size
 	position = pos
+	role = Data.enemy_roles.get(String(row.role), {})
+	if Data.boss_phases.has(id):
+		phase_row = Data.boss_phases[id][0]
+	_sway = randf() * TAU
 	if Data.ranged_ai.has(id):
 		var r: Dictionary = Data.ranged_ai[id]
 		for k in r:
@@ -205,6 +231,8 @@ func _physics_process(delta: float) -> void:
 		_state = ""
 		_body_mat.emission_enabled = false
 	if _stun_t > 0.0:
+		_was_stunned = true
+		_abort_move()
 		if _rstate == "aim" or _rstate == "recover":
 			_ranged_cancel(0.6)
 		if _bow:
@@ -219,10 +247,19 @@ func _physics_process(delta: float) -> void:
 	var to_p: Vector3 = player.global_position - global_position
 	var flat := Vector3(to_p.x, 0, to_p.z)
 	var dist := flat.length()
-	if _state == "" and _windup <= 0 and not _lock.is_finite():
+	if _was_stunned:
+		_was_stunned = false
+		_on_recovered(flat)
+	if _state == "" and _windup <= 0 and _recover_t <= 0 and _evade_t <= 0 and not _lock.is_finite():
 		if dist > 0.05:
 			rotation.y = atan2(-flat.x, -flat.z)
-	_behaviour(delta, flat, dist)
+	_tactics_tick(delta)
+	if _evade_t > 0.0:
+		_evade_t -= delta
+		velocity.x = _evade_dir.x * Data.cfg("ai_escape_speed")
+		velocity.z = _evade_dir.z * Data.cfg("ai_escape_speed")
+	else:
+		_behaviour(delta, flat, dist)
 	if _draw < 0.0 and (not _anim.is_playing() or _anim.current_animation in [&"Walk", &"Idle"]):
 		var moving := Vector2(velocity.x, velocity.z).length() > 0.15
 		var clip := &"Walk" if moving else &"Idle"
@@ -260,7 +297,7 @@ func _apply_gravity(delta: float) -> void:
 
 
 func _speed() -> float:
-	var s := speed * (1.0 - _slow / 100.0)
+	var s := speed * (1.0 - _slow / 100.0) * float(phase_row.get("speed_mult", 1.0))
 	if _enraged:
 		s *= 1.5
 	return s
@@ -301,6 +338,9 @@ func _ground_direction(goal: Vector2) -> Vector2:
 
 
 func _chase(flat: Vector3, dist: float, keep := 0.0, blocked := false) -> void:
+	if keep == 0.0 and not blocked and _uses_token() and _revealed:
+		_engage(flat, dist)
+		return
 	var dir := Vector3.ZERO
 	if blocked:
 		dir = flat.normalized()
@@ -362,36 +402,452 @@ func _separation() -> Vector3:
 
 func _melee(delta: float, dist: float, mult := 1.0) -> void:
 	_atk_cd -= delta
+	for k in _mv_cds:
+		_mv_cds[k] = float(_mv_cds[k]) - delta
 	if _windup > 0.0:
 		velocity.x = 0
 		velocity.z = 0
 		_windup -= delta
 		if _windup <= 0.0:
-			_body_mat.emission_enabled = false
-			var impact_reach := reach + 0.8 + hit_radius
-			FX.attack_trail(world,hit_center(),_swing_dir,impact_reach,180,0,Color("#ffa071"),.20)
-			Sfx.play("enemy_swing", hit_center())
-			if _anim:
-				FX.play(world,hit_center()+_swing_dir*impact_reach*.7,&"sword-slash",impact_reach*.8,.20)
-			var toward: Vector3 = player.global_position-global_position
-			toward.y = 0
-			if dist <= impact_reach and _swing_dir.dot(toward.normalized()) >= 0 and _clear_shot():
-				_hit_player(dmg * mult)
+			_strike(dist, mult)
 		return
-	if _atk_cd <= 0.0 and dist <= reach + 0.5 + hit_radius and _clear_shot():
-		_swing_dir = -global_basis.z
+	if _recover_t > 0.0:
 		velocity.x = 0
 		velocity.z = 0
-		_windup = 0.35
-		_atk_cd = 1.3
-		Sfx.play("enemy_windup", hit_center())
-		_body_mat.emission_enabled = true
-		_body_mat.emission = Color(1, 0.3, 0.2)
-		if not _anim.is_playing() or _anim.current_animation in [&"Walk", &"Idle", &"Slash"]:
-			_anim.play(&"Slash", 0.05)
+		_recover_t -= delta
+		if _recover_t <= 0.0:
+			_after_move(dist)
+		return
+	var mv := _pick_move(dist)
+	if mv.is_empty() or not _clear_shot() or not _may_attack():
+		return
+	_start_move(mv)
 
 
-func _hit_player(amount: float) -> void:
+## 這隻敵人的招式：自己的（enemy_moves.csv 以 enemy_id 列出），沒有就用階級預設
+func _move_table() -> Dictionary:
+	return Data.enemy_moves.get(eid, Data.enemy_moves.get(rank, {}))
+
+
+func _move_reach(mv: Dictionary) -> float:
+	return reach + float(mv.reach_add_m) + hit_radius
+
+
+## 選一招：反擊優先；否則從冷卻好、階段夠、打得到的招式裡依權重抽
+func _pick_move(dist: float) -> Dictionary:
+	var table := _move_table()
+	if _counter_t > 0.0:
+		var c: Dictionary = table.get("counter", Data.enemy_moves.get(rank, {}).get("counter", {}))
+		if not c.is_empty() and dist <= _move_reach(c) - 0.3:
+			return c
+	if _atk_cd > 0.0:
+		return {}
+	var pool: Array = []
+	var total := 0.0
+	for id in table:
+		var mv: Dictionary = table[id]
+		if mv.kind != "melee" or float(mv.weight) <= 0.0 or int(mv.min_phase) > _phase:
+			continue
+		if float(_mv_cds.get(id, 0.0)) > 0.0 or dist > _move_reach(mv) - 0.3:
+			continue
+		pool.append(mv)
+		total += float(mv.weight)
+	if pool.is_empty():
+		return {}
+	var roll := randf() * total
+	for mv in pool:
+		roll -= float(mv.weight)
+		if roll <= 0.0:
+			return mv
+	return pool[-1]
+
+
+func _start_move(mv: Dictionary) -> void:
+	if _mv.is_empty() or mv.kind == "counter":
+		_mv_root = mv.move_id
+	_mv = mv
+	_swing_dir = -global_basis.z
+	var t := float(mv.windup_s) * float(phase_row.get("windup_mult", 1.0))
+	if not _onscreen():
+		t *= Data.cfg("ai_offscreen_windup_mult")
+	_windup = maxf(t, 0.05)
+	_windup_total = _windup
+	velocity.x = 0
+	velocity.z = 0
+	Sfx.play("enemy_windup", hit_center())
+	# 起手光：破霸體是金色、擊倒或挑空是暗紅，一般是橘紅
+	_body_mat.emission_enabled = true
+	_body_mat.emission = Color(1, 0.78, 0.15) if int(mv.break_armor) == 1 else (Color(0.85, 0.05, 0.1) if int(mv.knockdown) == 1 or int(mv.launch) == 1 else Color(1, 0.3, 0.2))
+	if mv.kind == "counter":
+		_counter_t = 0.0
+		FX.float_text(world, hit_center() + Vector3(0, 1.0 * size, 0), "反擊", Color(1, 0.8, 0.3), 34)
+	var clip := StringName(mv.anim) if mv.anim != "" and _anim.has_animation(StringName(mv.anim)) else &"Slash"
+	if not _anim.is_playing() or _anim.current_animation in [&"Walk", &"Idle", &"Slash", clip]:
+		_anim.play(clip, 0.05)
+
+
+func _strike(dist: float, mult: float) -> void:
+	_body_mat.emission_enabled = false
+	var mv := _mv
+	var impact_reach := _move_reach(mv)
+	var arc := float(mv.arc_deg)
+	if arc >= 359.0:
+		FX.impact_wave(world, global_position, impact_reach, 0.2, Color(1, 0.45, 0.3))
+	else:
+		FX.attack_trail(world, hit_center(), _swing_dir, impact_reach, arc, 0, Color("#ffa071"), .20)
+		FX.play(world, hit_center() + _swing_dir * impact_reach * .7, &"sword-slash", impact_reach * .8, .20)
+	Sfx.play("enemy_swing", hit_center())
+	var toward: Vector3 = player.global_position - global_position
+	toward.y = 0
+	var in_arc := arc >= 359.0 or toward.length() < 0.05 or _swing_dir.dot(toward.normalized()) >= cos(deg_to_rad(arc * 0.5))
+	if dist <= impact_reach and in_arc and _clear_shot():
+		_hit_player(dmg * mult * float(mv.dmg_mult), _hit_dict(mv))
+	_recover_t = maxf(float(mv.recover_s), 0.01)
+
+
+## 收招：有連招就接下去，否則記冷卻、交回出手權
+func _after_move(dist: float) -> void:
+	var mv := _mv
+	var table := _move_table()
+	if not mv.is_empty() and mv.chain != "" and table.has(mv.chain):
+		var nxt: Dictionary = table[mv.chain]
+		var pv := _player_view()
+		if dist <= _move_reach(nxt) + 0.6 and not pv.inv:
+			_start_move(nxt)
+			return
+	var root: Dictionary = table.get(_mv_root, {})
+	if not root.is_empty():
+		_mv_cds[_mv_root] = float(root.cd_s)
+	_atk_cd = Data.cfg("ai_attack_gap_s")
+	_mv = {}
+	_mv_root = ""
+	_release_token(Data.cfg("ai_token_rest_s"))
+
+
+## 被打斷（硬直、浮空、倒地、跳開）：招式作廢
+func _abort_move() -> void:
+	if not _mv.is_empty():
+		var root: Dictionary = _move_table().get(_mv_root, {})
+		if not root.is_empty():
+			_mv_cds[_mv_root] = float(root.cd_s) * 0.5
+		_atk_cd = Data.cfg("ai_attack_gap_s")
+	_mv = {}
+	_mv_root = ""
+	_windup = 0.0
+	_recover_t = 0.0
+	_release_token(Data.cfg("ai_token_rest_s"))
+
+
+## 一招打在玩家身上的屬性；留空的欄位用階級預設（combat_state_config.csv）
+func _hit_dict(mv: Dictionary) -> Dictionary:
+	var tier := "" if rank == "minion" else ("_elite" if rank == "elite" else "_boss")
+	var h := {}
+	h["hitstun_s"] = float(mv.hitstun_s) if mv.get("hitstun_s", "") != "" else CombatState.cfg("enemy_hitstun%s_s" % tier)
+	h["push_m"] = float(mv.push_m) if mv.get("push_m", "") != "" else CombatState.cfg("enemy_push%s_m" % tier)
+	h["launch"] = int(mv.get("launch", 0))
+	h["launch_h_m"] = float(mv.get("launch_h_m", 0))
+	h["break_armor"] = int(mv.get("break_armor", 0))
+	h["knockdown"] = int(mv.get("knockdown", 0))
+	return h
+
+
+## 專屬技能（跳擊、衝撞…）的命中屬性，在 enemy_moves.csv 的 skill 列
+func _skill_hit(key: String) -> Dictionary:
+	var mv: Dictionary = Data.enemy_moves.get(eid, {}).get(key, Data.enemy_moves.get("*", {}).get(key, {}))
+	return _hit_dict(mv) if not mv.is_empty() else {}
+
+
+# ------------------------------------------------------------------ 戰術判斷
+func _uses_token() -> bool:
+	return int(role.get("token", 0)) == 1
+
+
+## 玩家現在的狀態（區網的對方也一樣是 player.gd）
+func _player_view() -> Dictionary:
+	var v := {"inv": false, "armor": false, "air_down": false, "busy_long": false}
+	if player == null or not is_instance_valid(player):
+		return v
+	var pcs = player.get("cs")
+	if pcs != null:
+		v.inv = pcs.state() == CombatState.S.INVINCIBLE or (player.has_method("damage_immune") and player.damage_immune())
+		v.armor = pcs.has_armor()
+		v.air_down = pcs.base == CombatState.S.AIR or pcs.base == CombatState.S.DOWN
+	var r = player.get("runner")
+	if r != null and not r.move.is_empty():
+		v.armor = v.armor or String(r.move.get("slot", "")) == "ult"
+		v.busy_long = float(r.move.get("duration_s", 0.0)) >= Data.cfg("ai_punish_move_s")
+	return v
+
+
+## 在玩家的畫面裡嗎？本機玩家看鏡頭；區網對方沒有鏡頭資訊，看面向
+func _onscreen() -> bool:
+	if view_override != 0:
+		return view_override > 0
+	if player == null or not is_instance_valid(player):
+		return true
+	var c = player.get("cam")
+	if c != null and c.is_inside_tree() and c.get_viewport().get_camera_3d() == c:
+		return c.is_position_in_frustum(hit_center())
+	var yaw = player.get("body_yaw")
+	if yaw == null:
+		return true
+	var to: Vector3 = global_position - player.global_position
+	to.y = 0
+	if to.length() < 0.1:
+		return true
+	return Vector3(-sin(yaw), 0, -cos(yaw)).dot(to.normalized()) >= cos(deg_to_rad(Data.cfg("ai_behind_deg")))
+
+
+## 可以起手嗎：看玩家狀態、出手權、在不在鏡頭裡
+func _may_attack() -> bool:
+	if _counter_t > 0.0:
+		return true
+	var pv := _player_view()
+	if pv.inv:
+		return false
+	if pv.air_down and int(role.get("pursue_down", 0)) != 1:
+		return false
+	if pv.armor and int(role.get("fear_armor", 0)) == 1:
+		return false
+	if _uses_token() and not _token:
+		return false
+	if not _onscreen():
+		if _offscreen_t > 0.0:
+			return false
+		if randf() > Data.cfg("ai_offscreen_attack_chance"):
+			_offscreen_t = Data.cfg("ai_offscreen_retry_s")
+			return false
+	return true
+
+
+## 專屬技能（跳擊、衝鋒、撲擊…）能不能放：玩家無敵或倒地時不放，鏡頭外機率降低
+func _skill_ok() -> bool:
+	var pv := _player_view()
+	if pv.inv or (pv.air_down and int(role.get("pursue_down", 0)) != 1):
+		return false
+	if not _onscreen():
+		if _offscreen_t > 0.0:
+			return false
+		if randf() > Data.cfg("ai_offscreen_attack_chance"):
+			_offscreen_t = Data.cfg("ai_offscreen_retry_s")
+			return false
+	return true
+
+
+func token_limit(pv := {}) -> int:
+	var n := int(Data.cfg("ai_tokens_base") + Data.cfg("ai_tokens_per_map") * float(world.map_index if world else 0))
+	n = mini(n, int(Data.cfg("ai_tokens_max")))
+	if pv.get("busy_long", false):
+		n += int(Data.cfg("ai_punish_extra_tokens"))
+	return maxi(1, n)
+
+
+func _token_holders() -> int:
+	var n := 0
+	for e in get_tree().get_nodes_in_group("enemies"):
+		if e != self and not e.dead and e._token and e.player == player:
+			n += 1
+	return n
+
+
+func _take_token(pv: Dictionary) -> bool:
+	if _token:
+		return true
+	var pursuit: bool = pv.air_down and int(role.get("pursue_down", 0)) == 1
+	if pursuit or _token_holders() < token_limit(pv):
+		_token = true
+		_token_t = 0.0
+		return true
+	return false
+
+
+func _release_token(rest: float) -> void:
+	if _token:
+		_token = false
+		_token_rest = maxf(_token_rest, rest)
+
+
+## 每幀的戰術計時：出手權逾時、反擊時機、首領階段
+func _tactics_tick(delta: float) -> void:
+	_offscreen_t -= delta
+	_token_rest -= delta
+	_slot_t -= delta
+	_sway += delta * TAU / maxf(0.1, Data.cfg("ai_ring_sway_s"))
+	if _token and _windup <= 0.0 and _recover_t <= 0.0:
+		_token_t += delta
+		if _token_t > Data.cfg("ai_token_hold_s"):
+			_release_token(Data.cfg("ai_token_rest_s"))
+	# 精英與首領：被破霸體的空窗結束時反擊
+	if cs.armor_always:
+		if _broken_by_hit and cs.armor_broken_t <= 0.0:
+			_broken_by_hit = false
+			_counter_t = Data.cfg("ai_counter_window_s")
+		_counter_t -= delta
+	_update_phase()
+
+
+## 外圈站位與輪流上前：拿到出手權就衝進去，沒拿到在外圈散開包圍
+func _engage(flat: Vector3, dist: float) -> void:
+	var pv := _player_view()
+	var radius := float(role.ring_m)
+	var fear: bool = pv.armor and int(role.get("fear_armor", 0)) == 1
+	if fear:
+		_release_token(0.3)
+		radius = maxf(radius, Data.cfg("ai_armor_retreat_m"))
+	elif pv.inv:
+		radius = maxf(minf(radius, dist), reach + hit_radius + Data.cfg("ai_backoff_m"))
+	elif not _token and _atk_cd <= 0.0 and _token_rest <= 0.0 and dist < radius + 2.5:
+		if not pv.air_down or int(role.get("pursue_down", 0)) == 1:
+			_take_token(pv)
+	if _token and not fear and not pv.inv:
+		_approach(flat, dist)
+	else:
+		_ring_move(flat, dist, radius)
+
+
+## 拿著出手權：直接靠近，前方有同伴就從側面繞
+func _approach(flat: Vector3, dist: float) -> void:
+	var dir := Vector3.ZERO
+	if dist > reach * 0.8:
+		dir = flat.normalized()
+		var here := Vector2(global_position.x, global_position.z)
+		var goal := here + Vector2(dir.x, dir.z) * dist
+		if dist < Data.cfg("ai_flank_range") and dist > reach:
+			goal += _flank_offset(dir)
+		var step := _ground_direction(goal)
+		dir = Vector3(step.x, 0, step.y)
+	dir = (dir + _separation() * 0.8).limit_length()
+	velocity.x = dir.x * _speed()
+	velocity.z = dir.z * _speed()
+
+
+## 外圈：依定位決定站在哪個角度（側翼散開、刀盾手擋在遠程隊友前面），沿圓周移過去
+func _ring_move(flat: Vector3, dist: float, radius: float) -> void:
+	var pp: Vector3 = player.global_position
+	var now := atan2(-flat.x, -flat.z)          # 玩家 → 自己 的角度
+	if _slot_t <= 0.0:
+		_slot_t = 0.3
+		_slot_angle = _formation_angle(now)
+	var target := now if is_nan(_slot_angle) else _slot_angle
+	target += sin(_sway) * deg_to_rad(Data.cfg("ai_ring_sway_deg"))
+	var d_ang := wrapf(target - now, -PI, PI)
+	var a := target if absf(d_ang) < 0.6 else now + signf(d_ang) * 0.6     # 沿圓周走，不穿過玩家
+	var goal := pp + Vector3(sin(a), 0, cos(a)) * radius
+	var to := goal - global_position
+	to.y = 0
+	var dir := Vector3.ZERO
+	if to.length() > 0.25:
+		var step := _ground_direction(Vector2(goal.x, goal.z))
+		dir = Vector3(step.x, 0, step.y)
+	dir = (dir + _separation() * 0.8).limit_length()
+	var mult := Data.cfg("ai_ring_speed_mult") if absf(dist - radius) < Data.cfg("ai_ring_band_m") else 1.0
+	velocity.x = dir.x * _speed() * mult
+	velocity.z = dir.z * _speed() * mult
+
+
+## 外圈角度（玩家 → 自己 的方向，atan2(x, z)）
+func _formation_angle(now: float) -> float:
+	var pp: Vector3 = player.global_position
+	if role.get("formation", "") == "front":
+		# 刀盾手：站在玩家與最近的遠程隊友之間
+		var best = null
+		var best_d := Data.cfg("ai_cover_scan_m")
+		for e in get_tree().get_nodes_in_group("enemies"):
+			if e.dead or e.role.get("formation", "") != "ranged":
+				continue
+			var d: float = e.global_position.distance_to(global_position)
+			if d < best_d:
+				best_d = d
+				best = e
+		if best != null:
+			var v: Vector3 = best.global_position - pp
+			return atan2(v.x, v.z)
+		return now
+	if role.get("formation", "") != "flank":
+		return now
+	# 側翼：同一個目標的外圈隊友在玩家鏡頭前方平均散開
+	var members: Array = []
+	for e in get_tree().get_nodes_in_group("enemies"):
+		if not e.dead and e.player == player and not e._token and e.role.get("formation", "") == "flank":
+			members.append(e)
+	members.sort_custom(func(x, y): return x.get_instance_id() < y.get_instance_id())
+	var i := members.find(self)
+	if i < 0:
+		return now
+	var yaw = player.get("yaw")
+	if yaw == null:
+		yaw = player.get("body_yaw")
+	if yaw == null:
+		return now
+	var front := float(yaw) + PI                # 玩家鏡頭正前方
+	var spread := deg_to_rad(Data.cfg("ai_ring_spread_deg"))
+	var k := (float(i) + 0.5) / float(members.size()) - 0.5
+	return wrapf(front + spread * k, -PI, PI)
+
+
+## 硬直結束：被連打夠多下的小怪往後跳開
+func _on_recovered(flat: Vector3) -> void:
+	var hits := _combo_taken
+	_combo_taken = 0
+	if dead or int(role.get("escape", 0)) != 1 or hits < int(Data.cfg("ai_combo_escape_hits")):
+		return
+	if randf() > Data.cfg("ai_escape_chance"):
+		return
+	_evade_dir = -flat.normalized() if flat.length() > 0.05 else _away
+	_evade_t = Data.cfg("ai_escape_time_s")
+	_release_token(Data.cfg("ai_token_rest_s"))
+	if _anim.has_animation(&"Walk"):
+		_anim.play(&"Walk", 0.05)
+
+
+## 首領依血量換階段（boss_phases.csv）
+func _update_phase() -> void:
+	if not Data.boss_phases.has(eid):
+		return
+	var ratio := hp / max_hp
+	for r in Data.boss_phases[eid]:
+		var p := int(r.phase)
+		if p > _phase and ratio <= float(r.hp_below):
+			_phase = p
+			phase_row = r
+			_on_phase(p)
+
+
+func _on_phase(p: int) -> void:
+	if phase_row.message != "":
+		Game.message.emit(phase_row.message)
+	Sfx.play("roar", global_position, 2.0, 0.85)
+	if _anim.has_animation(&"Burst") and _state == "" and _windup <= 0.0:
+		_anim.play(&"Burst", .08)
+	if eid == "H09":
+		if p == 2:
+			if _anim.has_animation(&"Realm"):
+				_anim.play(&"Realm", .08)
+			Sfx.play("chant", global_position, 2.0, 0.8)
+			var hz := HAZARD.new()
+			world.add_child(hz)
+			hz.global_position = Vector3(global_position.x, 0, global_position.z)
+			hz.configure(9.0, dmg * 0.3, -1.0, true, Color(0.3, 0.6, 0.2, 0.25))
+			world.track_hazard(hz)
+		elif p == 3:
+			_enraged = true
+			hp = minf(max_hp, hp + max_hp * 0.15)
+			_summon("B01", 6, 12)
+
+
+## 首領放完技能後的破綻：霸體暫時消失，原地不動一小段
+func _open_window() -> void:
+	if phase_row.is_empty() or dead:
+		return
+	var t := float(phase_row.opening_s)
+	if t <= 0.0:
+		return
+	cs.armor_broken_t = maxf(cs.armor_broken_t, t)
+	_recover_t = maxf(_recover_t, t * Data.cfg("ai_opening_stand_ratio"))
+	FX.float_text(world, hit_center() + Vector3(0, 1.2 * size, 0), "破綻", Color(0.6, 0.95, 1.0), 40)
+
+
+func _hit_player(amount: float, h := {}) -> void:
 	if eid == "B01":
 		var pack := 0
 		for o in world.enemies_near(player.global_position, 4.0):
@@ -404,8 +860,9 @@ func _hit_player(amount: float) -> void:
 		_first_strike = false
 	if eid == "H07" and hp < max_hp * 0.3:
 		hp = minf(max_hp, hp + amount * 0.3)
-	var tier := "" if rank == "minion" else ("_elite" if rank == "elite" else "_boss")
-	player.take_damage(amount, self, false, {"hitstun_s": CombatState.cfg("enemy_hitstun%s_s" % tier), "push_m": CombatState.cfg("enemy_push%s_m" % tier)})
+	if h.is_empty():
+		h = _hit_dict({})
+	player.take_damage(amount, self, false, h)
 
 
 func _cancel_draw() -> void:
@@ -489,7 +946,7 @@ func _ranged(delta: float, flat: Vector3, dist: float) -> void:
 		var in_band: bool = dist <= ai.max_m and (dist >= ai.panic_m or cornered)
 		if blocked or not in_band:
 			_aim_cd = 0.25
-		elif _aiming_count() >= int(Data.cfg("ai_ranged_max_aiming")) or randf() > ai.attack_chance:
+		elif _aiming_count() >= int(Data.cfg("ai_ranged_max_aiming")) or randf() > ai.attack_chance or (not _onscreen() and randf() > Data.cfg("ai_offscreen_attack_chance")):
 			_aim_cd = randf_range(Data.cfg("ai_ranged_retry_min"), Data.cfg("ai_ranged_retry_max"))
 		else:
 			_rstate = "aim"
@@ -531,6 +988,13 @@ func _reposition(delta: float, flat: Vector3, dist: float, blocked: bool) -> voi
 		var drift := clampf((dist - ai.pref_m) / 2.0, -1.0, 1.0)
 		want = side * 0.8 + toward * drift * 0.4
 		mult = 0.7
+		var cover := _cover_point()
+		if cover.is_finite():
+			var to_cover := cover - global_position
+			to_cover.y = 0
+			if to_cover.length() > 1.2:
+				want = to_cover.normalized() + side * 0.25
+				mult = 0.9
 	if want.is_zero_approx():
 		velocity.x = 0
 		velocity.z = 0
@@ -549,6 +1013,28 @@ func _reposition(delta: float, flat: Vector3, dist: float, blocked: bool) -> voi
 	dir = (dir + _separation() * 0.8).limit_length()
 	velocity.x = dir.x * _speed() * mult
 	velocity.z = dir.z * _speed() * mult
+
+
+## 遠程：附近有刀盾手時，站到他背後（玩家 → 刀盾手 的延長線上）
+func _cover_point() -> Vector3:
+	var best = null
+	var best_d := Data.cfg("ai_cover_scan_m")
+	for e in get_tree().get_nodes_in_group("enemies"):
+		if e.dead or e.role.get("formation", "") != "front":
+			continue
+		var d: float = e.global_position.distance_to(global_position)
+		if d < best_d:
+			best_d = d
+			best = e
+	if best == null:
+		return Vector3.INF
+	var v: Vector3 = best.global_position - player.global_position
+	v.y = 0
+	if v.length() < 0.1:
+		return Vector3.INF
+	var pt: Vector3 = best.global_position + v.normalized() * Data.cfg("ai_cover_offset_m")
+	var d_p := Vector2(pt.x - player.global_position.x, pt.z - player.global_position.z).length()
+	return pt if d_p <= ai.max_m else Vector3.INF
 
 
 func _ranged_fire(dist: float) -> void:
@@ -608,6 +1094,7 @@ func _aoe_after(center: Vector3, r: float, delay: float, amount: float) -> void:
 	Feel.shake(float(Data.feel.shake_boom) * clampf(1.0 - d / (r * 3.0), 0.2, 1.0))
 	if d <= r:
 		player.take_damage(amount, self, false, {"hitstun_s": 0.4, "launch": 1, "launch_h_m": CombatState.cfg("enemy_aoe_launch_h_m"), "push_m": CombatState.cfg("enemy_aoe_push_m")})
+	_open_window()
 
 
 func _summon(id: String, n: int, cap: int) -> void:
@@ -615,19 +1102,21 @@ func _summon(id: String, n: int, cap: int) -> void:
 	summons = summons.filter(func(s): return is_instance_valid(s) and not s.dead)
 	for i in n:
 		if summons.size() >= cap:
-			return
+			break
 		var ang := randf() * TAU
 		var pos := global_position + Vector3(cos(ang), 0, sin(ang)) * randf_range(2.0, 4.0)
 		var e = world.spawn_enemy(id, pos, false)
 		if e:
 			e.summoner = self
 			summons.append(e)
+	_open_window()
 
 
 # ------------------------------------------------------------------ 專屬行為
 func _behaviour(delta: float, flat: Vector3, dist: float) -> void:
-	_skill_cd -= delta
-	_skill2_cd -= delta
+	var rate := float(phase_row.get("skill_rate", 1.0))
+	_skill_cd -= delta * rate
+	_skill2_cd -= delta * rate
 	match eid:
 		"Z02": _b_hopper(delta, flat, dist)
 		"Z05":
@@ -700,7 +1189,7 @@ func _b_hopper(delta: float, flat: Vector3, dist: float) -> void:
 		"":
 			_chase(flat, dist)
 			_melee(delta, dist)
-			if _skill_cd <= 0.0 and dist < 9.0 and dist > 2.0 and is_on_floor():
+			if _skill_cd <= 0.0 and dist < 9.0 and dist > 2.0 and is_on_floor() and _windup <= 0.0 and _skill_ok():
 				_state = "windup"
 				Sfx.play("roar" if eid == "B06" or eid == "B02" else "enemy_windup", hit_center(), -4.0)
 				_state_t = 0.6
@@ -723,7 +1212,7 @@ func _b_hopper(delta: float, flat: Vector3, dist: float) -> void:
 				_skill_cd = 3.0
 				var impact_radius := 2.0 + hit_radius
 				if dist < impact_radius:
-					_hit_player(dmg)
+					_hit_player(dmg, _skill_hit("hop"))
 				FX.impact_wave(world, global_position, impact_radius, 0.2, Color(0.6, 0.6, 0.4))
 
 
@@ -732,7 +1221,7 @@ func _b_boar(delta: float, flat: Vector3, dist: float) -> void:
 		"":
 			_chase(flat, dist)
 			_melee(delta, dist)
-			if _skill_cd <= 0.0 and dist < 14.0 and dist > 3.0:
+			if _skill_cd <= 0.0 and dist < 14.0 and dist > 3.0 and _windup <= 0.0 and _skill_ok():
 				_state = "windup"
 				Sfx.play("roar" if eid == "B06" or eid == "B02" else "enemy_windup", hit_center(), -4.0)
 				_state_t = 1.0
@@ -755,7 +1244,7 @@ func _b_boar(delta: float, flat: Vector3, dist: float) -> void:
 			velocity.z = _move_dir.z * 13.0
 			if not _charge_hit and dist < 1.4:
 				_charge_hit = true
-				_hit_player(dmg * 1.6)
+				_hit_player(dmg * 1.6, _skill_hit("charge"))
 			if is_on_wall():
 				_state = ""
 				_skill_cd = 4.0
@@ -775,7 +1264,7 @@ func _b_crow(delta: float, flat: Vector3, dist: float) -> void:
 			velocity.x = want.x
 			velocity.z = want.z
 			velocity.y = (target_y - global_position.y) * 2.0
-			if _skill_cd <= 0.0 and dist < 12.0:
+			if _skill_cd <= 0.0 and dist < 12.0 and _skill_ok():
 				_state = "dive"
 				_anim.play(&"Dive", .05)
 				_state_t = 1.5
@@ -787,7 +1276,7 @@ func _b_crow(delta: float, flat: Vector3, dist: float) -> void:
 			velocity = d
 			if not _charge_hit and global_position.distance_to(tp) < 1.0:
 				_charge_hit = true
-				_hit_player(dmg)
+				_hit_player(dmg, _skill_hit("dive"))
 				_state_t = 0.0
 			if _state_t <= 0.0:
 				_state = ""
@@ -799,7 +1288,7 @@ func _b_tiger(delta: float, flat: Vector3, dist: float) -> void:
 		"":
 			_chase(flat, dist)
 			_melee(delta, dist)
-			if _skill_cd <= 0.0 and dist < 12.0 and dist > 3.0 and is_on_floor():
+			if _skill_cd <= 0.0 and dist < 12.0 and dist > 3.0 and is_on_floor() and _windup <= 0.0 and _recover_t <= 0.0 and _skill_ok():
 				_state = "windup"
 				Sfx.play("roar" if eid == "B06" or eid == "B02" else "enemy_windup", hit_center(), -4.0)
 				_state_t = 0.6
@@ -820,7 +1309,7 @@ func _b_tiger(delta: float, flat: Vector3, dist: float) -> void:
 				_skill_cd = 6.0
 				var impact_radius := 2.5 + hit_radius
 				if dist < impact_radius:
-					_hit_player(dmg * 1.2)
+					_hit_player(dmg * 1.2, _skill_hit("pounce"))
 				FX.impact_wave(world, global_position, impact_radius, 0.2, Color(1, 0.7, 0.3))
 
 
@@ -829,7 +1318,7 @@ func _b_blade(delta: float, flat: Vector3, dist: float) -> void:
 		"":
 			_chase(flat, dist)
 			_melee(delta, dist)
-			if _skill_cd <= 0.0 and dist < 12.0:
+			if _skill_cd <= 0.0 and dist < 12.0 and _windup <= 0.0 and _recover_t <= 0.0 and _skill_ok():
 				_state = "windup"
 				Sfx.play("roar" if eid == "B06" or eid == "B02" else "enemy_windup", hit_center(), -4.0)
 				_state_t = 0.5
@@ -854,27 +1343,11 @@ func _b_blade(delta: float, flat: Vector3, dist: float) -> void:
 				_state = ""
 				_skill_cd = 5.0
 				if dist < 2.0:
-					_hit_player(dmg)
+					_hit_player(dmg, _skill_hit("dash"))
 
 
 func _b_final(delta: float, flat: Vector3, dist: float) -> void:
-	var ratio := hp / max_hp
-	if _phase == 1 and ratio <= 0.66:
-		_anim.play(&"Realm", .08)
-		_phase = 2
-		Sfx.play("chant", global_position, 2.0, 0.8)
-		Game.message.emit("天魔：天魔領域！")
-		var hz := HAZARD.new()
-		world.add_child(hz)
-		hz.global_position = Vector3(global_position.x, 0, global_position.z)
-		hz.configure(9.0, dmg * 0.3, -1.0, true, Color(0.3, 0.6, 0.2, 0.25))
-		world.track_hazard(hz)
-	elif _phase == 2 and ratio <= 0.33:
-		_phase = 3
-		_enraged = true
-		hp = minf(max_hp, hp + max_hp * 0.15)
-		Game.message.emit("天魔吸取血氣，狂暴了！")
-		_summon("B01", 6, 12)
+	# 階段變化（領域、狂暴）在 _on_phase，門檻在 boss_phases.csv
 	if _phase == 1 and _skill2_cd <= 0.0:
 		_skill2_cd = 25.0
 		_summon("B02", 2, 3)
@@ -1048,9 +1521,15 @@ func take_hit(amount: float, from_pos: Vector3, crit: bool, weight := 1.0, hit :
 			_knock += _away * kv * _knock_mass() * (.4 if last_hit_metal else 1.0)
 		else:
 			# 狀態屬性：硬直、浮空、破霸體、擊倒；擊退距離由招式的 push_m 決定，受擊、浮空、倒地都會退
+			var armored := cs.armor_always and cs.armor_broken_t <= 0.0
 			var res: Dictionary = cs.apply_hit(hit)
 			if float(res.launch_v) > 0.0:
 				velocity.y = float(res.launch_v)
+			if res.taken:
+				_combo_taken += 1
+			if armored and cs.armor_broken_t > 0.0:
+				_broken_by_hit = true
+				_counter_t = 0.0
 			var dist := float(hit.get("push_m", 0.0)) * _knock_mass()
 			if res.absorbed:
 				dist *= float(Data.feel.knock_armor_mult)
@@ -1094,6 +1573,7 @@ func _apply_damage(v: float, crit: bool, dot: bool) -> float:
 
 
 func die() -> void:
+	_token = false
 	if dead:
 		return
 	dead = true
