@@ -1549,6 +1549,46 @@ def s16_skill_bar():
     return doc("\n".join(b), "16 技能列")
 
 
+def _figure(cx, foot, h, col, op=1.0):
+    """簡單人形剪影（頭、身、持刀手臂）"""
+    k = h / 180
+    return (f'<g opacity="{op}" transform="translate({cx} {foot}) scale({k})">'
+            f'<circle cx="0" cy="-160" r="16" fill="{col}"/>'
+            f'<path d="M-24,-140 H24 L30,-70 H-30 Z" fill="{col}"/><path d="M-26,-72 L-34,0 H-14 L0,-50 L14,0 H34 L26,-72 Z" fill="{col}"/>'
+            f'<path d="M24,-136 L58,-96 L52,-90 L20,-120 Z" fill="{col}"/><path d="M52,-96 L110,-150" stroke="{BONE}" stroke-width="5"/>'
+            f'<path d="M-24,-136 L-48,-92 L-40,-88 L-20,-118 Z" fill="{col}"/></g>')
+
+
+def s19_lock_on():
+    b = []
+    b.append(f'<image href="{asset("scene")}" x="0" y="0" width="{W}" height="{H}" preserveAspectRatio="xMidYMid slice"/>')
+    b.append(f'<rect width="{W}" height="{H}" fill="url(#vignette)" opacity=".7"/>')
+    # 其他敵人（未鎖定）與鎖定中的目標
+    b.append(_figure(560, 560, 150, "#2a2630", .85))
+    b.append(_figure(1150, 540, 140, "#2a2630", .85))
+    b.append(_figure(860, 600, 220, "#1c191f"))
+    # 鎖定標記：頭頂紅色菱形＋身旁四角框
+    mx, my = 860, 352
+    b.append(f'<path d="M{mx},{my-22} L{mx+16},{my} L{mx},{my+22} L{mx-16},{my} Z" fill="{BLOOD}" stroke="{INK}" stroke-width="3"/>')
+    b.append(f'<path d="M{mx},{my-34} L{mx+26},{my} L{mx},{my+34} L{mx-26},{my} Z" fill="none" stroke="{BONE}" stroke-width="2" opacity=".8"/>')
+    x0, y0, x1, y1 = 770, 372, 950, 612
+    for (ax, ay, dx, dy) in [(x0, y0, 1, 1), (x1, y0, -1, 1), (x0, y1, 1, -1), (x1, y1, -1, -1)]:
+        b.append(f'<path d="M{ax},{ay+dy*26} V{ay} H{ax+dx*26}" fill="none" stroke="{BLOOD}" stroke-width="4"/>')
+    # 上方：目標框（名稱、階級、生命）
+    b.append(slant(560, 34, 480, 74, 16, INK, BONE, 2, 'opacity=".9"'))
+    b.append(f'<path d="M{586},{58} l9,-12 l9,12 l-9,12 z" fill="{BLOOD}"/>')
+    b.append(text(616, 66, "血刀客", 26, BONE, SERIF, 900))
+    b.append(f'<rect x="712" y="48" width="52" height="22" fill="{EMBER}"/>')
+    b.append(text(738, 64, "精英", 14, INK, SANS, 900, "middle"))
+    b.append(text(1012, 66, "霸體", 15, GOLD, SANS, 900, "end"))
+    b.append(bar(586, 80, 430, 14, 0.64, cut=8))
+    b.append(crosshair(800, 450))
+    b.append(note(30, 790, ["稿註：中鍵鎖定鏡頭前方最近的敵人，再按一次解除；鎖定時左右甩滑鼠或滾輪切換。",
+                           "鏡頭自動轉向目標，出招與暗器自動朝向目標；目標死亡自動換下一個，太遠或擋住太久解除。",
+                           "鎖定首領時不顯示目標框（上方已有首領條）。"]))
+    return doc("\n".join(b), "19 鎖定目標")
+
+
 def build(only=None):
     os.makedirs(OUT, exist_ok=True)
     screens = {k: v for k, v in globals().items() if k.startswith("s") and k[1:3].isdigit()}
@@ -1557,7 +1597,7 @@ def build(only=None):
             continue
         slug = {"s00": "00-style", "s01": "01-main-menu", "s02": "02-character-select", "s03": "03-hud",
                 "s04": "04-shrine", "s05": "05-martial-panel", "s06": "06-pause", "s07": "07-result",
-                "s08": "08-start-weapon", "s09": "09-drop-compare", "s10": "10-smith", "s11": "11-merchant", "s12c": "12c-meridian-pose", "s12d": "12d-meridian-poses", "s13": "13-bow-aim", "s14": "14-tianji-wheel", "s15": "15-settings", "s16": "16-skill-bar"}[name.split("_")[0]]
+                "s08": "08-start-weapon", "s09": "09-drop-compare", "s10": "10-smith", "s11": "11-merchant", "s12c": "12c-meridian-pose", "s12d": "12d-meridian-poses", "s13": "13-bow-aim", "s14": "14-tianji-wheel", "s15": "15-settings", "s16": "16-skill-bar", "s19": "19-lock-on"}[name.split("_")[0]]
         path = os.path.join(OUT, slug + ".svg")
         with open(path, "w", encoding="utf-8") as f:
             f.write(fn())

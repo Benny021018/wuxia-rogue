@@ -53,3 +53,12 @@ enemy_push_elite_m,0.9,精英近戰的擊退距離
 enemy_push_boss_m,1.4,首領近戰的擊退距離
 enemy_proj_push_m,0.3,敵人飛行道具的擊退距離
 enemy_aoe_push_m,1.2,敵人範圍攻擊（預警圈）的擊退距離
+lock_range_m,18,中鍵鎖定：能鎖定的最遠距離
+lock_cone_deg,70,初次鎖定時，目標要在鏡頭正前方左右各幾度內
+lock_break_m,24,鎖定中目標超過這個距離就自動解除
+lock_los_s,1.5,鎖定中視線被擋住超過這麼久就解除
+lock_cam_turn,9,鎖定時鏡頭轉向目標的速度（越大越快跟上）
+lock_pitch_offset,-0.14,鎖定時鏡頭俯仰的偏移（負值＝略往下看，角色不擋住目標）
+lock_flick_px,90,鎖定時橫向甩滑鼠超過這麼多像素就換到那一側的目標
+lock_flick_window_s,0.25,甩滑鼠的累計時間窗（停下來就歸零）
+lock_flick_cd_s,0.3,甩滑鼠換目標後的冷卻，避免一次甩過頭跳兩個

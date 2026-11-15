@@ -25,6 +25,13 @@ var boss_seal: ComicSeal
 var boss_bar: ComicBar
 var boss_name: Control
 var boss
+var target_box: Control              # 鎖定目標框（19 號稿）：名稱、階級、狀態、生命
+var target_name: Label
+var target_rank: Label
+var target_rank_bg: ColorRect
+var target_state: Label
+var target_bar: ComicBar
+const TARGET_STATE := {CombatState.S.ARMOR: "霸體", CombatState.S.HIT: "硬直", CombatState.S.DOWN: "倒地", CombatState.S.AIR: "浮空"}
 var banner: Control
 var banner_burst: ComicFX
 var banner_title: Control
@@ -46,6 +53,7 @@ func _ready() -> void:
 	_build_skills()
 	_build_zone()
 	_build_boss()
+	_build_target()
 	_build_banner()
 	msg_box = VBoxContainer.new()
 	msg_box.add_theme_constant_override("separation", 22)
@@ -277,6 +285,64 @@ func _build_boss() -> void:
 	boss_box.add_child(boss_bar)
 
 
+func _build_target() -> void:
+	target_box = Control.new()
+	target_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	target_box.visible = false
+	_at(target_box, 560, 34, 480, 74, 0.5, 0)
+	var panel := UIKit.box("system_dark", "", 0)
+	UIKit.place(panel, 0, 0, 0, 0, 480, 74)
+	target_box.add_child(panel)
+	var dia := ColorRect.new()
+	dia.color = UIKit.BLOOD
+	dia.size = Vector2(13, 13)
+	dia.pivot_offset = dia.size / 2.0
+	dia.rotation_degrees = 45
+	dia.position = Vector2(29.5, 17.5)
+	target_box.add_child(dia)
+	# 名稱＋階級標籤排成一列（標籤跟在名字後面）
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	UIKit.place(row, 0, 0, 56, 6, 290, 36)
+	target_box.add_child(row)
+	target_name = UIKit.label("", 26, UIKit.BONE, HORIZONTAL_ALIGNMENT_LEFT, true)
+	target_name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	target_name.autowrap_mode = TextServer.AUTOWRAP_OFF
+	row.add_child(target_name)
+	target_rank_bg = ColorRect.new()
+	target_rank_bg.color = UIKit.EMBER
+	target_rank_bg.custom_minimum_size = Vector2(52, 22)
+	target_rank_bg.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(target_rank_bg)
+	target_rank = UIKit.label("精英", 14, UIKit.INK, HORIZONTAL_ALIGNMENT_CENTER)
+	target_rank.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	target_rank.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	target_rank_bg.add_child(target_rank)
+	target_state = UIKit.label("", 15, UIKit.GOLD, HORIZONTAL_ALIGNMENT_RIGHT)
+	UIKit.place(target_state, 0, 0, 352, 12, 100, 26)
+	target_box.add_child(target_state)
+	target_bar = UIKit.bar(Color("#6e0a10"), UIKit.EMBER, 0, 8.0)
+	target_bar.font_size = 0
+	UIKit.place(target_bar, 0, 0, 26, 46, 430, 14)
+	target_box.add_child(target_bar)
+
+
+## 鎖定中的目標；首領與對手已有上方大血條，不重複顯示
+func _update_target() -> void:
+	var t = player.lock.target if player.lock.locked() else null
+	if t == null or t == boss or t == opponent or t.get("rank") == null:
+		target_box.visible = false
+		return
+	target_box.visible = true
+	var nm := String(t.row.get("name_zh", ""))
+	target_name.text = nm
+	target_rank_bg.visible = t.rank == "elite"
+	target_state.text = TARGET_STATE.get(t.cs.state(), "")
+	target_bar.max_value = t.max_hp
+	target_bar.value = t.hp
+
+
 func _build_banner() -> void:
 	banner = Control.new()
 	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -325,6 +391,7 @@ func _process(_delta: float) -> void:
 		free_chip.reset_size()
 	_update_reticle()
 	_refresh_martial()
+	_update_target()
 	if is_instance_valid(opponent):
 		boss_box.visible = true
 		boss_bar.max_value = opponent.build.max_hp()

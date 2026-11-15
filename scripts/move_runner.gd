@@ -86,7 +86,7 @@ func _start(slot: String) -> void:
 	counter_ready = move.kind == "counter"
 	counter_done = false
 	speed = 1.0 + (p.atk_speed_now() / 100.0 if slot.begins_with("normal") else 0.0)
-	dir = p.aim_flat()
+	dir = p.attack_flat()
 	p.face(dir)
 	if slot == "ult":
 		rage = 0.0

@@ -102,7 +102,7 @@ func show_help() -> void:
 	grid.add_theme_constant_override("v_separation", 12)
 	keys.add_child(grid)
 	var bindings := [["WASD", "移動"], ["滑鼠", "視角"], ["空白鍵", "跳躍"], ["Shift", "閃避（短暫無敵）"],
-			["左鍵", "普攻，連按接連段"], ["右鍵 Q E R 1 2 3", "七個技能"], ["V", "大招（怒氣滿）"]]
+			["左鍵", "普攻，連按接連段"], ["右鍵 Q E R 1 2 3", "七個技能"], ["V", "大招（怒氣滿）"], ["中鍵", "鎖定目標；甩滑鼠或滾輪換目標"]]
 	if not network_match:
 		bindings.append_array([["F", "參悟、撿配件、鐵匠、商人"], ["K", "經脈"], ["Tab", "武學與門派"]])
 	bindings.append(["Esc", "開啟選單" if network_match else "暫停"])

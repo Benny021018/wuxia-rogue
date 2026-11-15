@@ -122,6 +122,8 @@ func _ready() -> void:
 	add_child(model)
 	model.setup(build.char_id, String(Data.characters[build.char_id].weapon_id))
 	runner.setup(self, build.char_id)
+	lock.setup(self)
+	add_child(lock)
 	hp = build.max_hp()
 	build.stats_changed.connect(_on_stats_changed)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -139,6 +141,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not input_enabled:
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		if lock.locked():
+			lock.mouse_motion(event.relative.x)     # 鎖定時鏡頭自動跟目標，橫甩滑鼠＝換目標
+			return
 		var sens := MOUSE_SENS * Settings.get_value("mouse_sens")
 		yaw -= event.relative.x * sens
 		pitch = clampf(pitch - event.relative.y * sens, -1.2, 0.7)
@@ -146,6 +151,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		pivot.rotation.x = pitch
 	elif event.is_action_pressed("interact"):
 		interact_pressed.emit()
+	elif event.is_action_pressed("lock_on"):
+		lock.toggle()
+	elif event.is_action_pressed("lock_next") and lock.locked():
+		lock.switch(1)
+	elif event.is_action_pressed("lock_prev") and lock.locked():
+		lock.switch(-1)
 	else:
 		for a in ACTIONS:
 			if event.is_action_pressed(a):
@@ -165,8 +176,15 @@ func aim_flat() -> Vector3:
 	return Vector3(-sin(yaw), 0, -cos(yaw))
 
 
-## 準星指向的世界座標（最遠 max_m）
+## 出招方向：鎖定時朝目標，否則鏡頭前方
+func attack_flat() -> Vector3:
+	return lock.flat_dir()
+
+
+## 準星指向的世界座標（最遠 max_m）；鎖定時＝目標腳下（夠近的話）
 func aim_point(max_m: float) -> Vector3:
+	if lock.locked() and global_position.distance_to(lock.target.global_position) <= max_m + 1.0:
+		return lock.target.global_position
 	var from := cam.global_position
 	var to := from - cam.global_basis.z * (max_m + CombatState.cfg("cam_dist_m"))
 	var q := PhysicsRayQueryParameters3D.create(from, to, 1)
@@ -174,8 +192,12 @@ func aim_point(max_m: float) -> Vector3:
 	return hit.position if not hit.is_empty() else to
 
 
-## 從 origin 射向準星的方向
+## 從 origin 射向準星的方向；鎖定時直接瞄目標身體
 func aim_dir(origin: Vector3) -> Vector3:
+	if lock.locked():
+		var t: Vector3 = lock.target.hit_center() - origin
+		if t.length() > 0.5:
+			return t.normalized()
 	var d := aim_point(40.0) - origin
 	return d.normalized() if d.length() > 0.5 else aim_flat()
 
@@ -251,16 +273,21 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	if dir != Vector3.ZERO and not runner.busy():
 		face(dir)
+	elif lock.locked() and not runner.busy() and dash_t <= 0.0:
+		face(lock.flat_dir())      # 鎖定時站著不動就面向目標（沒有側移動作，移動時仍面向移動方向）
 	still_t = still_t + delta if Vector2(velocity.x, velocity.z).length() < 0.5 else 0.0
 	_move_sounds(delta)
 	if global_position.y < -10.0:
 		global_position.y = 2.0
 		velocity = Vector3.ZERO
+	if not network_driven:
+		lock.update(delta)
 	_update_camera()
 	_animate(delta)
 
 
 var _dash_dir := Vector3.FORWARD
+var lock := preload("res://scripts/lock_on.gd").new()     # 中鍵鎖定目標
 var _knock := Vector3.ZERO          # 被擊退的速度（逐幀衰減）
 
 

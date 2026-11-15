@@ -64,6 +64,28 @@ func _ready() -> void:
 	Feel.set_process(true)
 	foe.queue_free()
 	await _frames(30)
+	# 鎖定目標（19 號稿）：精英在前方，旁邊兩個嘍囉
+	var elite_id := ""
+	for id in Data.enemies:
+		if Data.enemies[id].rank == "elite" and Data.enemies[id].map_id == Data.enemies["H01"].map_id:
+			elite_id = id
+			break
+	var lock_foes: Array = []
+	for spec in [[elite_id, Vector3(0, 0, -6.5)], ["H01", Vector3(-3.2, 0, -8.0)], ["H01", Vector3(3.4, 0, -8.5)]]:
+		var e = world.spawn_enemy(spec[0], player.global_position + player.global_basis * spec[1], false)
+		e.set_physics_process(false)
+		var tp: Vector3 = player.global_position - e.global_position
+		e.rotation.y = atan2(-tp.x, -tp.z)
+		e.hp = e.max_hp * 0.64
+		lock_foes.append(e)
+	await _frames(6)
+	player.lock.toggle()
+	await _frames(30)
+	await _shot("19-lock-on", 2)
+	player.lock.release()
+	for e in lock_foes:
+		e.queue_free()
+	await _frames(10)
 	Game.message.emit("精進：三流・第四重　生命回復 20%")
 	Game.message.emit("銀兩：+18")
 	main.hud.show_banner("鎖　陣", "寨外山道・戰鬥　殺光所有敵人以破陣", "lock")

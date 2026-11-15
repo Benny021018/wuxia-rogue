@@ -1134,7 +1134,9 @@ func _setup_input() -> void:
 				ev.physical_keycode = k
 				InputMap.action_add_event(a, ev)
 	# 第三人稱戰鬥：左鍵普攻，右鍵＋Q E R 1 2 3 是七個技能，V 大招，F 互動
-	var mouse := {"attack": MOUSE_BUTTON_LEFT, "skill1": MOUSE_BUTTON_RIGHT}
+	# 中鍵鎖定目標；滾輪在鎖定時切換目標
+	var mouse := {"attack": MOUSE_BUTTON_LEFT, "skill1": MOUSE_BUTTON_RIGHT, "lock_on": MOUSE_BUTTON_MIDDLE,
+			"lock_next": MOUSE_BUTTON_WHEEL_DOWN, "lock_prev": MOUSE_BUTTON_WHEEL_UP}
 	for a in mouse:
 		if not InputMap.has_action(a):
 			InputMap.add_action(a)

@@ -615,6 +615,17 @@ def ui_error():
     return [lp(sq, 1200) * gate * 0.6]
 
 
+def lock_on():
+    """鎖定目標：兩下短促的金屬「喀喀」，第二下較高"""
+    d = 0.16
+    t = T(d)
+    imp = np.zeros(len(t))
+    imp[0] = 1.0
+    imp[int(0.055 * SR)] = 0.8
+    body = reso(imp, 1900, 14) + reso(imp, 2850, 16) * 0.7
+    return [body * 10 * np.exp(-t * 22) + hp(noise(d, 430), 5000) * np.exp(-t * 90) * 0.15]
+
+
 def purchase():
     d = 0.6
     r = rng(430)

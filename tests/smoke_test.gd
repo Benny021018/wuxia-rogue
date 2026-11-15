@@ -102,6 +102,7 @@ func _run_character(cid: String) -> void:
 		await _check_third_person(world, player)
 		await _check_knockback(world, player)
 		await _check_enemy_ai(world, player)
+		await _check_lock_on(world, player)
 		var gate = world.rooms[0].gate_out
 		var meshes := (gate as Node).find_children("*", "MeshInstance3D", true, false)
 		_check(meshes.size() == 1, "山寨門只有一個可見模型")
@@ -1375,6 +1376,97 @@ func _check_enemy_ai(world, player) -> void:
 	player.hp = Game.max_hp()
 	player.invuln_t = 0.0
 	Feel.reset()
+
+
+## 鎖定目標：選前方的、鏡頭轉過去、甩滑鼠／滾輪換目標、出招朝目標、目標死了換下一個、太遠解除
+func _check_lock_on(world, player) -> void:
+	Feel.reset()
+	player.cs.reset()
+	player.runner.interrupt()
+	player.velocity = Vector3.ZERO
+	var lock = player.lock
+	lock.release()
+	_check(InputMap.has_action("lock_on") and InputMap.has_action("lock_next") and InputMap.has_action("lock_prev"), "鎖定目標的按鍵（中鍵、滾輪）")
+	# 找一塊四周 8 公尺都沒牆的空地，敵人不會被擋住視線
+	var home: Vector3 = player.global_position
+	var open := home
+	for gx in range(-5, 6):
+		for gz in range(-5, 6):
+			var cand: Vector3 = home + Vector3(gx * 4.0, 0, gz * 4.0)
+			if player.test_move(Transform3D(Basis(), home + Vector3.UP * 0.1), cand - home):
+				continue
+			var clear := true
+			for k in 8:
+				if player.test_move(Transform3D(Basis(), cand + Vector3.UP * 0.1), Vector3(cos(TAU * k / 8.0), 0, sin(TAU * k / 8.0)) * 8.0):
+					clear = false
+					break
+			if clear:
+				open = cand
+				break
+		if open != home:
+			break
+	player.global_position = open + Vector3.UP * 0.1
+	player.yaw = 0.0
+	player.rotation.y = 0.0
+	await _physics(2)
+	var c: Vector3 = player.global_position
+	var fwd := Vector3(0, 0, -1)
+	var mk := func(pos: Vector3):
+		var e = world.spawn_enemy("H01", pos, false)
+		e.max_hp = 1.0e7
+		e.hp = 1.0e7
+		e.set_physics_process(false)          # 站著不動，只測鎖定
+		return e
+	var a = mk.call(c + fwd * 5.0)
+	var b = mk.call(c + fwd.rotated(Vector3.UP, 0.7) * 6.0)     # 左前方
+	var back = mk.call(c - fwd * 7.0)                           # 身後，不在初次鎖定的範圍
+	await _physics(1)
+	lock.toggle()
+	_check(lock.target == a, "中鍵鎖定鏡頭正前方的敵人")
+	player.yaw = 0.6
+	await _physics(40)
+	_check(absf(wrapf(player.yaw, -PI, PI)) < 0.08, "鎖定時鏡頭自動轉向目標（yaw=%.2f）" % player.yaw)
+	_check(lock.marker.visible and lock.marker.global_position.distance_to(a.global_position) < 0.1, "目標頭上有鎖定標記")
+	_check(main.hud.target_box.visible and main.hud.target_name.text == String(a.row.name_zh), "上方顯示目標框與名稱")
+	lock.switch(-1)
+	_check(lock.target == b, "滾輪往左換到左邊的敵人")
+	lock.switch(1)
+	_check(lock.target == a, "滾輪往右換回來")
+	lock._flick_cd = 0.0
+	lock.mouse_motion(-140.0)
+	_check(lock.target == b, "鎖定時往左甩滑鼠換目標")
+	var yaw_before: float = player.yaw
+	player._unhandled_input(_motion(Vector2(30, 0)))
+	_check(player.yaw == yaw_before, "鎖定時滑鼠不會直接轉鏡頭")
+	var to_b: Vector3 = (b.global_position - player.global_position).slide(Vector3.UP).normalized()
+	_check(player.attack_flat().dot(to_b) > 0.99, "鎖定時出招方向朝目標")
+	_check(player.aim_dir(player.global_position + Vector3.UP * 1.1).dot((b.hit_center() - player.global_position - Vector3.UP * 1.1).normalized()) > 0.99, "鎖定時暗器、箭朝目標身體")
+	b.queue_free()
+	await _physics(2)
+	_check(lock.target == a, "目標死亡後自動換到最近的下一個")
+	a.global_position = c + fwd * 30.0
+	await _physics(2)
+	_check(not lock.locked() and not lock.marker.visible, "目標超出距離自動解除鎖定")
+	_check(not main.hud.target_box.visible, "解除鎖定後目標框隱藏")
+	a.queue_free()
+	player.yaw = 0.0
+	player.rotation.y = 0.0
+	await _physics(1)
+	lock.toggle()
+	_check(lock.target == null, "前方沒人時不會鎖到身後的敵人")
+	back.queue_free()
+	lock.release()
+	await _physics(2)
+	player.global_position = home
+	player.cs.reset()
+	player.hp = Game.max_hp()
+	Feel.reset()
+
+
+func _motion(rel: Vector2) -> InputEventMouseMotion:
+	var m := InputEventMouseMotion.new()
+	m.relative = rel
+	return m
 
 
 # 取動畫與所有父節點變換後的世界頭部朝向。
