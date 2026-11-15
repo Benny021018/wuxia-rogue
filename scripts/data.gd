@@ -34,6 +34,7 @@ var sfx := {}               # id -> 音效設定（sfx.csv）
 var settings_cfg := {}      # key -> 設定預設值與範圍（settings_config.csv）
 var settings_order: Array = []
 var feel := {}              # 打擊感數值（feel_config.csv）
+var enemy_stride := {}      # enemy_id → 跑步動作原速時的移動速度（enemy_motion.csv 的 stride_mps）
 var combat_state := {}      # 戰鬥狀態數值（combat_state_config.csv）
 var moves := {}             # move_id -> 招式（moves.csv），含 hits: Array（move_hits.csv）
 var char_moves := {}        # char_id -> {slot: move_id}
@@ -109,6 +110,10 @@ func _ready() -> void:
 		settings_order.append(r.key)
 	feel = _kv("feel_config")
 	combat_state = _kv("combat_state_config")
+	# 敵人跑步動作原速時對應的移動速度（腳步對上地面用）
+	for r in _csv("enemy_motion"):
+		if r.action == "Walk" and String(r.get("stride_mps", "")) != "":
+			enemy_stride[r.enemy_id] = float(r.stride_mps)
 	for r in _csv("moves"):
 		r["hits"] = []
 		moves[r.move_id] = r

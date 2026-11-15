@@ -10,7 +10,7 @@
 
 ## 在動作臺修改
 
-選擇中文怪物名稱，在「角色自带」選動作。Idle／Walk 為待機與移動，Slash／Shoot 為近戰與遠攻，Hit／Death 為受擊與死亡；其餘依怪物包含 Dash、Charge、Dive、Leap、Summon、Burst 或 Realm。動作臺的「匹配动作」會提出其他怪物相容的動作，這些不屬於所選怪物的遊戲片段。
+選擇中文怪物名稱，在「角色自带」選動作。Idle／Walk 為待機與移動，Slash／Shoot 為近戰與遠攻，Hit／Death 為受擊與死亡，GetUp 為倒地起身（取自 LayToIdle）；其餘依怪物包含 Dash、Charge、Dive、Leap、Summon、Burst 或 Realm。動作臺的「匹配动作」會提出其他怪物相容的動作，這些不屬於所選怪物的遊戲片段。
 
 十九隻人形敵人的外觀由 `tools/build_enemy_bodies.py` 以 Quaternius 的 Universal Base Characters 與 Modular Character Outfits - Fantasy（CC0）組成：服裝（布衣、獵裝、兜帽）、頭、髮型與上色設定在 `data/enemy_looks.csv`。這兩包跟 Universal Animation Library 同一套 65 骨骨架，動作直接套用；只轉移骨頭旋轉（`root`、`pelvis` 以外不轉移位移），保留各身體自己的骨長。黑羽鷹沿用鴿型模型。遊戲另行處理命中、擊退、浮空、範圍預警、粒子與手持兵器。片段的模型預覽只播放骨架。審閱工作區保留獨立副本；採用候選後，更新對應 ID 的遊戲 GLB，再跑冒煙測試。直接重跑烘焙會重建遊戲 GLB，已有手修版本時應先保存。
 
@@ -21,3 +21,5 @@
 - `ranged.glb` 取自 KayKit 套件的 `Animations/gltf/Rig_Medium/Rig_Medium_CombatRanged.glb`。下載 ZIP 的 SHA-256 為 `65882f31f905ad2e953819648a59287cdeab8f623908d5ef701971d3758be20f`。
 - `bird.glb` 以 Blender 從上列鴿型原檔匯出，只選取 pigeon-armature 與 pigeon-model，以 NLA Tracks 各自匯出 flap-wings-animation、idle-animation、legs-up-animation 三個同名片段。原始 .blend 的 SHA-256 為 `a02f6b2a327dba85edb4a2b31904351e59bbd367519a3b703cd9a934495a8643`。
 
+
+`data/enemy_motion.csv` 的 `stride_mps` 只填在 Walk 列：該跑步動作原速播放時腳步對應的移動速度（公尺／秒）。遊戲中跑步動作的播放倍率＝實際速度÷`stride_mps`，限制在 `combat_config.csv` 的 `ai_run_rate_min`～`ai_run_rate_max` 之間。Walk 列的 `seconds` 用來源動作的原始長度，不再拉長。

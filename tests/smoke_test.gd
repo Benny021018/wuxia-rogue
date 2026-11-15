@@ -102,6 +102,7 @@ func _run_character(cid: String) -> void:
 		await _check_third_person(world, player)
 		await _check_knockback(world, player)
 		await _check_enemy_ai(world, player)
+		await _check_enemy_getup(world, player)
 		var gate = world.rooms[0].gate_out
 		var meshes := (gate as Node).find_children("*", "MeshInstance3D", true, false)
 		_check(meshes.size() == 1, "山寨門只有一個可見模型")
@@ -1375,6 +1376,50 @@ func _check_enemy_ai(world, player) -> void:
 	player.hp = Game.max_hp()
 	player.invuln_t = 0.0
 	Feel.reset()
+
+
+## 敵人倒地躺著、時間到播完整段起身才行動；跑步速度與腳步播放速度
+func _check_enemy_getup(world, player) -> void:
+	for row in Data._csv("enemy_motion"):
+		if row.action == "Walk" and row.enemy_id != "B04":
+			_check(Data.enemy_stride.has(row.enemy_id), "%s 的跑步動作有步速" % row.enemy_id)
+	var r: Dictionary = world.rooms[1]
+	var home: Vector3 = player.global_position
+	player.global_position = Vector3(r.x0 + 3.0, 0.5, 0.0)
+	player.invuln_t = 1.0e9
+	var e = world.spawn_enemy("H01", Vector3(r.x0 + 11.0, 0.5, 0.0), false)
+	e.max_hp = 1.0e7
+	e.hp = 1.0e7
+	_check(is_equal_approx(e.speed, float(e.row.move_speed) * Data.cfg("ai_move_speed_mult")), "敵人移速套用整體倍率")
+	_check(e._anim.has_animation(&"GetUp"), "人形敵人有起身動作")
+	await _physics(30)
+	var v: float = Vector2(e.velocity.x, e.velocity.z).length()
+	if e._anim.current_animation == &"Walk" and v > 0.5:
+		var want := clampf(v / e._stride, Data.cfg("ai_run_rate_min"), Data.cfg("ai_run_rate_max"))
+		_check(is_equal_approx(e._anim.get_playing_speed(), want), "跑步動作的播放速度跟著移動速度（%.2f）" % e._anim.get_playing_speed())
+	else:
+		_check(false, "敵人追擊時播放跑步動作")
+	var skel: Skeleton3D = e._skeleton
+	var head := skel.find_bone("Head")
+	e.cs.base = CombatState.S.DOWN
+	e.cs.t = 0.3
+	await _physics(4)
+	var head_y := func(): return (skel.global_transform * skel.get_bone_global_pose(head)).origin.y - e.global_position.y
+	_check(e._anim.assigned_animation == &"GetUp" and not e._anim.is_playing() and head_y.call() < 0.6, "倒地時躺在地上（頭高 %.2f）" % head_y.call())
+	var frames := 0
+	while e.cs.base == CombatState.S.DOWN and frames < 60:
+		await _physics(1)
+		frames += 1
+	var start: Vector3 = e.global_position
+	await _physics(2)
+	_check(e._anim.current_animation == &"GetUp" and e._anim.is_playing(), "倒地結束播起身動作，不直接接跑步")
+	await _physics(30)
+	_check(e._anim.current_animation == &"GetUp" and e.global_position.distance_to(start) < 0.05, "起身途中不移動")
+	await _physics(20)
+	_check(e._anim.current_animation in [&"Walk", &"Idle", &"Slash"] and head_y.call() > 1.2, "起身完畢恢復行動（頭高 %.2f）" % head_y.call())
+	e.queue_free()
+	player.global_position = home
+	await _physics(2)
 
 
 # 取動畫與所有父節點變換後的世界頭部朝向。
