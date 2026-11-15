@@ -68,3 +68,8 @@ ai_move_speed_mult,1.35,所有敵人移動速度的倍率（乘在 enemies.csv �
 ai_run_rate_min,0.85,敵人跑步動作的最低播放倍率（速度太慢時不至於像慢動作）
 ai_run_rate_max,1.9,敵人跑步動作的最高播放倍率
 ai_getup_speed,1.0,敵人起身動作的播放倍率（起身動作 0.7 秒；播完才能行動）
+ai_windup_rate_min,0.15,起手時攻擊動作的最低播放倍率（起手越長動作越慢，讓揮出的瞬間對上判定）
+ai_windup_rate_max,2.5,起手時攻擊動作的最高播放倍率
+ai_combo_track_deg_s,240,首領連招起手時轉向玩家的速度（度／秒）
+ai_combo_track_stop_s,0.2,出手前最後這段時間不再轉向（留閃避的空間）
+ai_combo_lunge_s,0.3,連招每一下出手前往前踏步（lunge_m）所花的時間

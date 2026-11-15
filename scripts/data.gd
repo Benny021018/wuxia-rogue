@@ -34,6 +34,7 @@ var sfx := {}               # id -> 音效設定（sfx.csv）
 var settings_cfg := {}      # key -> 設定預設值與範圍（settings_config.csv）
 var settings_order: Array = []
 var feel := {}              # 打擊感數值（feel_config.csv）
+var enemy_beat := {}        # enemy_id → {動作: 出手瞬間秒數}（enemy_motion.csv 的 seconds × beat）
 var enemy_stride := {}      # enemy_id → 跑步動作原速時的移動速度（enemy_motion.csv 的 stride_mps）
 var combat_state := {}      # 戰鬥狀態數值（combat_state_config.csv）
 var moves := {}             # move_id -> 招式（moves.csv），含 hits: Array（move_hits.csv）
@@ -114,6 +115,10 @@ func _ready() -> void:
 	for r in _csv("enemy_motion"):
 		if r.action == "Walk" and String(r.get("stride_mps", "")) != "":
 			enemy_stride[r.enemy_id] = float(r.stride_mps)
+		# 出手瞬間在動作裡的秒數（起手時調整播放速度，讓刀剛好在判定那一刻揮到）
+		if not enemy_beat.has(r.enemy_id):
+			enemy_beat[r.enemy_id] = {}
+		enemy_beat[r.enemy_id][r.action] = float(r.seconds) * float(r.beat)
 	for r in _csv("moves"):
 		r["hits"] = []
 		moves[r.move_id] = r

@@ -103,6 +103,7 @@ func _run_character(cid: String) -> void:
 		await _check_knockback(world, player)
 		await _check_enemy_ai(world, player)
 		await _check_enemy_getup(world, player)
+		await _check_boss_combos(world, player)
 		var gate = world.rooms[0].gate_out
 		var meshes := (gate as Node).find_children("*", "MeshInstance3D", true, false)
 		_check(meshes.size() == 1, "山寨門只有一個可見模型")
@@ -1418,6 +1419,76 @@ func _check_enemy_getup(world, player) -> void:
 	await _physics(20)
 	_check(e._anim.current_animation in [&"Walk", &"Idle", &"Slash"] and head_y.call() > 1.2, "起身完畢恢復行動（頭高 %.2f）" % head_y.call())
 	e.queue_free()
+	player.global_position = home
+	await _physics(2)
+
+
+## 首領連招：起手慢、出手後打完整套（一般攻擊打不斷、玩家閃開也照打），破霸體才中斷
+func _check_boss_combos(world, player) -> void:
+	for id in Data.enemies:
+		if Data.enemies[id].rank != "boss":
+			continue
+		var table: Dictionary = Data.enemy_moves.get(id, {})
+		var roots := 0
+		for mid in table:
+			var mv: Dictionary = table[mid]
+			if int(mv.get("commit", 0)) != 1 or float(mv.weight) <= 0.0:
+				continue
+			roots += 1
+			_check(float(mv.windup_s) >= 1.0, "%s %s 起手夠慢（%s 秒）" % [id, mv.name_zh, mv.windup_s])
+			var cur: Dictionary = mv
+			var n := 1
+			while cur.chain != "":
+				var nxt: Dictionary = table[cur.chain]
+				_check(int(nxt.get("commit", 0)) == 1, "%s 的每一下都標了 commit" % nxt.name_zh)
+				_check(float(cur.hitstun_s) < float(cur.recover_s) + float(nxt.windup_s), "%s 打中後玩家有空檔閃開下一下" % cur.name_zh)
+				_check(float(cur.push_m) <= float(nxt.lunge_m) + float(nxt.reach_add_m), "%s 的擊退不超過下一下踏步＋攻擊距離" % cur.name_zh)
+				_check(Data.enemy_beat.get(id, {}).has(String(nxt.anim)), "%s 的動作 %s 有出手時間" % [nxt.name_zh, nxt.anim])
+				cur = nxt
+				n += 1
+			_check(n >= 3, "%s %s 至少三下（%d）" % [id, mv.name_zh, n])
+		_check(roots >= 2, "首領 %s 至少兩套連招（%d）" % [id, roots])
+
+	var r: Dictionary = world.rooms[1]
+	var home: Vector3 = player.global_position
+	player.global_position = Vector3(r.x0 + 3.0, 0.5, 0.0)
+	player.invuln_t = 1.0e9
+	await _physics(2)
+	var run := func(break_at: int) -> Array:
+		var b = world.spawn_enemy("H08", player.global_position + Vector3(2.4, 0, 0), false)
+		b.max_hp = 1.0e8
+		b.hp = 1.0e8
+		b._skill_cd = 99.0
+		b._skill2_cd = 99.0
+		await _physics(2)
+		b._start_move(b._move_table()["kaishan"])
+		var slow: float = b._anim.get_playing_speed()
+		var seen: Array = [slow]
+		var hits := 0
+		for i in 240:
+			await _physics(1)
+			if b._mv.is_empty():
+				break
+			if not seen.has(b._mv.move_id):
+				seen.append(b._mv.move_id)
+			if i % 12 == 6:
+				hits += 1
+				var brk := 1 if hits == break_at else 0
+				b.take_hit(1.0, player.global_position, false, 1.0, {"hitstun_s": 0.5, "push_m": 0.3, "break_armor": brk})
+			if i == 30:
+				player.global_position += Vector3(-3.0, 0, 0)     # 玩家閃開：首領照樣打完
+		var res: Array = [seen, b._mv.is_empty(), b.cs.state()]
+		b.queue_free()
+		await _physics(2)
+		return res
+	var full: Array = await run.call(-1)
+	var ids: Array = full[0]
+	_check(float(ids[0]) < 0.5, "連招起手的動作放慢（%.2f 倍）" % float(ids[0]))
+	_check(ids.has("kaishan") and ids.has("kaishan2") and ids.has("kaishan3"), "被一般攻擊連打、玩家退開，首領照樣打完整套（%s）" % str(ids.slice(1)))
+	player.global_position = Vector3(r.x0 + 3.0, 0.5, 0.0)
+	await _physics(2)
+	var broke: Array = await run.call(2)
+	_check(not (broke[0] as Array).has("kaishan3") and broke[1], "破霸體才中斷連招（%s）" % str((broke[0] as Array).slice(1)))
 	player.global_position = home
 	await _physics(2)
 
