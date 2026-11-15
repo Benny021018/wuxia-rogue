@@ -207,6 +207,12 @@ func _run_character(cid: String) -> void:
 			if ri < 4:
 				var nx: Dictionary = world.rooms[ri + 1]
 				player.global_position = Vector3(r.x0 + r.w - 3.0, 0.5, 0.0)
+				player.cs.reset()
+				# 這裡只測出口的地形：清掉擋在出口路上的敵人（召喚物、跑得快的敵人可能堵在門口）
+				for e in get_tree().get_nodes_in_group("enemies"):
+					if absf(e.global_position.x - (r.x0 + r.w)) < 6.0 and absf(e.global_position.z) < 4.0:
+						e.queue_free()
+				await get_tree().physics_frame
 				Input.action_press("move_forward")
 				var go := 0
 				while player.global_position.x < r.x0 + r.w + 2.0 and go < 180:
