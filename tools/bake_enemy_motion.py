@@ -1,4 +1,8 @@
-"""Bake curated combat clips. Requires NumPy and SciPy; see docs/enemy-motion.md."""
+"""Bake curated combat clips onto each enemy body. Requires NumPy and SciPy; see docs/enemy-motion.md.
+
+Bodies come from assets/models/enemy-bodies/<ID>.glb (tools/build_enemy_bodies.py); enemies without one use the UAL mannequin.
+Clips named legacy:<clip> are retargeted from <donors>/<ID>_legacy.glb (the archer's former 16-bone rig).
+B04 needs <donors>/bird.glb; without it the existing B04.glb is kept."""
 from pathlib import Path
 import argparse
 import csv
@@ -12,7 +16,9 @@ from scipy.spatial.transform import Rotation as R, Slerp
 ROOT = Path(__file__).resolve().parents[1]
 MODEL = ROOT / "assets/models"
 OUT = MODEL / "enemy-motion"
-BANDITS = {"H01", "H02", "H03", "H07", "H08"}
+BANDITS: set = set()           # 舊的 16 骨山寨模型已換成 enemy-bodies；保留機制給 legacy 片段
+BODIES = MODEL / "enemy-bodies"
+KEEP_TRANSLATION = {"root", "pelvis"}   # 其他骨頭只套旋轉，保留各身體自己的骨長
 IDENTITY = [0, 0, 0, 1]
 
 
@@ -23,7 +29,7 @@ class Glb:
         self.doc = json.loads(raw[20:20 + length])
         self.bin = bytearray(raw[28 + length:])
         self.names = {n.get("name"): i for i, n in enumerate(self.doc["nodes"])}
-        self.clips = {a["name"]: a for a in self.doc["animations"]}
+        self.clips = {a["name"]: a for a in self.doc.get("animations", [])}
 
     def read(self, idx):
         a = self.doc["accessors"][idx]
@@ -125,8 +131,8 @@ def rotation(m):
     return R.from_matrix(axes / np.linalg.norm(axes,axis=1,keepdims=True))
 
 
-def retarget(target, source, clip, phases, kay):
-    names=mapping(kay)
+def retarget(target, source, clip, phases, kay, names=None):
+    names=names or mapping(kay)
     base,_=pose(source,None,np.array([0]))
     rest,_=pose(target,None,np.array([0]))
     animated,_=pose(source,clip,phases)
@@ -162,6 +168,13 @@ def bake(row,target,sources,bandit):
     name,src,seconds=row["action"],row["source_clip"],float(row["seconds"])
     times=np.linspace(0,seconds,max(3,round(seconds*30)+1))
     phase=np.interp(times/seconds,[0,float(row["beat"]),1],[0,float(row["source_beat"]),1])
+    if src.startswith("legacy:"):
+        # 舊骨架（16 骨山寨模型）上的片段轉到 UAL 骨架：骨名對照反過來用
+        source=sources["legacy:"+row["enemy_id"]]
+        clip=src.split(":",1)[1]
+        names={ual:old for old,ual in mapping(False).items()}
+        tracks=retarget(target,source,clip,phase,False,names)
+        return _write(name,times,tracks,target)
     source=sources[src]
     if bandit:
         if src=="Ranged_Bow_Draw":
@@ -174,7 +187,12 @@ def bake(row,target,sources,bandit):
     else:
         _,local=pose(source,src,phase)
         tracks={(target.names[source.doc["nodes"][i]["name"]],kind):v for (i,kind),v in local.items()
-                if source.doc["nodes"][i]["name"] in target.names}
+                if source.doc["nodes"][i]["name"] in target.names
+                and (kind!="translation" or source.doc["nodes"][i]["name"] in KEEP_TRANSLATION)}
+    return _write(name,times,tracks,target)
+
+
+def _write(name,times,tracks,target):
     result={"name":name,"samplers":[],"channels":[]}
     ta=target.add(times[:,None])
     for (i,kind),values in tracks.items():
@@ -194,14 +212,23 @@ def main():
     args=parser.parse_args()
     sources={}
     for p in [MODEL/"character/UAL1.glb",MODEL/"character/UAL2.glb",args.donors/"ranged.glb",args.donors/"bird.glb"]:
+        if not p.exists():
+            print("skip missing donor", p.name)
+            continue
         model=Glb(p)
         sources.update({clip:model for clip in model.clips})
+    for p in args.donors.glob("*_legacy.glb"):
+        sources["legacy:"+p.stem.split("_")[0]]=Glb(p)
     rows=list(csv.DictReader((ROOT/"data/enemy_motion.csv").open(encoding="utf-8-sig")))
     OUT.mkdir(exist_ok=True)
     for eid in dict.fromkeys(r["enemy_id"] for r in rows):
         bandit=eid in BANDITS
-        path=MODEL/"greenwood"/(eid+".glb") if bandit else MODEL/"character/UAL1.glb"
+        body=BODIES/(eid+".glb")
+        path=MODEL/"greenwood"/(eid+".glb") if bandit else (body if body.exists() else MODEL/"character/UAL1.glb")
         bird=eid=="B04"
+        if bird and not (args.donors/"bird.glb").exists():
+            print("keep existing", eid)
+            continue
         target=Glb(args.donors/"bird.glb" if bird else path)
         target.doc["animations"]=[bake(r,target,sources,bandit) for r in rows if r["enemy_id"]==eid]
         if not bandit:
@@ -212,7 +239,7 @@ def main():
             target.doc["scenes"][0]["nodes"]=[len(target.doc["nodes"])]
             target.doc["nodes"].append(wrapper)
             tint=next(r["tint"] for r in rows if r["enemy_id"]==eid)
-            for material in target.doc["materials"]:
+            for material in ([] if body.exists() else target.doc["materials"]):
                 mat=material.setdefault("pbrMetallicRoughness",{})
                 mat["baseColorFactor"]=[int(tint[i:i+2],16)/255 for i in (0,2,4)]+[1]
         target.write(OUT/(eid+".glb"))
