@@ -23,6 +23,11 @@ const CAMP_ART := {
 	"二樓迴廊":[preload("res://assets/models/greenwood/gallery.glb"),Vector3(6,1,2)],
 	"石階（高台）":[preload("res://assets/models/greenwood/stairs.glb"),Vector3(3,1,4)]
 }
+# 已在 Blender 佈景完成的房間（流程見 docs/greenwood-art.md「房間佈景」）：
+# 原點＝房間西緣中線，X 向東、Z 同 zones.json。有佈景的房間只保留碰撞，灰盒外觀不畫。
+const ROOM_ART := {1: preload("res://assets/models/greenwood/rooms/room1.glb")}
+const TERRAIN_SHADER := preload("res://assets/greenwood/terrain.gdshader")
+const BANNER_SHADER := preload("res://assets/greenwood/banner.gdshader")
 const CAMP_CHAIR := preload("res://assets/models/greenwood/throne.glb")
 const CAMP_BRAZIER := preload("res://assets/models/greenwood/brazier.glb")
 const CAMP_STELE := preload("res://assets/models/greenwood/shrine.glb")
@@ -63,6 +68,8 @@ var smith_node: Node3D           # 休息區的鐵匠（stages.csv 的 rest_stop
 var merchant_node: Node3D        # 休息區的商人
 var drops: Array = []            # 地上的掉落配件（meta "item"）
 var allow_drops := true          # 區網模式不掉配件（雙方的養成各自計算）
+var _bare := false               # true 時 _static_box 只建碰撞（佈景房間）
+var _dressed_spans: Array = []   # 佈景房間（含兩側走廊）的 X 範圍
 
 
 func _ready() -> void:
@@ -89,8 +96,15 @@ func build_map(index: int) -> void:
 	rooms = []
 	var theme: Dictionary = THEMES[map_id]
 	var x := 0.0
-	_corridor(x - CORRIDOR, x, theme)
 	var first_stage := index * 5 + 1
+	_dressed_spans = []
+	var sx := 0.0
+	for z in 5:
+		var w: float = float(Data.zones[str(first_stage + z)].w)
+		if map_id == "greenwood" and ROOM_ART.has(first_stage + z):
+			_dressed_spans.append(Vector2(sx - CORRIDOR, sx + w + CORRIDOR))
+		sx += w + CORRIDOR
+	_corridor(x - CORRIDOR, x, theme)
 	for z in 5:
 		var stage := first_stage + z
 		var lay: Dictionary = Data.zones[str(stage)]
@@ -136,6 +150,17 @@ func _apply_env() -> void:
 		e.fog_light_color = Color(0.38, 0.46, 0.43)
 		e.fog_density = 0.01
 		e.fog_sky_affect = 0.12
+	if map_id == "greenwood" and not ROOM_ART.is_empty():
+		e.ambient_light_color = Color(0.72, 0.76, 0.8)
+		e.ambient_light_energy = 0.55
+		e.fog_light_color = Color(0.66, 0.73, 0.77)
+		e.fog_density = 0.0025
+		e.fog_aerial_perspective = 0.35
+		e.fog_sky_affect = 0.0
+	for c in get_children():
+		if c is DirectionalLight3D:
+			c.light_energy = 1.6 if map_id == "greenwood" else 0.6
+			c.light_color = Color(1.0, 0.93, 0.82) if map_id == "greenwood" else Color.WHITE
 	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	e.glow_enabled = true
 	env.environment = e
@@ -149,7 +174,9 @@ func _static_box(size: Vector3, pos: Vector3, color: Color, model: PackedScene =
 	shape.size = size
 	col.shape = shape
 	sb.add_child(col)
-	if model:
+	if _bare:
+		pass
+	elif model:
 		var art: Node3D = model.instantiate()
 		art.position.y = -size.y / 2.0
 		if model == GATE_MODEL:
@@ -166,7 +193,7 @@ func _static_box(size: Vector3, pos: Vector3, color: Color, model: PackedScene =
 
 
 func _camp_block(label: String, extent: Vector3, base: Vector3, tint: Color) -> void:
-	var spec: Array = CAMP_ART.get(label,[]) if map_id == "greenwood" else []
+	var spec: Array = CAMP_ART.get(label,[]) if map_id == "greenwood" and not _bare else []
 	var body := _static_box(extent,base+Vector3.UP*extent.y*.5,tint,spec[0] if spec else null)
 	if spec:
 		var visual := body.get_child(1) as Node3D
@@ -189,9 +216,16 @@ func _static_cyl(radius: float, h: float, pos: Vector3, color: Color) -> void:
 func _corridor(x0: float, x1: float, theme: Dictionary) -> void:
 	var length_m := x1 - x0
 	var cx := (x0 + x1) / 2.0
+	for span in _dressed_spans:
+		if x0 >= span.x - 0.01 and x1 <= span.y + 0.01:
+			_bare = true
 	_static_box(Vector3(length_m, 0.2, 6.0), Vector3(cx, -0.1, 0), theme.floor.darkened(0.15))
 	_static_box(Vector3(length_m, WALL_H, 0.5), Vector3(cx, WALL_H / 2.0, -3.25), theme.wall)
 	_static_box(Vector3(length_m, WALL_H, 0.5), Vector3(cx, WALL_H / 2.0, 3.25), theme.wall)
+	var bare := _bare
+	_bare = false
+	if bare:
+		return
 	var torch := OmniLight3D.new()
 	torch.light_color = Color(1.0, 0.7, 0.4)
 	torch.omni_range = 9.0
@@ -205,6 +239,10 @@ func _build_room(stage: int, lay: Dictionary, x0: float, theme: Dictionary) -> D
 	var h := float(lay.h)
 	var half := h / 2.0
 	var cx := x0 + w / 2.0
+	var art_scene: PackedScene = ROOM_ART.get(stage) if map_id == "greenwood" else null
+	if art_scene:
+		_place_room_art(art_scene, x0)
+		_bare = true
 	_static_box(Vector3(w, 0.2, h), Vector3(cx, -0.1, 0), theme.floor)
 	# 北、南牆
 	_static_box(Vector3(w + 0.5, WALL_H, 0.5), Vector3(cx, WALL_H / 2.0, -half - 0.25), theme.wall)
@@ -214,10 +252,12 @@ func _build_room(stage: int, lay: Dictionary, x0: float, theme: Dictionary) -> D
 	for wx in [x0, x0 + w]:
 		_static_box(Vector3(0.5, WALL_H, seg), Vector3(wx, WALL_H / 2.0, -3.0 - seg / 2.0), theme.wall)
 		_static_box(Vector3(0.5, WALL_H, seg), Vector3(wx, WALL_H / 2.0, 3.0 + seg / 2.0), theme.wall)
+	_bare = false
 	var gate_art := GATE_MODEL if map_id == "greenwood" else null
 	var gate_in := _static_box(Vector3(0.6, WALL_H, 6.0), Vector3(x0, WALL_H / 2.0, 0), Color(0.75, 0.2, 0.15), gate_art)
 	var gate_out := _static_box(Vector3(0.6, WALL_H, 6.0), Vector3(x0 + w, WALL_H / 2.0, 0), Color(0.75, 0.2, 0.15), gate_art)
 	_set_gate(gate_in, false)
+	_bare = art_scene != null
 	var r := {"stage": stage, "x0": x0, "w": w, "h": h, "gate_in": gate_in, "gate_out": gate_out,
 		"spawns": {}, "elites": [], "boss": Vector3.ZERO, "shrine": Vector3(x0 + w - 4.0, 0, 4.0)}
 	var nav := preload("res://scripts/room_routes.gd").new(Rect2(x0,-half,w,h))
@@ -314,7 +354,32 @@ func _build_room(stage: int, lay: Dictionary, x0: float, theme: Dictionary) -> D
 					fire.position = c + Vector3(0, 0.72 if map_id == "greenwood" else 0.4, 0)
 					if map_id == "greenwood": fire.scale = Vector3(.53,.38,.53)
 					_permanent_hazard(c, minf(ew, eh) / 2.0 + 0.5, stage, Color(1, 0.4, 0.1, 0.2), 1.5, &"" if "血池" in label else &"campfire")
+	_bare = false
 	return r
+
+
+func _place_room_art(scene: PackedScene, x0: float) -> void:
+	var art: Node3D = scene.instantiate()
+	art.name = "RoomArt"
+	level_root.add_child(art)
+	art.position = Vector3(x0, 0, 0)
+	var terrain := ShaderMaterial.new()
+	terrain.shader = TERRAIN_SHADER
+	terrain.set_shader_parameter("dirt", preload("res://assets/greenwood/ground/dirt.png"))
+	terrain.set_shader_parameter("grass", preload("res://assets/greenwood/ground/grass.png"))
+	terrain.set_shader_parameter("rock", preload("res://assets/greenwood/ground/rock.png"))
+	var banner := ShaderMaterial.new()
+	banner.shader = BANNER_SHADER
+	banner.set_shader_parameter("tex", preload("res://assets/greenwood/ground/banner_red.png"))
+	for mi in art.find_children("*", "MeshInstance3D", true, false):
+		var n := String(mi.name)
+		if n.ends_with("terrain") or n.begins_with("mtn_"):
+			mi.material_override = terrain
+		elif n.ends_with("_cloth"):
+			mi.material_override = banner
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		elif n.begins_with("nat_Grass") or n.begins_with("nat_pebble") or n.begins_with("path_"):
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
 func _permanent_hazard(c: Vector3, radius: float, stage: int, color: Color, mult := 0.5, clip: StringName = &"poison-cloud") -> void:

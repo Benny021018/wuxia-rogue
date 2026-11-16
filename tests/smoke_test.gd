@@ -151,6 +151,9 @@ func _run_character(cid: String) -> void:
 			world.build_map(mi)
 			await _frames(3)
 		_check(world.map_index == mi, "換圖 %d" % mi)
+		if mi == 0:
+			var art: Node = world.level_root.get_node_or_null("RoomArt")
+			_check(art != null and art.find_children("*_terrain", "MeshInstance3D", true, false).size() == 1, "綠林第1區載入 Blender 佈景與地形")
 		for ri in 5:
 			var r: Dictionary = world.rooms[ri]
 			# 從門外走進去（確認入口沒有被擋住），失敗才傳送
