@@ -338,7 +338,7 @@ func _animate(delta: float) -> void:
 	if not is_on_floor():
 		model.play("Jump_Loop", 1.0, 0.0, 0.1)
 		return
-	if model.current == "Sprint":
+	if model.current == model.clip("Sprint_Loop"):
 		model.current = ""
 	var speed2 := Vector2(velocity.x, velocity.z).length()
 	if speed2 > 0.6:

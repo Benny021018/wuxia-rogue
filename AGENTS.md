@@ -31,3 +31,4 @@
 - 不要直接推 `main`。每項工作開一個分支（例如 `feature/weapon-awaken`、`fix/boss-hp`），用 PR 合併。
 - Commit 訊息用繁體中文，第一行簡述做了什麼。
 - 不要提交 `.godot/`、`tests/*.log`、匯出檔（見 .gitignore）。
+每次遊戲修改完成並通過測試後，將工作分支推送至 GitHub 並建立 PR。使用同一版程式碼匯出 Windows 單檔版，試跑成功後更新 Windows 桌面的「天魔劫.exe」。

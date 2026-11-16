@@ -1391,6 +1391,18 @@ func _face_points_up(skeleton: Skeleton3D, rest_forward: Vector3) -> bool:
 func _check_third_person(world, player) -> void:
 	var S := CombatState.S
 	_check(player.model != null and player.model.has("Sword_Regular_A") and player.model.has("Sword_Idle"), "角色模型載入兩個動作庫")
+	if Game.char_id == "nangong":
+		_check(player.model.seated_hilt != null and player.model.scabbard != null, "南宮載入平尾刀鞘與刀柄")
+		for clip_name in ["NG_CarryRun", "NG_CarrySprint", "NG_RaiseSlash", "NG_RisingCut", "NG_CrossCut", "NG_DrawCut"]:
+			_check(player.model.has(clip_name), "南宮動作存在：" + clip_name)
+		var cut: Animation = player.model.anim.get_animation("NG_DrawCut")
+		for phase in [0.0, 0.35, 0.60, 0.98]:
+			player.model.hold("NG_DrawCut", cut.length * phase)
+			var model = player.model
+			_check(int(model.seated_hilt.visible) + int(model.emerging_blade.visible) + int(model.drawn_blade.visible) == 1, "拔刀時只有一把照影刀")
+			_check(model.emerging_blade.visible == (phase == 0.35), "局部出鞘的時間正確")
+		player.model.play(player.model.idle, 1.0, 0.0, 0.0, true)
+
 	_check(player.cam.get_parent() == player.pivot and player.cam.position.z > 2.0, "第三人稱鏡頭在角色後方")
 	_check(Game.weapons[1] == null and Game.current_weapon().id == String(Data.characters[Game.char_id].weapon_id), "角色使用固定兵器，沒有副武器")
 	var missing: Array = []
@@ -1408,16 +1420,16 @@ func _check_third_person(world, player) -> void:
 	player.runner.interrupt()
 	Input.action_press("move_forward")
 	await _frames(12)
-	_check(player.model.current == "Jog_Fwd" and player.model.anim.is_playing(), "移動時播放跑步動作（目前 %s）" % player.model.current)
+	_check(player.model.current == player.model.clip("Jog_Fwd_Loop") and player.model.anim.is_playing(), "移動時播放跑步動作（目前 %s）" % player.model.current)
 	# 閃避：前傾衝刺，不翻滾，期間無敵
 	player.dash_cd = 0.0
 	Input.action_press("dash")
 	await _frames(4)
 	Input.action_release("dash")
-	_check(player.dash_t > 0.0 and player.model.current == "Sprint" and player.model.rotation.x < -0.15 and not player.cs.hittable(), "閃避時身體前傾並無敵（動作 %s）" % player.model.current)
+	_check(player.dash_t > 0.0 and player.model.current == player.model.clip("Sprint_Loop") and player.model.rotation.x < -0.15 and not player.cs.hittable(), "閃避時身體前傾並無敵（動作 %s）" % player.model.current)
 	Input.action_release("move_forward")
 	await _frames(40)
-	_check(player.model.current == "Sword_Idle" and absf(player.model.rotation.x) < 0.05, "停下後回到待機、身體回正")
+	_check(player.model.current == player.model.idle and absf(player.model.rotation.x) < 0.05, "停下後回到待機、身體回正")
 	Settings.values["hitstop"] = 0.0
 	player.runner.setup(player, Game.char_id)
 	player.cs.reset()
