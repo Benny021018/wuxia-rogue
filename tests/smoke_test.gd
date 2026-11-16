@@ -1393,6 +1393,14 @@ func _check_third_person(world, player) -> void:
 	_check(player.model != null and player.model.has("Sword_Regular_A") and player.model.has("Sword_Idle"), "角色模型載入兩個動作庫")
 	if Game.char_id == "nangong":
 		_check(player.model.seated_hilt != null and player.model.scabbard != null, "南宮載入平尾刀鞘與刀柄")
+		_check(Data.toon_materials.has("face") and Data.toon_lighting.has(world.map_id), "角色與地圖光影配置齊全")
+		_check(preload("res://assets/toon/character_material.gd").FACE_LIGHT.get_width() > 0, "載入臉部受光遮罩")
+		if DisplayServer.get_name() != "headless":
+			var face: ShaderMaterial = player.model.face_material
+			_check(face != null and face.get_shader_parameter("face_map") is Texture2D, "南宮使用臉部受光遮罩")
+			for part in [player.model.drawn_blade, player.model.emerging_blade, player.model.seated_hilt]:
+				var blade_material: ShaderMaterial = part.get_active_material(0)
+				_check(blade_material != null and blade_material.get_shader_parameter("surface_kind") == 3, "拔刀各階段皆用刀身材質")
 		for clip_name in ["NG_CarryRun", "NG_CarrySprint", "NG_RaiseSlash", "NG_RisingCut", "NG_CrossCut", "NG_DrawCut"]:
 			_check(player.model.has(clip_name), "南宮動作存在：" + clip_name)
 		var cut: Animation = player.model.anim.get_animation("NG_DrawCut")

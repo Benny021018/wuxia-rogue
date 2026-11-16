@@ -33,6 +33,8 @@ var music := {}             # key（menu 或 map_id）-> 配樂設定（music.cs
 var sfx := {}               # id -> 音效設定（sfx.csv）
 var settings_cfg := {}      # key -> 設定預設值與範圍（settings_config.csv）
 var settings_order: Array = []
+var toon_materials := {}
+var toon_lighting := {}
 var feel := {}              # 打擊感數值（feel_config.csv）
 var combat_state := {}      # 戰鬥狀態數值（combat_state_config.csv）
 var moves := {}             # move_id -> 招式（moves.csv），含 hits: Array（move_hits.csv）
@@ -107,6 +109,10 @@ func _ready() -> void:
 	for r in _csv("settings_config"):
 		settings_cfg[r.key] = r
 		settings_order.append(r.key)
+	for r in _csv("toon_materials"):
+		toon_materials[r.profile] = r
+	for r in _csv("toon_lighting"):
+		toon_lighting[r.map_id] = r
 	feel = _kv("feel_config")
 	combat_state = _kv("combat_state_config")
 	for r in _csv("moves"):
