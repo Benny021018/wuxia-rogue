@@ -30,3 +30,6 @@ particles_crit,26,暴擊火花數
 particles_kill,40,擊殺時的血墨飛濺數
 footstep_m,2.1,每走幾公尺一個腳步聲
 heartbeat_hp,0.3,生命低於此比例開始心跳
+armor_outline_px,2.5,霸體外輪廓寬度（畫素）
+invincible_blink_s,0.36,無敵閃爍的週期（秒）
+invincible_blink_alpha,0.78,無敵閃爍亮部的不透明度
