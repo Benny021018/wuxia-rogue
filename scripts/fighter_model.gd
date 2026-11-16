@@ -1,8 +1,9 @@
 extends Node3D
-## 第三人稱角色模型：Quaternius 通用假人（CC0）＋UAL1／UAL2 動作，右手掛兵器。
+## 第三人稱角色模型與共用 UAL 動作庫。南宮使用白袍、照影刀與平尾鞘。
 ## 動作名稱直接用動作庫裡的名字；*_Loop 與待機類動作會循環。
 
 const UAL1 := preload("res://assets/models/character/UAL1.glb")
+const NANGONG := preload("res://assets/models/character/Nangong.glb")
 const UAL2 := preload("res://assets/models/character/UAL2.glb")
 const WEAPONS := {"W001": preload("res://assets/models/weapons/Tachi.glb"),
 	"W007": preload("res://assets/models/weapons/W007.glb"), "W301": preload("res://assets/models/weapons/W301.glb")}
@@ -26,22 +27,34 @@ var invincible := false
 var current := ""
 var motion_pivot := Node3D.new()
 var idle := "Sword_Idle"
+var seated_hilt: MeshInstance3D
+var drawn_blade: MeshInstance3D
+var emerging_blade: MeshInstance3D
+var scabbard: MeshInstance3D
 
 
 func setup(char_id: String, weapon_id: String) -> void:
-	var body := UAL1.instantiate()
+	var is_nangong := char_id == "nangong"
+	var body := NANGONG.instantiate() if is_nangong else UAL1.instantiate()
 	add_child(motion_pivot)
 	motion_pivot.add_child(body)
 	body.rotation.y = PI          # 模型朝 +Z，轉成朝 -Z（Godot 的前方）
 	anim = body.find_children("*", "AnimationPlayer", true, false)[0]
 	skeleton = body.find_children("*", "Skeleton3D", true, false)[0]
-	var extra := UAL2.instantiate()
-	var ap2: AnimationPlayer = extra.find_children("*", "AnimationPlayer", true, false)[0]
-	var lib: AnimationLibrary = anim.get_animation_library(&"")
-	for n in ap2.get_animation_list():
-		if not lib.has_animation(n):
-			lib.add_animation(n, ap2.get_animation(n))
-	extra.free()
+	# 招式庫以角色為單位建立；三套模型共用相同骨骼路徑。
+	var lib: AnimationLibrary = anim.get_animation_library(&"").duplicate()
+	anim.remove_animation_library(&"")
+	anim.add_animation_library(&"", lib)
+	var sources := [UAL2]
+	if is_nangong:
+		sources.append(UAL1)
+	for scene in sources:
+		var extra: Node = scene.instantiate()
+		var source: AnimationPlayer = extra.find_children("*", "AnimationPlayer", true, false)[0]
+		for n in source.get_animation_list():
+			if not lib.has_animation(n):
+				lib.add_animation(n, source.get_animation(n))
+		extra.free()
 	# Godot 匯入時會把名稱結尾的 _Loop 去掉並設成循環；這裡只補上沒標記但要循環的待機動作
 	for n in LOOPS:
 		if anim.has_animation(n):
@@ -53,17 +66,27 @@ func setup(char_id: String, weapon_id: String) -> void:
 			lib.add_animation(id, _compose(move))
 	body_meshes = body.find_children("*", "MeshInstance3D", true, false)
 	status_material.shader = preload("res://scripts/fighter_status.gdshader")
-	var mesh: MeshInstance3D = body_meshes[0]
-	var tint: Array = TINT.get(char_id, TINT.nangong)
-	for i in mesh.mesh.get_surface_count():
-		var m := StandardMaterial3D.new()
-		m.albedo_color = tint[mini(i, 1)]
-		m.roughness = 0.75
-		mesh.set_surface_override_material(i, m)
+	if is_nangong:
+		idle = "NG_CarryIdle"
+		for n in [idle, "NG_CarryRun", "NG_CarrySprint"]:
+			lib.get_animation(n).loop_mode = Animation.LOOP_LINEAR
+		seated_hilt = body.find_child("SeatedHilt", true, false)
+		drawn_blade = body.find_child("DrawnBlade", true, false)
+		emerging_blade = body.find_child("EmergingBlade", true, false)
+		scabbard = body.find_child("FlatSaya", true, false)
+		weapon = drawn_blade
+	else:
+		var mesh: MeshInstance3D = body_meshes[0]
+		var tint: Array = TINT.get(char_id, TINT.nangong)
+		for i in mesh.mesh.get_surface_count():
+			var m := StandardMaterial3D.new()
+			m.albedo_color = tint[mini(i, 1)]
+			m.roughness = 0.75
+			mesh.set_surface_override_material(i, m)
 	hand = BoneAttachment3D.new()
 	skeleton.add_child(hand)
 	hand.bone_name = "hand_r"
-	if WEAPONS.has(weapon_id):
+	if not is_nangong and WEAPONS.has(weapon_id):
 		weapon = WEAPONS[weapon_id].instantiate()
 		hand.add_child(weapon)
 		var g: Array = GRIP[weapon_id]
@@ -82,6 +105,8 @@ func setup(char_id: String, weapon_id: String) -> void:
 		weapon.rotation_degrees.x = 75
 		idle = "Crouch_Idle_Loop"
 	play(idle)
+	if seated_hilt:
+		_update_sword_visibility()
 
 
 func set_defense(armor: bool, immune: bool) -> void:
@@ -101,6 +126,8 @@ func flash_hit() -> void:
 
 
 func _process(delta: float) -> void:
+	if seated_hilt:
+		_update_sword_visibility()
 	if flash_left > 0:
 		flash_left = maxf(0.0, flash_left - delta)
 		status_material.set_shader_parameter("flash", minf(1.0, flash_left / float(Data.feel.flash_fade_s)))
@@ -202,8 +229,36 @@ func _compose(move: Dictionary) -> Animation:
 	return result
 
 
-## 動作庫原名（含 _Loop）或匯入後的名稱都可以
+## 拔刀期間依動作時間決定刀身顯示，支援跳格、暫停與連線校時。
+func _update_sword_visibility() -> void:
+	var carry := current.trim_suffix("@hold").begins_with("NG_Carry")
+	var drawing := current.trim_suffix("@hold") == "NG_DrawCut" and anim.current_animation_length > 0.0
+	var phase := anim.current_animation_position / anim.current_animation_length if drawing else 0.0
+	var pull := smoothstep(0.16, 0.51, phase)
+	var emerging := drawing and phase >= 0.16 and phase < 0.53
+	seated_hilt.visible = carry or (drawing and phase < 0.16)
+	emerging_blade.visible = emerging
+	drawn_blade.visible = not seated_hilt.visible and not emerging
+	_set_draw_shapes(scabbard, pull * (1.0 - smoothstep(0.58, 0.92, phase)))
+	if emerging:
+		_set_draw_shapes(emerging_blade, pull, true)
+
+
+## 相鄰形狀間插值，讓左手送鞘與刃身露出的長度吻合。
+func _set_draw_shapes(mesh: MeshInstance3D, amount: float, has_closed_shape := false) -> void:
+	var count := mesh.get_blend_shape_count()
+	var frame := amount * (count - 1) if has_closed_shape else amount * count - 1.0
+	for i in count:
+		var weight := maxf(0.0, 1.0 - absf(frame - i))
+		if not is_equal_approx(mesh.get_blend_shape_value(i), weight):
+			mesh.set_blend_shape_value(i, weight)
+
+
 func clip(n: String) -> String:
+	if seated_hilt:
+		match n.trim_suffix("_Loop"):
+			"Jog_Fwd": return "NG_CarryRun"
+			"Sprint": return "NG_CarrySprint"
 	if anim == null:
 		return ""
 	if anim.has_animation(n):
@@ -242,3 +297,5 @@ func hold(n: String, at: float) -> void:
 		anim.play(n, 0.0)
 	anim.seek(minf(at, anim.get_animation(n).length - 0.01), true)
 	anim.pause()
+	if seated_hilt:
+		_update_sword_visibility()
