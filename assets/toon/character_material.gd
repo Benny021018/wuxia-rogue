@@ -7,7 +7,7 @@ const FACE_LIGHT := preload("res://assets/toon/nangong_face_light.png")
 ## Keep UVs, source colours and skinning on the original surface. The overlay
 ## remains available to combat feedback. Transparent surfaces retain their alpha mode.
 static func apply(mesh: MeshInstance3D, profile: String) -> ShaderMaterial:
-	if not mesh.mesh:
+	if DisplayServer.get_name() == "headless" or not mesh.mesh:
 		return null
 	var first: ShaderMaterial
 	for i in mesh.mesh.get_surface_count():

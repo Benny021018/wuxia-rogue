@@ -137,6 +137,8 @@ func setup(char_id: String, weapon_id: String) -> void:
 
 
 func _update_face_light() -> void:
+	if not skeleton.is_inside_tree():
+		return
 	var basis := (skeleton.global_basis * skeleton.get_bone_global_pose(head_index).basis * head_rest_inverse).orthonormalized()
 	face_material.set_shader_parameter("head_front", basis.z)
 	face_material.set_shader_parameter("head_side", basis.x)
