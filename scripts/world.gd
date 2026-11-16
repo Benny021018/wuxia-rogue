@@ -25,7 +25,9 @@ const CAMP_ART := {
 }
 # 已在 Blender 佈景完成的房間（流程見 docs/greenwood-art.md「房間佈景」）：
 # 原點＝房間西緣中線，X 向東、Z 同 zones.json。有佈景的房間只保留碰撞，灰盒外觀不畫。
-const ROOM_ART := {1: preload("res://assets/models/greenwood/rooms/room1.glb")}
+const ROOM_ART := {1: preload("res://assets/models/greenwood/rooms/room1.glb"),
+	2: preload("res://assets/models/greenwood/rooms/room2.glb"), 3: preload("res://assets/models/greenwood/rooms/room3.glb"),
+	4: preload("res://assets/models/greenwood/rooms/room4.glb"), 5: preload("res://assets/models/greenwood/rooms/room5.glb")}
 const TERRAIN_SHADER := preload("res://assets/greenwood/terrain.gdshader")
 const BANNER_SHADER := preload("res://assets/greenwood/banner.gdshader")
 const CAMP_CHAIR := preload("res://assets/models/greenwood/throne.glb")
@@ -241,7 +243,7 @@ func _build_room(stage: int, lay: Dictionary, x0: float, theme: Dictionary) -> D
 	var cx := x0 + w / 2.0
 	var art_scene: PackedScene = ROOM_ART.get(stage) if map_id == "greenwood" else null
 	if art_scene:
-		_place_room_art(art_scene, x0)
+		_place_room_art(art_scene, x0, stage)
 		_bare = true
 	_static_box(Vector3(w, 0.2, h), Vector3(cx, -0.1, 0), theme.floor)
 	# 北、南牆
@@ -299,7 +301,7 @@ func _build_room(stage: int, lay: Dictionary, x0: float, theme: Dictionary) -> D
 				_camp_block(label,Vector3(ew,tall,eh),c,theme.wall.lightened(.15))
 			"high":
 				_camp_block(label,Vector3(ew,1.0,eh),c,Color(.55,.47,.33))
-				if map_id == "greenwood" and label == "交椅":
+				if map_id == "greenwood" and label == "交椅" and not _bare:
 					var chair := CAMP_CHAIR.instantiate() as Node3D
 					level_root.add_child(chair)
 					chair.position = c + Vector3.UP
@@ -345,6 +347,10 @@ func _build_room(stage: int, lay: Dictionary, x0: float, theme: Dictionary) -> D
 					cliff.position = c + Vector3(0, 0.03, 0)
 					_permanent_hazard(c, minf(ew, eh) / 2.0, stage, Color(0.1, 0.0, 0.0, 0.0), 3.0, &"")
 				elif "血池" in label or ew <= 2.5:
+					if _bare:
+						# 佈景已放火盆與 fx_fire 標記，這裡只留傷害區
+						_permanent_hazard(c, minf(ew, eh) / 2.0 + 0.5, stage, Color(1, 0.4, 0.1, 0.2), 1.5, &"campfire")
+						continue
 					if map_id == "greenwood":
 						var basket := CAMP_BRAZIER.instantiate() as Node3D
 						level_root.add_child(basket)
@@ -358,9 +364,9 @@ func _build_room(stage: int, lay: Dictionary, x0: float, theme: Dictionary) -> D
 	return r
 
 
-func _place_room_art(scene: PackedScene, x0: float) -> void:
+func _place_room_art(scene: PackedScene, x0: float, stage: int) -> void:
 	var art: Node3D = scene.instantiate()
-	art.name = "RoomArt"
+	art.name = "RoomArt%d" % stage
 	level_root.add_child(art)
 	art.position = Vector3(x0, 0, 0)
 	var terrain := ShaderMaterial.new()
@@ -378,8 +384,81 @@ func _place_room_art(scene: PackedScene, x0: float) -> void:
 		elif n.ends_with("_cloth"):
 			mi.material_override = banner
 			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		elif n.begins_with("nat_Grass") or n.begins_with("nat_pebble") or n.begins_with("path_"):
+		elif n.begins_with("nat_Grass") or n.begins_with("nat_pebble") or n.begins_with("path_") or n.begins_with("floor"):
 			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	for mk in art.find_children("fx_fire_*", "Node3D", true, false):
+		mk.add_child(_fire_fx())
+
+
+## 火盆的火焰、黑煙與閃動的火光（佈景裡 fx_fire_* 標記點）
+func _fire_fx() -> Node3D:
+	var root := Node3D.new()
+	root.name = "Fire"
+	root.add_child(_flame_particles(false))
+	root.add_child(_flame_particles(true))
+	var lamp := OmniLight3D.new()
+	lamp.light_color = Color(1.0, 0.62, 0.3)
+	lamp.omni_range = 6.0
+	lamp.light_energy = 1.6
+	lamp.position.y = 0.6
+	lamp.set_script(preload("res://scripts/fx_flicker.gd"))
+	root.add_child(lamp)
+	return root
+
+
+func _flame_particles(smoke: bool) -> GPUParticles3D:
+	var p := GPUParticles3D.new()
+	p.amount = 18 if smoke else 28
+	p.lifetime = 2.6 if smoke else 0.7
+	p.local_coords = false
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	p.visibility_aabb = AABB(Vector3(-2, -0.5, -2), Vector3(4, 7, 4))
+	var pm := ParticleProcessMaterial.new()
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	pm.emission_sphere_radius = 0.22 if smoke else 0.18
+	pm.direction = Vector3.UP
+	pm.spread = 12.0
+	pm.gravity = Vector3(0.25, 0.9, 0) if smoke else Vector3(0, 2.5, 0)
+	pm.initial_velocity_min = 0.5 if smoke else 0.4
+	pm.initial_velocity_max = 0.9 if smoke else 0.9
+	var curve := Curve.new()
+	if smoke:
+		curve.add_point(Vector2(0, 0.4))
+		curve.add_point(Vector2(1, 1.6))
+	else:
+		curve.add_point(Vector2(0, 1.0))
+		curve.add_point(Vector2(1, 0.15))
+	var ct := CurveTexture.new()
+	ct.curve = curve
+	pm.scale_curve = ct
+	var grad := Gradient.new()
+	if smoke:
+		grad.set_color(0, Color(0.12, 0.1, 0.09, 0.0))
+		grad.add_point(0.15, Color(0.14, 0.12, 0.11, 0.55))
+		grad.set_color(grad.get_point_count() - 1, Color(0.3, 0.3, 0.3, 0.0))
+	else:
+		grad.set_color(0, Color(1.0, 0.85, 0.4, 1.0))
+		grad.add_point(0.5, Color(1.0, 0.4, 0.1, 0.9))
+		grad.set_color(grad.get_point_count() - 1, Color(0.6, 0.1, 0.05, 0.0))
+	var gt := GradientTexture1D.new()
+	gt.gradient = grad
+	pm.color_ramp = gt
+	p.process_material = pm
+	var quad := QuadMesh.new()
+	quad.size = Vector2.ONE * (0.9 if smoke else 0.5)
+	var mat := StandardMaterial3D.new()
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.vertex_color_use_as_albedo = true
+	mat.albedo_texture = preload("res://assets/greenwood/ground/puff.png")
+	if not smoke:
+		mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	quad.material = mat
+	p.draw_pass_1 = quad
+	if smoke:
+		p.position.y = 0.5
+	return p
 
 
 func _permanent_hazard(c: Vector3, radius: float, stage: int, color: Color, mult := 0.5, clip: StringName = &"poison-cloud") -> void:

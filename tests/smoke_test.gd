@@ -152,8 +152,12 @@ func _run_character(cid: String) -> void:
 			await _frames(3)
 		_check(world.map_index == mi, "換圖 %d" % mi)
 		if mi == 0:
-			var art: Node = world.level_root.get_node_or_null("RoomArt")
-			_check(art != null and art.find_children("*_terrain", "MeshInstance3D", true, false).size() == 1, "綠林第1區載入 Blender 佈景與地形")
+			var arts: Array = world.level_root.get_children().filter(func(n): return String(n.name).begins_with("RoomArt"))
+			_check(arts.size() == 5 and arts.all(func(a): return a.find_children("*terrain", "MeshInstance3D", true, false).size() == 1), "綠林五區都載入 Blender 佈景與地形（%d）" % arts.size())
+			var fires := 0
+			for a in arts:
+				fires += a.find_children("Fire", "Node3D", true, false).size()
+			_check(fires >= 10, "聚義廳前與聚義廳的火盆有火焰與煙（%d）" % fires)
 		for ri in 5:
 			var r: Dictionary = world.rooms[ri]
 			# 從門外走進去（確認入口沒有被擋住），失敗才傳送
