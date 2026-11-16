@@ -8,6 +8,7 @@
 | 貨箱、板車、掩體、鐵匠鋪、商人攤 | [Fantasy Props MegaKit](https://quaternius.itch.io/fantasy-props-megakit)（Standard） | Quaternius | CC0 1.0 |
 | 板車、石階 | [Medieval Village MegaKit](https://quaternius.itch.io/medieval-village-megakit)（Standard） | Quaternius | CC0 1.0 |
 | 山賊弓手的拉弓動作（舊骨架片段轉移） | [KayKit Character Animations 1.1](https://kaylousberg.itch.io/kaykit-character-animations) | Kay Lousberg | CC0 1.0 |
+| 第1區佈景的松樹、扭松、岩石、草叢、蕨類、石板路、碎石（葉色重新調色） | [Stylized Nature MegaKit](https://quaternius.itch.io/stylized-nature-megakit)（Standard） | Quaternius | CC0 1.0 |
 | 黑羽鷹 | [Low poly pigeon](https://opengameart.org/content/low-poly-3d-pigeon-model-rigged-animated-untextured) | OpenGameArt | CC0 1.0 |
 
 CC0 可商用、可修改，不需要標示作者；這份清單是給自己追溯來源用。

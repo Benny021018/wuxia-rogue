@@ -21,3 +21,14 @@
 - 後續：其餘三圖的專屬敵人與道具、其餘十六把玩家武器、三名可玩角色的獨立人物模型未在此批替換。地板牆面、碰撞、區域標記、傳送陣與攻擊特效仍使用引擎材質、幾何或動畫，不把可變攻擊範圍烘成固定網格。
 
 [綠林山寨實拍](previews/greenwood-smart.jpg) · [太刀連段實拍](previews/tachi-draw.gif) · [全部生成來源](greenwood-smart-sources.json)
+
+## 房間佈景（第1區先行）
+
+第1區「寨外山道」改成在 Blender 整間佈景後匯出 `assets/models/greenwood/rooms/room1.glb`，`world.gd` 的 `ROOM_ART` 依區號載入；有佈景的房間與兩側走廊只建碰撞盒，不畫灰盒。
+
+- **座標**：GLB 原點＝房間西緣中線，Blender +X 往東、+Y 對應遊戲 −Z。拒馬、木掩體、板車的位置對齊 `data/zones.json` 第 1 區的 cover；改 zones.json 時要同步搬 Blender 裡的物件。
+- **地形**：一張 72×104 m 的高度網格，房間與走廊平坦，牆外起坡成山。頂點色 R＝草、G＝岩、B＝路面壓暗，Godot 以 `assets/greenwood/terrain.gdshader` 混合 `assets/greenwood/ground/` 的三張平鋪貼圖。遠處 12 座山與外圈地面共用同一個材質。
+- **物件**：Tripo 生成的寨門、木柵、拒馬、板車、箭樓等用減面版（單件 800～2,800 三角形，貼圖重新烘焙到 512～1024）；植被與石板路來自 Quaternius Stylized Nature MegaKit（CC0），葉色調成灰綠。同種物件共用網格。
+- **旗幟**：布面用 `assets/greenwood/banner.gdshader` 頂端固定、往下擺動。
+- **環境**：天空 `ridges.gdshader` 改成淡藍天頂、霧白地平線；綠林的太陽調亮、霧變淡並開空氣遠近感。
+- **其餘四區**仍是灰盒＋舊模型，之後照同一流程逐區替換。
