@@ -68,14 +68,8 @@ func setup(char_id: String, weapon_id: String) -> void:
 			lib.add_animation(id, _compose(move))
 	body_meshes = body.find_children("*", "MeshInstance3D", true, false)
 	status_material.shader = preload("res://scripts/fighter_status.gdshader")
-	# 畫面四向偏移共用角色遮罩，讓薄衣襬與刀鞘也有完整外框。
-	for direction in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN]:
-		var outline := ShaderMaterial.new()
-		outline.shader = preload("res://scripts/fighter_outline.gdshader")
-		outline.render_priority = 1
-		outline.set_shader_parameter("offset_px", direction * float(Data.feel.armor_outline_px))
-		outline.next_pass = outline_material
-		outline_material = outline
+	# 霸體外框：畫面八向偏移、共用角色遮罩，讓薄衣襬與刀鞘也有完整外框（見 armor_outline.gd）
+	outline_material = ArmorOutline.passes()
 	if is_nangong:
 		idle = "NG_CarryIdle"
 		for n in [idle, "NG_CarryRun", "NG_CarrySprint"]:

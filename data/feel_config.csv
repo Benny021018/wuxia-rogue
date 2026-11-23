@@ -30,6 +30,11 @@ particles_crit,26,暴擊火花數
 particles_kill,40,擊殺時的血墨飛濺數
 footstep_m,2.1,每走幾公尺一個腳步聲
 heartbeat_hp,0.3,生命低於此比例開始心跳
-armor_outline_px,2.5,霸體外輪廓寬度（畫素）
+armor_outline_px,3,霸體外輪廓寬度（畫素，以玩家畫面為準）
+armor_outline_color_a,#ff1a0d,霸體外框漸層的紅色端
+armor_outline_color_b,#ffd21f,霸體外框漸層的黃色端
+armor_outline_cycle_s,1.1,霸體外框紅→黃→紅流動一輪的秒數
+armor_outline_band_px,160,霸體外框漸層在畫面上一個紅黃循環的寬度（畫素）
+armor_outline_sway,0.35,霸體外框整圈一起偏紅／偏黃的擺幅（0＝只有流動漸層）
 invincible_blink_s,0.36,無敵閃爍的週期（秒）
 invincible_blink_alpha,0.78,無敵閃爍亮部的不透明度
