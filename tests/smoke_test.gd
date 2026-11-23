@@ -102,6 +102,7 @@ func _run_character(cid: String) -> void:
 		await _check_third_person(world, player)
 		await _check_knockback(world, player)
 		await _check_enemy_ai(world, player)
+		await _check_armor_outline(world, player)
 		var gate = world.rooms[0].gate_out
 		var meshes := (gate as Node).find_children("*", "MeshInstance3D", true, false)
 		_check(meshes.size() == 1, "山寨門只有一個可見模型")
@@ -1544,3 +1545,41 @@ func _check_third_person(world, player) -> void:
 	player.invuln_t = keep_inv
 	player.hp = Game.max_hp()
 	Settings.values["hitstop"] = 1.0
+
+
+## 霸體外框：精英與首領平時有、小怪沒有；破霸體消失、死亡消失；玩家進霸體才有
+func _check_armor_outline(world, player) -> void:
+	var r: Dictionary = world.rooms[1]
+	var base := Vector3(r.x0 + 6.0, 0.5, 0.0)
+	var elite = world.spawn_enemy("H07", base, false)
+	var minion = world.spawn_enemy("H01", base + Vector3(0, 0, 2.5), false)
+	elite.max_hp = 1.0e7
+	elite.hp = 1.0e7
+	await _physics(2)
+	_check(elite._body_mat.next_pass == ArmorOutline.with_mask(), "精英平時有霸體外框")
+	_check(minion._body_mat.next_pass == null, "小怪沒有霸體外框")
+	elite.cs.armor_broken_t = 2.0
+	await _physics(2)
+	_check(elite._body_mat.next_pass == null, "破霸體後外框消失")
+	elite.cs.armor_broken_t = 0.0
+	await _physics(2)
+	_check(elite._body_mat.next_pass != null, "霸體恢復後外框回來")
+	var mat: ShaderMaterial = ArmorOutline.passes()
+	var n := 0
+	while mat != null:
+		n += 1
+		mat = mat.next_pass
+	_check(n == ArmorOutline.DIRS.size(), "外框由八個方向疊成（%d）" % n)
+	elite.die()
+	_check(elite._body_mat.next_pass == null, "死亡後外框消失")
+	minion.queue_free()
+	var was: float = player.cs.armor_t
+	player.cs.armor_t = 1.0
+	await _physics(1)
+	_check(player.model.status_material.next_pass == ArmorOutline.passes(), "玩家霸體時有外框")
+	player.cs.armor_t = 0.0
+	await _physics(1)
+	_check(player.model.status_material.next_pass == null, "玩家霸體結束外框消失")
+	player.cs.armor_t = was
+	await _physics(10)
+

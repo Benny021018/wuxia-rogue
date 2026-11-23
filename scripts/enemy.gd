@@ -30,6 +30,7 @@ var _draw := -1.0
 var _recoil: Tween
 var _flash := StandardMaterial3D.new()
 var _flash_meshes: Array[Node] = []
+var _outline_on := false            # 霸體外框是否顯示中（精英、首領平時都有，破霸體時消失）
 var _hit_side := 1.0
 var _impact_pivot := Node3D.new()
 var _skeleton: Skeleton3D
@@ -220,6 +221,7 @@ func _physics_process(delta: float) -> void:
 	_route_retry -= delta
 	_tick_status(delta)
 	cs.tick(delta, is_on_floor())
+	_show_armor(cs.has_armor())
 	var lying := cs.base == CombatState.S.DOWN
 	if _pose:
 		if cs.base == CombatState.S.AIR:
@@ -1585,6 +1587,7 @@ func die() -> void:
 	if dead:
 		return
 	dead = true
+	_show_armor(false)
 	FX.play(world, hit_center(), &"poof", 1.4 * size, 0.36)
 	FX.burst(world, hit_center(), (Vector3.UP * .8 + _away * .3).normalized(), Color(.42, .02, .05, .95), int(Data.feel.particles_kill), "ink", 7.0, 1.2)
 	FX.burst(world, global_position + Vector3.UP * .3, Vector3.UP, Color(.55, .52, .5, .5), 8, "dust", 3.0, size)
@@ -1628,3 +1631,14 @@ func _death_fling() -> void:
 	t.parallel().tween_property(_impact_pivot, "scale", Vector3.ONE * .15, dur).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 	t.parallel().tween_property(_flash, "albedo_color", Color(.1, 0, 0, .8), dur)
 	t.tween_callback(queue_free)
+
+
+## 霸體外框：以玩家畫面為準、沿角色輪廓的紅黃流動線（armor_outline.gd）
+func _show_armor(on: bool) -> void:
+	if on == _outline_on:
+		return
+	_outline_on = on
+	var chain = ArmorOutline.with_mask() if on else null
+	_body_mat.next_pass = chain
+	_flash.next_pass = chain
+

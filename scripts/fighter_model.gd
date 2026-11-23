@@ -21,6 +21,8 @@ var hand: BoneAttachment3D
 var weapon: Node3D
 var body_meshes: Array[Node] = []
 var status_material := ShaderMaterial.new()
+var outline_material: ShaderMaterial
+var blink_elapsed := 0.0
 var flash_left := 0.0
 var armored := false
 var invincible := false
@@ -66,6 +68,8 @@ func setup(char_id: String, weapon_id: String) -> void:
 			lib.add_animation(id, _compose(move))
 	body_meshes = body.find_children("*", "MeshInstance3D", true, false)
 	status_material.shader = preload("res://scripts/fighter_status.gdshader")
+	# 霸體外框：畫面八向偏移、共用角色遮罩，讓薄衣襬與刀鞘也有完整外框（見 armor_outline.gd）
+	outline_material = ArmorOutline.passes()
 	if is_nangong:
 		idle = "NG_CarryIdle"
 		for n in [idle, "NG_CarryRun", "NG_CarrySprint"]:
@@ -113,9 +117,11 @@ func set_defense(armor: bool, immune: bool) -> void:
 	if armored == armor and invincible == immune:
 		return
 	armored = armor
-	invincible = immune
-	status_material.set_shader_parameter("armored", armor)
-	status_material.set_shader_parameter("invincible", immune)
+	if invincible != immune:
+		invincible = immune
+		blink_elapsed = 0.0
+		status_material.set_shader_parameter("invincible_glow", float(Data.feel.invincible_blink_alpha) if immune else 0.0)
+	status_material.next_pass = outline_material if armor else null
 	_refresh_overlay()
 
 
@@ -126,6 +132,11 @@ func flash_hit() -> void:
 
 
 func _process(delta: float) -> void:
+	if invincible:
+		var period := float(Data.feel.invincible_blink_s)
+		blink_elapsed = fmod(blink_elapsed + delta, period)
+		var pulse := smoothstep(0.15, 0.85, 0.5 + 0.5 * cos(TAU * blink_elapsed / period))
+		status_material.set_shader_parameter("invincible_glow", pulse * float(Data.feel.invincible_blink_alpha))
 	if seated_hilt:
 		_update_sword_visibility()
 	if flash_left > 0:
