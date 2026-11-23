@@ -2,6 +2,13 @@ extends Node3D
 ## 第三人稱角色模型與共用 UAL 動作庫。南宮使用白袍、照影刀與平尾鞘。
 ## 動作名稱直接用動作庫裡的名字；*_Loop 與待機類動作會循環。
 
+const Toon := preload("res://assets/toon/character_material.gd")
+const NANGONG_SURFACES := {"Body":"robe", "Face":"face", "Hair":"hair", "Spring_01_ponytail":"hair",
+	"FlatSaya":"lacquer", "DrawnBlade":"steel", "SeatedHilt":"steel", "EmergingBlade":"steel"}
+var face_material: ShaderMaterial
+var head_index := -1
+var head_rest_inverse := Basis.IDENTITY
+
 const UAL1 := preload("res://assets/models/character/UAL1.glb")
 const NANGONG := preload("res://assets/models/character/Nangong.glb")
 const UAL2 := preload("res://assets/models/character/UAL2.glb")
@@ -21,6 +28,8 @@ var hand: BoneAttachment3D
 var weapon: Node3D
 var body_meshes: Array[Node] = []
 var status_material := ShaderMaterial.new()
+var outline_material: ShaderMaterial
+var blink_elapsed := 0.0
 var flash_left := 0.0
 var armored := false
 var invincible := false
@@ -66,6 +75,8 @@ func setup(char_id: String, weapon_id: String) -> void:
 			lib.add_animation(id, _compose(move))
 	body_meshes = body.find_children("*", "MeshInstance3D", true, false)
 	status_material.shader = preload("res://scripts/fighter_status.gdshader")
+	# 霸體外框：畫面八向偏移、共用角色遮罩，讓薄衣襬與刀鞘也有完整外框（見 armor_outline.gd）
+	outline_material = ArmorOutline.passes()
 	if is_nangong:
 		idle = "NG_CarryIdle"
 		for n in [idle, "NG_CarryRun", "NG_CarrySprint"]:
@@ -104,18 +115,38 @@ func setup(char_id: String, weapon_id: String) -> void:
 		hand.add_child(weapon)
 		weapon.rotation_degrees.x = 75
 		idle = "Crouch_Idle_Loop"
+	for mesh in body_meshes:
+		var profile: String = NANGONG_SURFACES.get(String(mesh.name), "cloth") if is_nangong else "cloth"
+		var mat := Toon.apply(mesh, profile)
+		if profile == "face":
+			face_material = mat
+	if face_material:
+		head_index = skeleton.find_bone("Head")
+		head_rest_inverse = skeleton.get_bone_global_rest(head_index).basis.inverse()
+		skeleton.skeleton_updated.connect(_update_face_light)
+		_update_face_light()
 	play(idle)
 	if seated_hilt:
 		_update_sword_visibility()
+
+
+func _update_face_light() -> void:
+	if not skeleton.is_inside_tree():
+		return
+	var basis := (skeleton.global_basis * skeleton.get_bone_global_pose(head_index).basis * head_rest_inverse).orthonormalized()
+	face_material.set_shader_parameter("head_front", basis.z)
+	face_material.set_shader_parameter("head_side", basis.x)
 
 
 func set_defense(armor: bool, immune: bool) -> void:
 	if armored == armor and invincible == immune:
 		return
 	armored = armor
-	invincible = immune
-	status_material.set_shader_parameter("armored", armor)
-	status_material.set_shader_parameter("invincible", immune)
+	if invincible != immune:
+		invincible = immune
+		blink_elapsed = 0.0
+		status_material.set_shader_parameter("invincible_glow", float(Data.feel.invincible_blink_alpha) if immune else 0.0)
+	status_material.next_pass = outline_material if armor else null
 	_refresh_overlay()
 
 
@@ -126,6 +157,11 @@ func flash_hit() -> void:
 
 
 func _process(delta: float) -> void:
+	if invincible:
+		var period := float(Data.feel.invincible_blink_s)
+		blink_elapsed = fmod(blink_elapsed + delta, period)
+		var pulse := smoothstep(0.15, 0.85, 0.5 + 0.5 * cos(TAU * blink_elapsed / period))
+		status_material.set_shader_parameter("invincible_glow", pulse * float(Data.feel.invincible_blink_alpha))
 	if seated_hilt:
 		_update_sword_visibility()
 	if flash_left > 0:

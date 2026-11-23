@@ -17,6 +17,8 @@ var speed := 2.0
 var reach := 1.0
 var dead := false
 var hit_radius := 0.45
+var _stride := 0.0                  # 跑步動作原速對應的移動速度；播放速度跟著實際速度走
+var _was_down := false              # 上一幀是否倒地（倒地結束時播起身）
 var size := 1.0
 var summoner = null           # 召喚者（狼王判定狼群是否存活）
 var summons: Array = []
@@ -30,6 +32,7 @@ var _draw := -1.0
 var _recoil: Tween
 var _flash := StandardMaterial3D.new()
 var _flash_meshes: Array[Node] = []
+var _outline_on := false            # 霸體外框是否顯示中（精英、首領平時都有，破霸體時消失）
 var _hit_side := 1.0
 var _impact_pivot := Node3D.new()
 var _skeleton: Skeleton3D
@@ -111,7 +114,8 @@ func setup(id: String, stg: int, w, pos: Vector3) -> void:
 	max_hp = Data.enemy_hp(id, stg)
 	hp = max_hp
 	dmg = Data.enemy_dmg(id, stg)
-	speed = float(row.move_speed)
+	speed = float(row.move_speed) * Data.cfg("ai_move_speed_mult")
+	_stride = float(Data.enemy_stride.get(id, 0.0))
 	reach = float(row.range_m)
 	size = {"minion": 1.0, "elite": 1.5, "boss": 2.4}[rank]
 	if id == "B04":
@@ -195,6 +199,7 @@ func _ready() -> void:
 	_flash.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_flash_meshes = _visual.find_children("*", "MeshInstance3D", true, false).filter(func(m): return m.get_parent() is Skeleton3D)
 	for mesh in _flash_meshes:
+		preload("res://assets/toon/character_material.gd").apply(mesh, "cloth")
 		mesh.material_overlay = _body_mat
 	if rank != "minion":
 		_label = FX.label3d(row.name_zh, 64, Color(1, 0.85, 0.6) if rank == "elite" else Color(1, 0.4, 0.3))
@@ -220,6 +225,7 @@ func _physics_process(delta: float) -> void:
 	_route_retry -= delta
 	_tick_status(delta)
 	cs.tick(delta, is_on_floor())
+	_show_armor(cs.has_armor())
 	var lying := cs.base == CombatState.S.DOWN
 	if _pose:
 		if cs.base == CombatState.S.AIR:
@@ -229,9 +235,22 @@ func _physics_process(delta: float) -> void:
 				_anim.play(&"Hit", 0)
 				_anim.seek(0, true)
 				_anim.pause()
+		elif _anim and _anim.has_animation(&"GetUp"):
+			# 倒地：躺在起身動作的第一格；時間到就把起身整段播完，播完才能行動
+			# 躺姿由動作本身決定，不再整個身體轉 90 度（暫停中的動作不會混接，所以直接切）
+			_pose.rotation.x = 0.0
+			_pose.position.y = 0.0
+			if lying and (_anim.assigned_animation != &"GetUp" or _anim.is_playing()):
+				_anim.play(&"GetUp", 0.0)
+				_anim.seek(0, true)
+				_anim.pause()
+			elif _was_down and not lying:
+				_anim.play(&"GetUp", 0.0, Data.cfg("ai_getup_speed"))
+				_stun_t = maxf(_stun_t, _anim.get_animation(&"GetUp").length / Data.cfg("ai_getup_speed"))
 		else:
 			_pose.rotation.x = lerp_angle(_pose.rotation.x, -PI / 2.0 if lying else 0.0, minf(1.0, delta * 16.0))
-		_pose.position.y = lerpf(_pose.position.y, 0.35 * size if lying else 0.0, minf(1.0, delta * 16.0))
+			_pose.position.y = lerpf(_pose.position.y, 0.35 * size if lying else 0.0, minf(1.0, delta * 16.0))
+		_was_down = lying
 	if not cs.can_act():
 		# 受擊、浮空、倒地：不能行動，招式被打斷
 		_stun_t = maxf(_stun_t, delta)
@@ -271,8 +290,12 @@ func _physics_process(delta: float) -> void:
 	if _draw < 0.0 and (not _anim.is_playing() or _anim.current_animation in [&"Walk", &"Idle"]):
 		var moving := Vector2(velocity.x, velocity.z).length() > 0.15
 		var clip := &"Walk" if moving else &"Idle"
-		if _anim.current_animation != clip or not _anim.is_playing():
-			_anim.play(clip, 0.10)
+		var rate := 1.0
+		if moving and _stride > 0.0:
+			# 腳步速度跟著實際移動速度，跑快就擺快
+			rate = clampf(Vector2(velocity.x, velocity.z).length() / _stride, Data.cfg("ai_run_rate_min"), Data.cfg("ai_run_rate_max"))
+		if _anim.current_animation != clip or not _anim.is_playing() or not is_equal_approx(_anim.get_playing_speed(), rate):
+			_anim.play(clip, 0.10, rate)
 	_apply_knock(delta)
 	_apply_gravity(delta)
 	move_and_slide()
@@ -415,6 +438,8 @@ func _melee(delta: float, dist: float, mult := 1.0) -> void:
 	if _windup > 0.0:
 		velocity.x = 0
 		velocity.z = 0
+		if _committed():
+			_combo_step(delta, dist)
 		_windup -= delta
 		if _windup <= 0.0:
 			_strike(dist, mult)
@@ -489,14 +514,23 @@ func _start_move(mv: Dictionary) -> void:
 	if mv.kind == "counter":
 		_counter_t = 0.0
 		FX.float_text(world, hit_center() + Vector3(0, 1.0 * size, 0), "反擊", Color(1, 0.8, 0.3), 34)
+	if int(mv.get("commit", 0)) == 1 and mv.move_id == _mv_root:
+		# 連招起手：頭上報出招名，提醒玩家接下來是一整套
+		FX.float_text(world, hit_center() + Vector3(0, 1.2 * size, 0), String(mv.name_zh), Color(1, 0.55, 0.3), 40)
+		Sfx.play("roar", global_position, -6.0, 1.1)
 	var clip := StringName(mv.anim) if mv.anim != "" and _anim.has_animation(StringName(mv.anim)) else &"Slash"
-	if not _anim.is_playing() or _anim.current_animation in [&"Walk", &"Idle", &"Slash", clip]:
-		_anim.play(clip, 0.05)
+	if not _anim.is_playing() or _anim.current_animation in [&"Walk", &"Idle", &"Slash", &"GetUp", clip] or _is_move_clip(_anim.current_animation):
+		# 起手越長，動作放得越慢：出手瞬間剛好落在判定那一刻
+		var beat: float = Data.enemy_beat.get(eid, {}).get(String(clip), 0.0)
+		var rate := clampf(beat / _windup, Data.cfg("ai_windup_rate_min"), Data.cfg("ai_windup_rate_max")) if beat > 0.0 else 1.0
+		_anim.play(clip, 0.06, rate)
 
 
 func _strike(dist: float, mult: float) -> void:
 	_body_mat.emission_enabled = false
 	var mv := _mv
+	if _anim.is_playing() and _is_move_clip(_anim.current_animation):
+		_anim.play(_anim.current_animation, 0.0, 1.0)      # 揮出去之後用原速收招
 	var impact_reach := _move_reach(mv)
 	var arc := float(mv.arc_deg)
 	if arc >= 359.0:
@@ -520,7 +554,8 @@ func _after_move(dist: float) -> void:
 	if not mv.is_empty() and mv.chain != "" and table.has(mv.chain):
 		var nxt: Dictionary = table[mv.chain]
 		var pv := _player_view()
-		if dist <= _move_reach(nxt) + 0.6 and not pv.inv:
+		# 首領連招一旦出手就打完整套（只有被破霸體才會中斷）；一般連段打不到就收
+		if int(nxt.get("commit", 0)) == 1 or (dist <= _move_reach(nxt) + 0.6 and not pv.inv):
 			_start_move(nxt)
 			return
 	var root: Dictionary = table.get(_mv_root, {})
@@ -530,6 +565,36 @@ func _after_move(dist: float) -> void:
 	_mv = {}
 	_mv_root = ""
 	_release_token(Data.cfg("ai_token_rest_s"))
+
+
+## 正在打一套首領連招（出手後不中斷，見 enemy_moves.csv 的 commit）
+func _committed() -> bool:
+	return not _mv.is_empty() and int(_mv.get("commit", 0)) == 1
+
+
+func _is_move_clip(clip: StringName) -> bool:
+	if clip == &"":
+		return false
+	for mv in _move_table().values():
+		if StringName(mv.get("anim", "")) == clip:
+			return true
+	return false
+
+
+## 連招起手中：轉向玩家（出手前一小段時間停止轉向，留閃避的空間），最後一段往前踏
+func _combo_step(delta: float, dist: float) -> void:
+	var to: Vector3 = player.global_position - global_position
+	to.y = 0
+	if _windup > Data.cfg("ai_combo_track_stop_s") and to.length() > 0.05:
+		var want := atan2(-to.x, -to.z)
+		var turn := deg_to_rad(Data.cfg("ai_combo_track_deg_s")) * delta
+		rotation.y += clampf(wrapf(want - rotation.y, -PI, PI), -turn, turn)
+		_swing_dir = -global_basis.z
+	var lunge := float(_mv.get("lunge_m", 0.0)) if String(_mv.get("lunge_m", "")) != "" else 0.0
+	var span := minf(Data.cfg("ai_combo_lunge_s"), _windup_total)
+	if lunge > 0.0 and _windup <= span and dist > _move_reach(_mv) * 0.55:
+		velocity.x = _swing_dir.x * lunge / span
+		velocity.z = _swing_dir.z * lunge / span
 
 
 ## 被打斷（硬直、浮空、倒地、跳開）：招式作廢
@@ -1125,6 +1190,9 @@ func _behaviour(delta: float, flat: Vector3, dist: float) -> void:
 	var rate := float(phase_row.get("skill_rate", 1.0))
 	_skill_cd -= delta * rate
 	_skill2_cd -= delta * rate
+	if _committed():
+		_melee(delta, dist)      # 連招打到一半：不放技能、不追不退，專心打完
+		return
 	match eid:
 		"Z02": _b_hopper(delta, flat, dist)
 		"Z05":
@@ -1585,6 +1653,7 @@ func die() -> void:
 	if dead:
 		return
 	dead = true
+	_show_armor(false)
 	FX.play(world, hit_center(), &"poof", 1.4 * size, 0.36)
 	FX.burst(world, hit_center(), (Vector3.UP * .8 + _away * .3).normalized(), Color(.42, .02, .05, .95), int(Data.feel.particles_kill), "ink", 7.0, 1.2)
 	FX.burst(world, global_position + Vector3.UP * .3, Vector3.UP, Color(.55, .52, .5, .5), 8, "dust", 3.0, size)
@@ -1628,3 +1697,14 @@ func _death_fling() -> void:
 	t.parallel().tween_property(_impact_pivot, "scale", Vector3.ONE * .15, dur).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 	t.parallel().tween_property(_flash, "albedo_color", Color(.1, 0, 0, .8), dur)
 	t.tween_callback(queue_free)
+
+
+## 霸體外框：以玩家畫面為準、沿角色輪廓的紅黃流動線（armor_outline.gd）
+func _show_armor(on: bool) -> void:
+	if on == _outline_on:
+		return
+	_outline_on = on
+	var chain = ArmorOutline.with_mask() if on else null
+	_body_mat.next_pass = chain
+	_flash.next_pass = chain
+

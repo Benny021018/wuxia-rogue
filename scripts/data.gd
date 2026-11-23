@@ -33,7 +33,11 @@ var music := {}             # key（menu 或 map_id）-> 配樂設定（music.cs
 var sfx := {}               # id -> 音效設定（sfx.csv）
 var settings_cfg := {}      # key -> 設定預設值與範圍（settings_config.csv）
 var settings_order: Array = []
+var toon_materials := {}
+var toon_lighting := {}
 var feel := {}              # 打擊感數值（feel_config.csv）
+var enemy_beat := {}        # enemy_id → {動作: 出手瞬間秒數}（enemy_motion.csv 的 seconds × beat）
+var enemy_stride := {}      # enemy_id → 跑步動作原速時的移動速度（enemy_motion.csv 的 stride_mps）
 var combat_state := {}      # 戰鬥狀態數值（combat_state_config.csv）
 var moves := {}             # move_id -> 招式（moves.csv），含 hits: Array（move_hits.csv）
 var char_moves := {}        # char_id -> {slot: move_id}
@@ -107,8 +111,20 @@ func _ready() -> void:
 	for r in _csv("settings_config"):
 		settings_cfg[r.key] = r
 		settings_order.append(r.key)
+	for r in _csv("toon_materials"):
+		toon_materials[r.profile] = r
+	for r in _csv("toon_lighting"):
+		toon_lighting[r.map_id] = r
 	feel = _kv("feel_config")
 	combat_state = _kv("combat_state_config")
+	# 敵人跑步動作原速時對應的移動速度（腳步對上地面用）
+	for r in _csv("enemy_motion"):
+		if r.action == "Walk" and String(r.get("stride_mps", "")) != "":
+			enemy_stride[r.enemy_id] = float(r.stride_mps)
+		# 出手瞬間在動作裡的秒數（起手時調整播放速度，讓刀剛好在判定那一刻揮到）
+		if not enemy_beat.has(r.enemy_id):
+			enemy_beat[r.enemy_id] = {}
+		enemy_beat[r.enemy_id][r.action] = float(r.seconds) * float(r.beat)
 	for r in _csv("moves"):
 		r["hits"] = []
 		moves[r.move_id] = r

@@ -52,6 +52,7 @@ var player
 var map_index := 0
 var map_id := "greenwood"
 var level_root: Node3D
+var sun := DirectionalLight3D.new()
 var env: WorldEnvironment
 var rooms: Array = []          # 每個區域的資料
 var current := -1              # 目前所在 rooms 索引
@@ -78,7 +79,6 @@ func _ready() -> void:
 	add_to_group("world")
 	env = WorldEnvironment.new()
 	add_child(env)
-	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-55, -30, 0)
 	sun.light_energy = 0.6
 	sun.shadow_enabled = true
@@ -134,23 +134,24 @@ func build_map(index: int) -> void:
 
 func _apply_env() -> void:
 	var th: Dictionary = THEMES[map_id]
+	var light: Dictionary = Data.toon_lighting[map_id]
+	sun.light_color = Color(light.sun)
+	sun.light_energy = float(light.energy)
 	var e := Environment.new()
 	e.background_mode = Environment.BG_COLOR
 	e.background_color = th.sky
 	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	e.ambient_light_color = th.ambient
-	e.ambient_light_energy = 0.9
+	e.ambient_light_color = Color(light.ambient)
+	e.ambient_light_energy = float(light.ambient_energy)
 	e.fog_enabled = true
-	e.fog_light_color = th.fog
-	e.fog_density = 0.018
+	e.fog_light_color = Color(light.fog)
+	e.fog_density = float(light.fog_density)
 	if map_id == "greenwood":
 		e.background_mode = Environment.BG_SKY
 		e.sky = Sky.new()
 		var mountain_sky := ShaderMaterial.new()
 		mountain_sky.shader = preload("res://assets/greenwood/ridges.gdshader")
 		e.sky.sky_material = mountain_sky
-		e.fog_light_color = Color(0.38, 0.46, 0.43)
-		e.fog_density = 0.01
 		e.fog_sky_affect = 0.12
 	if map_id == "greenwood" and not ROOM_ART.is_empty():
 		e.ambient_light_color = Color(0.72, 0.76, 0.8)

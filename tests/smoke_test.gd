@@ -102,6 +102,9 @@ func _run_character(cid: String) -> void:
 		await _check_third_person(world, player)
 		await _check_knockback(world, player)
 		await _check_enemy_ai(world, player)
+		await _check_armor_outline(world, player)
+		await _check_enemy_getup(world, player)
+		await _check_boss_combos(world, player)
 		var gate = world.rooms[0].gate_out
 		var meshes := (gate as Node).find_children("*", "MeshInstance3D", true, false)
 		_check(meshes.size() == 1, "山寨門只有一個可見模型")
@@ -212,6 +215,12 @@ func _run_character(cid: String) -> void:
 			if ri < 4:
 				var nx: Dictionary = world.rooms[ri + 1]
 				player.global_position = Vector3(r.x0 + r.w - 3.0, 0.5, 0.0)
+				player.cs.reset()
+				# 這裡只測出口的地形：清掉擋在出口路上的敵人（召喚物、跑得快的敵人可能堵在門口）
+				for e in get_tree().get_nodes_in_group("enemies"):
+					if absf(e.global_position.x - (r.x0 + r.w)) < 6.0 and absf(e.global_position.z) < 4.0:
+						e.queue_free()
+				await get_tree().physics_frame
 				Input.action_press("move_forward")
 				var go := 0
 				while player.global_position.x < r.x0 + r.w + 2.0 and go < 180:
@@ -1384,6 +1393,120 @@ func _check_enemy_ai(world, player) -> void:
 	Feel.reset()
 
 
+## 敵人倒地躺著、時間到播完整段起身才行動；跑步速度與腳步播放速度
+func _check_enemy_getup(world, player) -> void:
+	for row in Data._csv("enemy_motion"):
+		if row.action == "Walk" and row.enemy_id != "B04":
+			_check(Data.enemy_stride.has(row.enemy_id), "%s 的跑步動作有步速" % row.enemy_id)
+	var r: Dictionary = world.rooms[1]
+	var home: Vector3 = player.global_position
+	player.global_position = Vector3(r.x0 + 3.0, 0.5, 0.0)
+	player.invuln_t = 1.0e9
+	var e = world.spawn_enemy("H01", Vector3(r.x0 + 11.0, 0.5, 0.0), false)
+	e.max_hp = 1.0e7
+	e.hp = 1.0e7
+	_check(is_equal_approx(e.speed, float(e.row.move_speed) * Data.cfg("ai_move_speed_mult")), "敵人移速套用整體倍率")
+	_check(e._anim.has_animation(&"GetUp"), "人形敵人有起身動作")
+	await _physics(30)
+	var v: float = Vector2(e.velocity.x, e.velocity.z).length()
+	if e._anim.current_animation == &"Walk" and v > 0.5:
+		var want := clampf(v / e._stride, Data.cfg("ai_run_rate_min"), Data.cfg("ai_run_rate_max"))
+		_check(is_equal_approx(e._anim.get_playing_speed(), want), "跑步動作的播放速度跟著移動速度（%.2f）" % e._anim.get_playing_speed())
+	else:
+		_check(false, "敵人追擊時播放跑步動作")
+	var skel: Skeleton3D = e._skeleton
+	var head := skel.find_bone("Head")
+	e.cs.base = CombatState.S.DOWN
+	e.cs.t = 0.3
+	await _physics(4)
+	var head_y := func(): return (skel.global_transform * skel.get_bone_global_pose(head)).origin.y - e.global_position.y
+	_check(e._anim.assigned_animation == &"GetUp" and not e._anim.is_playing() and head_y.call() < 0.6, "倒地時躺在地上（頭高 %.2f）" % head_y.call())
+	var frames := 0
+	while e.cs.base == CombatState.S.DOWN and frames < 60:
+		await _physics(1)
+		frames += 1
+	var start: Vector3 = e.global_position
+	await _physics(2)
+	_check(e._anim.current_animation == &"GetUp" and e._anim.is_playing(), "倒地結束播起身動作，不直接接跑步")
+	await _physics(30)
+	_check(e._anim.current_animation == &"GetUp" and e.global_position.distance_to(start) < 0.05, "起身途中不移動")
+	await _physics(20)
+	_check(e._anim.current_animation in [&"Walk", &"Idle", &"Slash"] and head_y.call() > 1.2, "起身完畢恢復行動（頭高 %.2f）" % head_y.call())
+	e.queue_free()
+	player.global_position = home
+	await _physics(2)
+
+
+## 首領連招：起手慢、出手後打完整套（一般攻擊打不斷、玩家閃開也照打），破霸體才中斷
+func _check_boss_combos(world, player) -> void:
+	for id in Data.enemies:
+		if Data.enemies[id].rank != "boss":
+			continue
+		var table: Dictionary = Data.enemy_moves.get(id, {})
+		var roots := 0
+		for mid in table:
+			var mv: Dictionary = table[mid]
+			if int(mv.get("commit", 0)) != 1 or float(mv.weight) <= 0.0:
+				continue
+			roots += 1
+			_check(float(mv.windup_s) >= 1.0, "%s %s 起手夠慢（%s 秒）" % [id, mv.name_zh, mv.windup_s])
+			var cur: Dictionary = mv
+			var n := 1
+			while cur.chain != "":
+				var nxt: Dictionary = table[cur.chain]
+				_check(int(nxt.get("commit", 0)) == 1, "%s 的每一下都標了 commit" % nxt.name_zh)
+				_check(float(cur.hitstun_s) < float(cur.recover_s) + float(nxt.windup_s), "%s 打中後玩家有空檔閃開下一下" % cur.name_zh)
+				_check(float(cur.push_m) <= float(nxt.lunge_m) + float(nxt.reach_add_m), "%s 的擊退不超過下一下踏步＋攻擊距離" % cur.name_zh)
+				_check(Data.enemy_beat.get(id, {}).has(String(nxt.anim)), "%s 的動作 %s 有出手時間" % [nxt.name_zh, nxt.anim])
+				cur = nxt
+				n += 1
+			_check(n >= 3, "%s %s 至少三下（%d）" % [id, mv.name_zh, n])
+		_check(roots >= 2, "首領 %s 至少兩套連招（%d）" % [id, roots])
+
+	var r: Dictionary = world.rooms[1]
+	var home: Vector3 = player.global_position
+	player.global_position = Vector3(r.x0 + 3.0, 0.5, 0.0)
+	player.invuln_t = 1.0e9
+	await _physics(2)
+	var run := func(break_at: int) -> Array:
+		var b = world.spawn_enemy("H08", player.global_position + Vector3(2.4, 0, 0), false)
+		b.max_hp = 1.0e8
+		b.hp = 1.0e8
+		b._skill_cd = 99.0
+		b._skill2_cd = 99.0
+		await _physics(2)
+		b._start_move(b._move_table()["kaishan"])
+		var slow: float = b._anim.get_playing_speed()
+		var seen: Array = [slow]
+		var hits := 0
+		for i in 240:
+			await _physics(1)
+			if b._mv.is_empty():
+				break
+			if not seen.has(b._mv.move_id):
+				seen.append(b._mv.move_id)
+			if i % 12 == 6:
+				hits += 1
+				var brk := 1 if hits == break_at else 0
+				b.take_hit(1.0, player.global_position, false, 1.0, {"hitstun_s": 0.5, "push_m": 0.3, "break_armor": brk})
+			if i == 30:
+				player.global_position += Vector3(-3.0, 0, 0)     # 玩家閃開：首領照樣打完
+		var res: Array = [seen, b._mv.is_empty(), b.cs.state()]
+		b.queue_free()
+		await _physics(2)
+		return res
+	var full: Array = await run.call(-1)
+	var ids: Array = full[0]
+	_check(float(ids[0]) < 0.5, "連招起手的動作放慢（%.2f 倍）" % float(ids[0]))
+	_check(ids.has("kaishan") and ids.has("kaishan2") and ids.has("kaishan3"), "被一般攻擊連打、玩家退開，首領照樣打完整套（%s）" % str(ids.slice(1)))
+	player.global_position = Vector3(r.x0 + 3.0, 0.5, 0.0)
+	await _physics(2)
+	var broke: Array = await run.call(2)
+	_check(not (broke[0] as Array).has("kaishan3") and broke[1], "破霸體才中斷連招（%s）" % str((broke[0] as Array).slice(1)))
+	player.global_position = home
+	await _physics(2)
+
+
 # 取動畫與所有父節點變換後的世界頭部朝向。
 func _face_points_up(skeleton: Skeleton3D, rest_forward: Vector3) -> bool:
 	var head := skeleton.find_bone("Head")
@@ -1400,6 +1523,14 @@ func _check_third_person(world, player) -> void:
 	_check(player.model != null and player.model.has("Sword_Regular_A") and player.model.has("Sword_Idle"), "角色模型載入兩個動作庫")
 	if Game.char_id == "nangong":
 		_check(player.model.seated_hilt != null and player.model.scabbard != null, "南宮載入平尾刀鞘與刀柄")
+		_check(Data.toon_materials.has("face") and Data.toon_lighting.has(world.map_id), "角色與地圖光影配置齊全")
+		_check(preload("res://assets/toon/character_material.gd").FACE_LIGHT.get_width() > 0, "載入臉部受光遮罩")
+		if DisplayServer.get_name() != "headless":
+			var face: ShaderMaterial = player.model.face_material
+			_check(face != null and face.get_shader_parameter("face_map") is Texture2D, "南宮使用臉部受光遮罩")
+			for part in [player.model.drawn_blade, player.model.emerging_blade, player.model.seated_hilt]:
+				var blade_material: ShaderMaterial = part.get_active_material(0)
+				_check(blade_material != null and blade_material.get_shader_parameter("surface_kind") == 3, "拔刀各階段皆用刀身材質")
 		for clip_name in ["NG_CarryRun", "NG_CarrySprint", "NG_RaiseSlash", "NG_RisingCut", "NG_CrossCut", "NG_DrawCut"]:
 			_check(player.model.has(clip_name), "南宮動作存在：" + clip_name)
 		var cut: Animation = player.model.anim.get_animation("NG_DrawCut")
@@ -1544,3 +1675,41 @@ func _check_third_person(world, player) -> void:
 	player.invuln_t = keep_inv
 	player.hp = Game.max_hp()
 	Settings.values["hitstop"] = 1.0
+
+
+## 霸體外框：精英與首領平時有、小怪沒有；破霸體消失、死亡消失；玩家進霸體才有
+func _check_armor_outline(world, player) -> void:
+	var r: Dictionary = world.rooms[1]
+	var base := Vector3(r.x0 + 6.0, 0.5, 0.0)
+	var elite = world.spawn_enemy("H07", base, false)
+	var minion = world.spawn_enemy("H01", base + Vector3(0, 0, 2.5), false)
+	elite.max_hp = 1.0e7
+	elite.hp = 1.0e7
+	await _physics(2)
+	_check(elite._body_mat.next_pass == ArmorOutline.with_mask(), "精英平時有霸體外框")
+	_check(minion._body_mat.next_pass == null, "小怪沒有霸體外框")
+	elite.cs.armor_broken_t = 2.0
+	await _physics(2)
+	_check(elite._body_mat.next_pass == null, "破霸體後外框消失")
+	elite.cs.armor_broken_t = 0.0
+	await _physics(2)
+	_check(elite._body_mat.next_pass != null, "霸體恢復後外框回來")
+	var mat: ShaderMaterial = ArmorOutline.passes()
+	var n := 0
+	while mat != null:
+		n += 1
+		mat = mat.next_pass
+	_check(n == ArmorOutline.DIRS.size(), "外框由八個方向疊成（%d）" % n)
+	elite.die()
+	_check(elite._body_mat.next_pass == null, "死亡後外框消失")
+	minion.queue_free()
+	var was: float = player.cs.armor_t
+	player.cs.armor_t = 1.0
+	await _physics(1)
+	_check(player.model.status_material.next_pass == ArmorOutline.passes(), "玩家霸體時有外框")
+	player.cs.armor_t = 0.0
+	await _physics(1)
+	_check(player.model.status_material.next_pass == null, "玩家霸體結束外框消失")
+	player.cs.armor_t = was
+	await _physics(10)
+
