@@ -17,6 +17,8 @@ var speed := 2.0
 var reach := 1.0
 var dead := false
 var hit_radius := 0.45
+var _stride := 0.0                  # 跑步動作原速對應的移動速度；播放速度跟著實際速度走
+var _was_down := false              # 上一幀是否倒地（倒地結束時播起身）
 var size := 1.0
 var summoner = null           # 召喚者（狼王判定狼群是否存活）
 var summons: Array = []
@@ -112,7 +114,8 @@ func setup(id: String, stg: int, w, pos: Vector3) -> void:
 	max_hp = Data.enemy_hp(id, stg)
 	hp = max_hp
 	dmg = Data.enemy_dmg(id, stg)
-	speed = float(row.move_speed)
+	speed = float(row.move_speed) * Data.cfg("ai_move_speed_mult")
+	_stride = float(Data.enemy_stride.get(id, 0.0))
 	reach = float(row.range_m)
 	size = {"minion": 1.0, "elite": 1.5, "boss": 2.4}[rank]
 	if id == "B04":
@@ -232,9 +235,22 @@ func _physics_process(delta: float) -> void:
 				_anim.play(&"Hit", 0)
 				_anim.seek(0, true)
 				_anim.pause()
+		elif _anim and _anim.has_animation(&"GetUp"):
+			# 倒地：躺在起身動作的第一格；時間到就把起身整段播完，播完才能行動
+			# 躺姿由動作本身決定，不再整個身體轉 90 度（暫停中的動作不會混接，所以直接切）
+			_pose.rotation.x = 0.0
+			_pose.position.y = 0.0
+			if lying and (_anim.assigned_animation != &"GetUp" or _anim.is_playing()):
+				_anim.play(&"GetUp", 0.0)
+				_anim.seek(0, true)
+				_anim.pause()
+			elif _was_down and not lying:
+				_anim.play(&"GetUp", 0.0, Data.cfg("ai_getup_speed"))
+				_stun_t = maxf(_stun_t, _anim.get_animation(&"GetUp").length / Data.cfg("ai_getup_speed"))
 		else:
 			_pose.rotation.x = lerp_angle(_pose.rotation.x, -PI / 2.0 if lying else 0.0, minf(1.0, delta * 16.0))
-		_pose.position.y = lerpf(_pose.position.y, 0.35 * size if lying else 0.0, minf(1.0, delta * 16.0))
+			_pose.position.y = lerpf(_pose.position.y, 0.35 * size if lying else 0.0, minf(1.0, delta * 16.0))
+		_was_down = lying
 	if not cs.can_act():
 		# 受擊、浮空、倒地：不能行動，招式被打斷
 		_stun_t = maxf(_stun_t, delta)
@@ -274,8 +290,12 @@ func _physics_process(delta: float) -> void:
 	if _draw < 0.0 and (not _anim.is_playing() or _anim.current_animation in [&"Walk", &"Idle"]):
 		var moving := Vector2(velocity.x, velocity.z).length() > 0.15
 		var clip := &"Walk" if moving else &"Idle"
-		if _anim.current_animation != clip or not _anim.is_playing():
-			_anim.play(clip, 0.10)
+		var rate := 1.0
+		if moving and _stride > 0.0:
+			# 腳步速度跟著實際移動速度，跑快就擺快
+			rate = clampf(Vector2(velocity.x, velocity.z).length() / _stride, Data.cfg("ai_run_rate_min"), Data.cfg("ai_run_rate_max"))
+		if _anim.current_animation != clip or not _anim.is_playing() or not is_equal_approx(_anim.get_playing_speed(), rate):
+			_anim.play(clip, 0.10, rate)
 	_apply_knock(delta)
 	_apply_gravity(delta)
 	move_and_slide()

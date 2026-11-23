@@ -64,3 +64,7 @@ ai_counter_window_s,1.5,霸體空窗結束後，多久內走得到玩家身邊�
 ai_opening_stand_ratio,0.5,首領放完技能的破綻中，有多少比例的時間原地不動
 ai_cover_offset_m,4,遠程敵人站在刀盾手後方多遠
 ai_cover_scan_m,14,遠程敵人找刀盾手掩護的範圍
+ai_move_speed_mult,1.35,所有敵人移動速度的倍率（乘在 enemies.csv 的 move_speed 上）
+ai_run_rate_min,0.85,敵人跑步動作的最低播放倍率（速度太慢時不至於像慢動作）
+ai_run_rate_max,1.9,敵人跑步動作的最高播放倍率
+ai_getup_speed,1.0,敵人起身動作的播放倍率（起身動作 0.7 秒；播完才能行動）
