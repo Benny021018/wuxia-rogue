@@ -438,6 +438,8 @@ func _melee(delta: float, dist: float, mult := 1.0) -> void:
 	if _windup > 0.0:
 		velocity.x = 0
 		velocity.z = 0
+		if _committed():
+			_combo_step(delta, dist)
 		_windup -= delta
 		if _windup <= 0.0:
 			_strike(dist, mult)
@@ -512,14 +514,23 @@ func _start_move(mv: Dictionary) -> void:
 	if mv.kind == "counter":
 		_counter_t = 0.0
 		FX.float_text(world, hit_center() + Vector3(0, 1.0 * size, 0), "反擊", Color(1, 0.8, 0.3), 34)
+	if int(mv.get("commit", 0)) == 1 and mv.move_id == _mv_root:
+		# 連招起手：頭上報出招名，提醒玩家接下來是一整套
+		FX.float_text(world, hit_center() + Vector3(0, 1.2 * size, 0), String(mv.name_zh), Color(1, 0.55, 0.3), 40)
+		Sfx.play("roar", global_position, -6.0, 1.1)
 	var clip := StringName(mv.anim) if mv.anim != "" and _anim.has_animation(StringName(mv.anim)) else &"Slash"
-	if not _anim.is_playing() or _anim.current_animation in [&"Walk", &"Idle", &"Slash", clip]:
-		_anim.play(clip, 0.05)
+	if not _anim.is_playing() or _anim.current_animation in [&"Walk", &"Idle", &"Slash", &"GetUp", clip] or _is_move_clip(_anim.current_animation):
+		# 起手越長，動作放得越慢：出手瞬間剛好落在判定那一刻
+		var beat: float = Data.enemy_beat.get(eid, {}).get(String(clip), 0.0)
+		var rate := clampf(beat / _windup, Data.cfg("ai_windup_rate_min"), Data.cfg("ai_windup_rate_max")) if beat > 0.0 else 1.0
+		_anim.play(clip, 0.06, rate)
 
 
 func _strike(dist: float, mult: float) -> void:
 	_body_mat.emission_enabled = false
 	var mv := _mv
+	if _anim.is_playing() and _is_move_clip(_anim.current_animation):
+		_anim.play(_anim.current_animation, 0.0, 1.0)      # 揮出去之後用原速收招
 	var impact_reach := _move_reach(mv)
 	var arc := float(mv.arc_deg)
 	if arc >= 359.0:
@@ -543,7 +554,8 @@ func _after_move(dist: float) -> void:
 	if not mv.is_empty() and mv.chain != "" and table.has(mv.chain):
 		var nxt: Dictionary = table[mv.chain]
 		var pv := _player_view()
-		if dist <= _move_reach(nxt) + 0.6 and not pv.inv:
+		# 首領連招一旦出手就打完整套（只有被破霸體才會中斷）；一般連段打不到就收
+		if int(nxt.get("commit", 0)) == 1 or (dist <= _move_reach(nxt) + 0.6 and not pv.inv):
 			_start_move(nxt)
 			return
 	var root: Dictionary = table.get(_mv_root, {})
@@ -553,6 +565,36 @@ func _after_move(dist: float) -> void:
 	_mv = {}
 	_mv_root = ""
 	_release_token(Data.cfg("ai_token_rest_s"))
+
+
+## 正在打一套首領連招（出手後不中斷，見 enemy_moves.csv 的 commit）
+func _committed() -> bool:
+	return not _mv.is_empty() and int(_mv.get("commit", 0)) == 1
+
+
+func _is_move_clip(clip: StringName) -> bool:
+	if clip == &"":
+		return false
+	for mv in _move_table().values():
+		if StringName(mv.get("anim", "")) == clip:
+			return true
+	return false
+
+
+## 連招起手中：轉向玩家（出手前一小段時間停止轉向，留閃避的空間），最後一段往前踏
+func _combo_step(delta: float, dist: float) -> void:
+	var to: Vector3 = player.global_position - global_position
+	to.y = 0
+	if _windup > Data.cfg("ai_combo_track_stop_s") and to.length() > 0.05:
+		var want := atan2(-to.x, -to.z)
+		var turn := deg_to_rad(Data.cfg("ai_combo_track_deg_s")) * delta
+		rotation.y += clampf(wrapf(want - rotation.y, -PI, PI), -turn, turn)
+		_swing_dir = -global_basis.z
+	var lunge := float(_mv.get("lunge_m", 0.0)) if String(_mv.get("lunge_m", "")) != "" else 0.0
+	var span := minf(Data.cfg("ai_combo_lunge_s"), _windup_total)
+	if lunge > 0.0 and _windup <= span and dist > _move_reach(_mv) * 0.55:
+		velocity.x = _swing_dir.x * lunge / span
+		velocity.z = _swing_dir.z * lunge / span
 
 
 ## 被打斷（硬直、浮空、倒地、跳開）：招式作廢
@@ -1148,6 +1190,9 @@ func _behaviour(delta: float, flat: Vector3, dist: float) -> void:
 	var rate := float(phase_row.get("skill_rate", 1.0))
 	_skill_cd -= delta * rate
 	_skill2_cd -= delta * rate
+	if _committed():
+		_melee(delta, dist)      # 連招打到一半：不放技能、不追不退，專心打完
+		return
 	match eid:
 		"Z02": _b_hopper(delta, flat, dist)
 		"Z05":

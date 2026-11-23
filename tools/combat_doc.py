@@ -239,6 +239,24 @@ L += ["", f"遠程敵人附近有刀盾手時，會站到刀盾手背後 {a('ai_
       "| 首領 | 階段 | 血量低於 | 技能速度 | 移動速度 | 起手時間 | 破綻 | 台詞 |", "|---|---|---|---|---|---|---|---|"]
 for r in bphases:
     L.append(f"| {ENAME[r['enemy_id']]} | {r['phase']} | {float(r['hp_below']) * 100:g}% | ×{r['skill_rate']} | ×{r['speed_mult']} | ×{r['windup_mult']} | {r['opening_s']} 秒 | {r['message'] or '—'} |")
+# 首領連招：每套一行（招式名 → 下一下 → …）
+combos = []
+for m in emoves:
+    if m.get("commit") == "1" and float(m["weight"]) > 0:
+        seq, cur, gaps = [m["name_zh"]], m, []
+        while cur["chain"]:
+            nxt = next(x for x in emoves if x["enemy_id"] == m["enemy_id"] and x["move_id"] == cur["chain"])
+            gaps.append(float(cur["recover_s"]) + float(nxt["windup_s"]))
+            seq.append(nxt["name_zh"].split("・")[-1]); cur = nxt
+        end = "、".join(t for t, k in [("破霸體", cur["break_armor"]), ("擊倒", cur["knockdown"]), ("挑空", cur["launch"])] if k == "1") or "—"
+        combos.append(f"| {ENAME[m['enemy_id']]} | {m['name_zh']} | {m['min_phase']} | {len(seq)} 下 | {m['windup_s']} 秒 | {min(gaps):.2f}～{max(gaps):.2f} 秒 | {end} | {cur['recover_s']} 秒 | {m['cd_s']} 秒 |")
+L += ["", "### 首領連招", "",
+      "首領有幾套固定連招（`enemy_moves.csv` 中 `commit`＝1 的招式串）：",
+      "", f"- **起手很慢**：第一下的起手 1 秒以上，攻擊動作放慢播放（起手越長越慢，揮出的瞬間剛好對上判定），頭上報出招名。起手期間會轉向玩家，出手前 {a('ai_combo_track_stop_s')} 秒停止轉向。",
+      "- **出手後打完整套**：一般攻擊只會被霸體吸收，不會中斷；玩家閃開或退遠也照樣打完，每一下出手前往前踏 `lunge_m` 公尺追上去。只有**破霸體**的攻擊（或霸體被破後的空窗）能打斷。",
+      "- **每下之間有空檔**：每一下的硬直都短於「收招＋下一下起手」，被打中後還來得及閃開下一下。最後一下收招最長，是反擊的時機。",
+      "- 連招進行中不放範圍技、不召喚。", "",
+      "| 首領 | 連招 | 階段 | 下數 | 起手 | 每下間隔 | 收招效果 | 最後收招 | 冷卻 |", "|---|---|---|---|---|---|---|---|---|"] + combos
 L += ["", "### 敵人招式表", "",
       "硬直與擊退留空的招式用階級預設（小怪、精英、首領各一組，見附錄）。「接」是打完之後立刻接出的下一招。", "",
       "| 敵人 | 招式 | 階段 | 起手 | 範圍 | 傷害 | 硬直 | 浮空 | 擊退 | 破霸體 | 擊倒 | 收招 | 冷卻 | 接 |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
