@@ -1,5 +1,5 @@
 class_name ArmorOutline
-## 霸體外框（以玩家畫面為準的輪廓線，紅黃漸層來回流動）。
+## 霸體外框（以玩家畫面為準的輪廓線，整圈由紅慢慢變橙再轉回紅）。
 ## 外框由八個方向的畫面偏移疊成，數值在 data/feel_config.csv 的 armor_outline_*。
 ## 所有角色共用同一串材質：玩家的狀態材質自己會寫遮罩，用 passes()；敵人用 with_mask()。
 
@@ -23,8 +23,6 @@ static func passes() -> ShaderMaterial:
 			m.set_shader_parameter("color_a", Color(String(feel.armor_outline_color_a)))
 			m.set_shader_parameter("color_b", Color(String(feel.armor_outline_color_b)))
 			m.set_shader_parameter("cycle_s", float(feel.armor_outline_cycle_s))
-			m.set_shader_parameter("band_px", float(feel.armor_outline_band_px))
-			m.set_shader_parameter("sway", float(feel.armor_outline_sway))
 			m.next_pass = _passes
 			_passes = m
 	return _passes
