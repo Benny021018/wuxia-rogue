@@ -196,6 +196,7 @@ func _ready() -> void:
 	_flash.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_flash_meshes = _visual.find_children("*", "MeshInstance3D", true, false).filter(func(m): return m.get_parent() is Skeleton3D)
 	for mesh in _flash_meshes:
+		preload("res://assets/toon/character_material.gd").apply(mesh, "cloth")
 		mesh.material_overlay = _body_mat
 	if rank != "minion":
 		_label = FX.label3d(row.name_zh, 64, Color(1, 0.85, 0.6) if rank == "elite" else Color(1, 0.4, 0.3))
