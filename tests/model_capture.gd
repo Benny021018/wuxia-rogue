@@ -39,7 +39,7 @@ func _ready():
 		var k := 0
 		while t <= a.length + 0.001:
 			m.hold(args[3], t)
-			for view in [["front", Vector3(0.0, 2.2, -4.4)], ["side", Vector3(4.2, 1.2, 0.0)]]:
+			for view in [["front", Vector3(0.0, 2.2, -4.4)], ["side", Vector3(4.2, 1.2, 0.0)], ["behind", Vector3(0.0, 3.4, 3.2)]]:
 				cam.position = view[1]
 				cam.look_at(Vector3(0, 1.0, 0))
 				for f in 3:
