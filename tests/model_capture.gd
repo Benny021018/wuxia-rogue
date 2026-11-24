@@ -2,6 +2,7 @@ extends Node
 ## 角色模型近照：檢查兵器握法與各招式的姿勢。
 ## xvfb-run godot --path . --rendering-driver opengl3 res://tests/ModelCapture.tscn -- <輸出資料夾> [char_id] [trail]
 ## 第三個參數給 trail：實際播放每一招並畫刀光，在每一下判定瞬間截圖（請加 --fixed-fps 60）
+## 第三個參數給 anim <動作名> [間隔秒]：逐格截一段動作（檢查動作擷取的結果）
 func _ready():
 	await get_tree().process_frame
 	var args := OS.get_cmdline_user_args()
@@ -25,6 +26,25 @@ func _ready():
 	root.add_child(cam)
 	cam.fov = 40
 	cam.current = true
+	if args.size() > 3 and args[2] == "anim":
+		var a: Animation = m.anim.get_animation(m.clip(args[3]))
+		var step: float = float(args[4]) if args.size() > 4 else 0.2
+		var t := 0.0
+		var k := 0
+		while t <= a.length + 0.001:
+			m.hold(args[3], t)
+			for view in [["side", Vector3(4.2, 1.2, 0.0)], ["back", Vector3(1.5, 2.0, 4.0)]]:
+				cam.position = view[1]
+				cam.look_at(Vector3(0, 1.0, 0))
+				for f in 3:
+					await get_tree().process_frame
+				await RenderingServer.frame_post_draw
+				root.get_texture().get_image().save_png("%s/%s_%02d_%s.png" % [out, args[3], k, view[0]])
+			t += step
+			k += 1
+		print("saved ", k)
+		get_tree().quit()
+		return
 	if args.size() > 2 and args[2] == "trail":
 		await _trail_shots(m, cam, cid, out)
 		get_tree().quit()

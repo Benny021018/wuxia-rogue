@@ -1,9 +1,9 @@
 move_id,char_id,slot,name_zh,action,cooldown_s,self_state,self_from_s,self_to_s,desc,anim,anim_from_s,duration_s,lunge_m,lunge_from_s,lunge_to_s,kind,fx_clip,strike_sfx,fx_tint,lunge_pass
-nan_n1,nangong,normal1,斜斬,attack,0,,0,0,普攻第一段,NG_RaiseSlash,0,0.42,0.6,0.05,0.2,,sword-slash,swing_light,b8f6ff,0
-nan_n2,nangong,normal2,橫斬,attack,0,,0,0,普攻第二段,NG_CrossCut,0,0.46,0.6,0.05,0.2,,double-slash,swing_light,b8f6ff,0
-nan_n3,nangong,normal3,上撩,attack,0,,0,0,普攻第三段，把敵人撩離地面（小浮空）,Sword_Regular_C,0,0.55,0.6,0.05,0.2,,spin-slash,swing_light,b8f6ff,0
-nan_n4,nangong,normal4,縱劈,attack,0,,0,0,普攻收尾：打中浮空的敵人會再托高一點並劈退,Sword_Attack,0.25,0.75,1.0,0.05,0.3,,heavy-cleave,swing_heavy,b8f6ff,0
-nan_s1,nangong,skill1,挑月,skill1,4,,0,0,由下往上挑斬，把敵人挑上半空，連段起手,NG_RisingCut,0,0.55,0.5,0,0.2,,thrust,swing_thrust,b8f6ff,0
+nan_n1,nangong,normal1,斜斬,attack,0,,0,0,普攻第一段,NGM_N1,0,0.36,0.6,0.05,0.2,,sword-slash,swing_light,7b5cff,0
+nan_n2,nangong,normal2,橫斬,attack,0,,0,0,普攻第二段,NGM_N2,0,0.46,0.6,0.05,0.2,,double-slash,swing_light,7b5cff,0
+nan_n3,nangong,normal3,上撩,attack,0,,0,0,普攻第三段，把敵人撩離地面（小浮空）,NGM_N3,0,0.55,0.6,0.05,0.2,,spin-slash,swing_light,7b5cff,0
+nan_n4,nangong,normal4,縱劈,attack,0,,0,0,普攻收尾：打中浮空的敵人會再托高一點並劈退,NGM_N4,0,0.72,1.0,0.05,0.3,,heavy-cleave,swing_heavy,8f4dff,0
+nan_s1,nangong,skill1,挑月,skill1,4,,0,0,由下往上挑斬，把敵人挑上半空，連段起手,NGM_S1,0,0.62,0.5,0,0.2,,thrust,swing_thrust,b04dff,0
 nan_s2,nangong,skill2,疾風步,skill2,6,invincible,0.05,0.3,向前突進穿過敵人並斬擊，突進途中無敵,nan_s2,0,0.6,5.0,0.05,0.3,,blink-out,dash,b8f6ff,1
 nan_s3,nangong,skill3,追風連斬,skill3,8,,0,0,五連快斬，每一下都能把浮空的敵人托住,Sword_Regular_Combo,0,0.85,0.8,0,0.6,,double-slash,swing_light,b8f6ff,0
 nan_s4,nangong,skill4,落雁斬,skill4,8,,0,0,躍起下劈，把站著的敵人劈倒在地；倒地後再打就會浮空，可以接挑月重新起連段,Sword_Attack,0.2,0.8,1.5,0.05,0.35,,heavy-cleave,swing_heavy,b8f6ff,0

@@ -12,6 +12,7 @@ var head_rest_inverse := Basis.IDENTITY
 const UAL1 := preload("res://assets/models/character/UAL1.glb")
 const NANGONG := preload("res://assets/models/character/Nangong.glb")
 const UAL2 := preload("res://assets/models/character/UAL2.glb")
+const NANGONG_MOCAP := "res://assets/models/character/NangongMocap.glb"
 const WEAPONS := {"W001": preload("res://assets/models/weapons/Tachi.glb"),
 	"W007": preload("res://assets/models/weapons/W007.glb"), "W301": preload("res://assets/models/weapons/W301.glb")}
 const LOOPS := ["Sword_Idle"]
@@ -58,6 +59,9 @@ func setup(char_id: String, weapon_id: String) -> void:
 	var sources := [UAL2]
 	if is_nangong:
 		sources.append(UAL1)
+		# 動作擷取（MoCapAnything V2）轉到南宮骨架的招式，名稱以 NGM_ 開頭；見 tools/mocap/README.md
+		if ResourceLoader.exists(NANGONG_MOCAP):
+			sources.append(load(NANGONG_MOCAP))
 	for scene in sources:
 		var extra: Node = scene.instantiate()
 		var source: AnimationPlayer = extra.find_children("*", "AnimationPlayer", true, false)[0]
