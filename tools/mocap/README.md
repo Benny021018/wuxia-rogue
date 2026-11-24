@@ -36,7 +36,9 @@ ZOO_ROOT="$(pwd -W)/zoo" bash examples/custom_rig/run.sh Nangong
 
 ## 3. 擷取
 
-1. 影片裁成以角色為中心的正方形（約 512×512），只留出招的部分；檔名用 `Nangong#片段名.mp4` 放在 `videos/`。
+1. 影片裁成以**出招的角色**為中心的正方形（512×512），只留出招的部分；檔名用 `Nangong#片段名.mp4` 放在 `videos/`。
+   畫面裡有兩個以上的角色時，其他角色（含腳線以下、名牌下方的人）和大片特效要先塗掉，否則去背會把兩個人一起當成前景。
+   參考做法：依關鍵幀插值裁切中心與腳線，腳線以下和紫色特效塗成草地色。
    角色要大、全身入鏡、特效越少越好。遊戲錄影裡被大量特效、名牌擋住的角色，擷取品質會明顯變差。
 2. `"$PYTHON" -m inference.video2pose2rot --config examples/custom_rig/inference.yaml`
 3. 結果在 `outputs/custom_rig/tmp/<片段>/`，取 `*_rot6d_pred.bvh`；同一層的 `*_pose_compare_image.mp4` 可以對照原片檢查。
@@ -66,7 +68,11 @@ blender -b --factory-startup --python tools\mocap\mocap_to_nangong.py -- job.jso
 
 ## 目前的南宮招式
 
-| 招式 | 動作 | 來源 | BVH 幀 |
+參考影片裡出招的是畫面上方的青衣雙刃角色（下方紫光的角色是被打的一方）。
+
+| 招式 | 動作 | BVH 幀 | 判定 |
 |---|---|---|---|
-| 普攻一～四段 | NGM_N1～N4 | 普攻參考影片 | 0–8、8–22、22–40、40–62 |
-| 技能一：挑月 | NGM_S1 | 小技能參考影片 | 52–78（手由低往高挑起的那一段） |
+| 普攻一～四段 | NGM_N1～N4 | 4–20、20–33、32–41、41–60 | 各一下 |
+| 技能一：挑月 | NGM_S1 | 小技能影片 30–82 | 四下：挑起浮空、空中兩刀、劈落 |
+
+兩段都用 `"exaggerate": 1.6` 放大動作幅度。

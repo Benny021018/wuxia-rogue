@@ -12,12 +12,13 @@ splits 省略時只輸出整段；有 splits 時，整段和每一小段都會�
 每一幀在世界座標比對「目前姿勢相對預設姿勢的旋轉」，套到南宮的同名骨頭上；
 兩邊預設姿勢的朝向差用骨盆算一次。根骨只保留上下位移，水平前衝交給遊戲的 lunge。
 
-影片推回來的整體朝向（BVH 的 root 旋轉）跟著鏡頭亂跳，所以預設把它清成預設姿勢，
-只留骨盆以下的相對轉動（job 的 "keep_root_rotation": true 可保留）。
+影片推回來的整體朝向（BVH 的 root 旋轉）含有鏡頭角度，預設（root_mode = relative）把整段的平均朝向
+轉成正面、保留相對的轉身並平滑；zero 清成預設姿勢、keep 原樣保留。
+"exaggerate"（預設 1）把每根骨頭相對整段平均姿勢的轉動放大，補回影片擷取偏小的幅度；
 烘好的四元數會先對齊正負號，再做 smooth 幀的平滑（job 的 "smooth"，預設 1 = 前後各 1 幀）。
 """
 import bpy, json, sys, math
-from mathutils import Matrix, Quaternion, Vector
+from mathutils import Euler, Matrix, Quaternion, Vector
 
 job = json.load(open(sys.argv[sys.argv.index("--") + 1], encoding="utf-8"))
 report = {"clips": []}
@@ -64,24 +65,83 @@ def chain(arm):
 T_order = chain(T)
 T_rest = {n: T.matrix_world @ T.data.bones[n].matrix_local for n in T_order}
 ROOT = "pelvis" if "pelvis" in T.data.bones else T_order[0]
+ABOVE_ROOT = set()
+_b = T.data.bones[ROOT].parent
+while _b:
+    ABOVE_ROOT.add(_b.name)
+    _b = _b.parent
 
 
-def import_bvh(path, keep_root_rotation=False):
+def import_bvh(path, root_mode="relative", root_smooth=2):
+    """root_mode：relative＝整段平均朝向轉成正面、保留相對轉身並平滑；zero＝清成預設；keep＝原樣。"""
     before = set(bpy.data.objects)
     bpy.ops.object.mode_set(mode="OBJECT")
     bpy.ops.import_anim.bvh(filepath=path, axis_forward="-Z", axis_up="Y", rotate_mode="NATIVE",
                             update_scene_fps=True, update_scene_duration=True, use_fps_scale=False)
     S = [o for o in bpy.data.objects if o not in before and o.type == "ARMATURE"][0]
     top = [b.name for b in S.data.bones if b.parent is None][0]
-    if not keep_root_rotation and top != "pelvis":
-        for fc in fcurves_of(S.animation_data.action, S):
-            if fc.data_path.startswith('pose.bones["%s"].rotation' % top):
-                ident = 1.0 if (fc.data_path.endswith("quaternion") and fc.array_index == 0) else 0.0
-                for k in fc.keyframe_points:
-                    k.co.y = ident
-                    k.handle_left.y = ident
-                    k.handle_right.y = ident
+    if root_mode == "keep" or top == "pelvis":
+        return S
+    pb = S.pose.bones[top]
+    fcs = [fc for fc in fcurves_of(S.animation_data.action, S)
+           if fc.data_path == 'pose.bones["%s"].rotation_euler' % top]
+    fcs.sort(key=lambda fc: fc.array_index)
+    n = len(fcs[0].keyframe_points)
+    order = pb.rotation_mode
+    qs = []
+    for f in range(n):
+        e = Euler([fcs[i].keyframe_points[f].co.y for i in range(3)], order)
+        q = e.to_quaternion()
+        if qs and q.dot(qs[-1]) < 0:
+            q.negate()
+        qs.append(q)
+    if root_mode == "zero":
+        qs = [Quaternion() for _ in qs]
+    else:
+        avg = Quaternion((sum(q.w for q in qs), sum(q.x for q in qs), sum(q.y for q in qs), sum(q.z for q in qs)))
+        avg.normalize()
+        qs = [avg.inverted() @ q for q in qs]
+        for _ in range(root_smooth):
+            qs = [Quaternion([(qs[max(f - 1, 0)][i] + 2 * qs[f][i] + qs[min(f + 1, n - 1)][i]) / 4 for i in range(4)]).normalized()
+                  for f in range(n)]
+    prev = None
+    for f in range(n):
+        e = qs[f].to_euler(order, prev) if prev else qs[f].to_euler(order)
+        prev = e
+        for i in range(3):
+            k = fcs[i].keyframe_points[f]
+            k.co.y = k.handle_left.y = k.handle_right.y = e[i]
+    for fc in fcs:
+        fc.update()
     return S
+
+
+def exaggerate(act, k):
+    """把每根骨頭相對整段平均姿勢的轉動放大 k 倍（影片推回來的動作幅度通常偏小）。手指不放大。"""
+    if abs(k - 1.0) < 1e-3:
+        return
+    groups = {}
+    for fc in fcurves_of(act):
+        if fc.data_path.endswith("rotation_quaternion"):
+            groups.setdefault(fc.data_path, [None] * 4)[fc.array_index] = fc
+    fingers = ("thumb", "index", "middle", "ring", "pinky")
+    for path, fcs in groups.items():
+        if None in fcs or any(f in path for f in fingers):
+            continue
+        n = len(fcs[0].keyframe_points)
+        qs = [Quaternion([fcs[i].keyframe_points[f].co.y for i in range(4)]) for f in range(n)]
+        for f in range(1, n):
+            if qs[f].dot(qs[f - 1]) < 0:
+                qs[f].negate()
+        mean = Quaternion((sum(q.w for q in qs), sum(q.x for q in qs), sum(q.y for q in qs), sum(q.z for q in qs))).normalized()
+        for f in range(n):
+            d = mean.inverted() @ qs[f]
+            axis, ang = d.to_axis_angle()
+            q = mean @ Quaternion(axis, ang * k)
+            for i in range(4):
+                fcs[i].keyframe_points[f].co.y = q[i]
+        for fc in fcs:
+            fc.update()
 
 
 def smooth_quats(act, radius):
@@ -140,6 +200,8 @@ def bake(S, name):
         sc.frame_set(f)
         for n in T_order:
             pb = T.pose.bones[n]
+            if n in ABOVE_ROOT:
+                continue      # 骨盆以上的根骨不打關鍵幀：其他動作沒有這軌，殘留的轉動會帶到下一個動作
             if n in mapping:
                 ms = S.matrix_world @ S.pose.bones[mapping[n]].matrix
                 rs = S_rest[n]
@@ -180,10 +242,11 @@ def sub_action(src, name, a, b):
 
 
 for clip in job["clips"]:
-    S = import_bvh(clip["bvh"], job.get("keep_root_rotation", False))
+    S = import_bvh(clip["bvh"], clip.get("root_mode", job.get("root_mode", "relative")))
     bpy.context.view_layer.objects.active = T
     bpy.ops.object.mode_set(mode="POSE")
     act, info = bake(S, clip["name"])
+    exaggerate(act, float(clip.get("exaggerate", job.get("exaggerate", 1.0))))
     smooth_quats(act, int(job.get("smooth", 1)))
     made.append(act)
     for sp in clip.get("splits", []):
