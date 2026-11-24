@@ -40,6 +40,7 @@ var seated_hilt: MeshInstance3D
 var drawn_blade: MeshInstance3D
 var emerging_blade: MeshInstance3D
 var scabbard: MeshInstance3D
+var trail                      # 刀光拖尾（blade_trail.gd），目前只有南宮
 
 
 func setup(char_id: String, weapon_id: String) -> void:
@@ -128,6 +129,21 @@ func setup(char_id: String, weapon_id: String) -> void:
 	play(idle)
 	if seated_hilt:
 		_update_sword_visibility()
+	if is_nangong:
+		trail = preload("res://scripts/blade_trail.gd").new()
+		add_child(trail)
+		trail.setup([drawn_blade, emerging_blade], skeleton, "hand_r")
+
+
+## 揮刀時的刀光；delay、length 是真實秒數。沒有刀光的角色不做事。
+func swing_trail(delay: float, length: float, tint: Color) -> void:
+	if trail:
+		trail.swing(delay, length, tint)
+
+
+func stop_trail() -> void:
+	if trail:
+		trail.stop()
 
 
 func _update_face_light() -> void:

@@ -1,6 +1,7 @@
 extends Node
 ## 角色模型近照：檢查兵器握法與各招式的姿勢。
-## xvfb-run godot --path . --rendering-driver opengl3 res://tests/ModelCapture.tscn -- <輸出資料夾> [char_id]
+## xvfb-run godot --path . --rendering-driver opengl3 res://tests/ModelCapture.tscn -- <輸出資料夾> [char_id] [trail]
+## 第三個參數給 trail：實際播放每一招並畫刀光，在每一下判定瞬間截圖（請加 --fixed-fps 60）
 func _ready():
 	await get_tree().process_frame
 	var args := OS.get_cmdline_user_args()
@@ -24,6 +25,10 @@ func _ready():
 	root.add_child(cam)
 	cam.fov = 40
 	cam.current = true
+	if args.size() > 2 and args[2] == "trail":
+		await _trail_shots(m, cam, cid, out)
+		get_tree().quit()
+		return
 	var shots: Array = [[m.idle, 0.5]]
 	for mid in Data.moves:
 		var mv: Dictionary = Data.moves[mid]
@@ -45,3 +50,41 @@ func _ready():
 		i += 1
 	print("saved ", i)
 	get_tree().quit()
+
+
+## 依 move_runner 的規則播放招式並畫刀光；每一下判定時從斜後方截一張。
+func _trail_shots(m, cam: Camera3D, cid: String, out: String) -> void:
+	cam.position = Vector3(2.6, 2.0, 3.2)
+	cam.look_at(Vector3(0, 1.0, 0))
+	var n := 0
+	for mid in Data.moves:
+		var mv: Dictionary = Data.moves[mid]
+		if mv.char_id != cid or mv.hits.is_empty() or not m.has(mv.anim):
+			continue
+		var melee: Array = mv.hits.filter(func(h): return String(h.shape) != "proj")
+		if melee.is_empty():
+			continue
+		m.play(m.idle, 1.0, 0.0, 0.0, true)
+		for f in 10:
+			await get_tree().process_frame
+		var a: Animation = m.anim.get_animation(m.clip(mv.anim))
+		var aspeed := clampf((a.length - float(mv.anim_from_s)) / float(mv.duration_s), 0.4, 4.0)
+		m.play(mv.anim, aspeed, float(mv.anim_from_s), 0.06, true)
+		var first := maxf(0.0, float(melee[0].time_s) - float(Data.feel.blade_trail_lead_s))
+		var last := float(melee[melee.size() - 1].time_s) + float(Data.feel.blade_trail_tail_s)
+		m.swing_trail(first, last - first, Color(mv.fx_tint))
+		var t := 0.0
+		var k := 0
+		while t < float(mv.duration_s) and k < melee.size():
+			await get_tree().process_frame
+			t += 1.0 / 60.0
+			if t >= float(melee[k].time_s):
+				await RenderingServer.frame_post_draw
+				root_shot("%s/trail_%s_%d.png" % [out, mid, k + 1])
+				k += 1
+				n += 1
+	print("trail shots ", n)
+
+
+func root_shot(path: String) -> void:
+	get_tree().root.get_texture().get_image().save_png(path)

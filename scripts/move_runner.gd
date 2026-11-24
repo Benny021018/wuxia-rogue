@@ -116,6 +116,18 @@ func _start(slot: String) -> void:
 		next_crit = true
 	if move.hits.is_empty() or move.kind == "counter":
 		_cue(p.global_position + Vector3.UP, 2.3, false)
+	else:
+		_blade_trail()
+
+
+## 刀光從第一下判定前 lead 秒畫到最後一下後 tail 秒（招式時間 ÷ 速度＝真實時間）；飛行道具不畫
+func _blade_trail() -> void:
+	var melee: Array = move.hits.filter(func(h): return String(h.shape) != "proj")
+	if melee.is_empty():
+		return
+	var first := maxf(0.0, float(melee[0].time_s) - float(Data.feel.blade_trail_lead_s))
+	var last := float(melee[melee.size() - 1].time_s) + float(Data.feel.blade_trail_tail_s)
+	p.model.swing_trail(first / speed, (last - first) / speed, Color(move.fx_tint))
 
 
 
@@ -127,6 +139,8 @@ func _self_state(st: String, sec: float) -> void:
 
 
 func interrupt() -> void:
+	if not move.is_empty():
+		p.model.stop_trail()
 	move = {}
 	queued = ""
 	counter_ready = false

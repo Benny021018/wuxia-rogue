@@ -1540,6 +1540,30 @@ func _check_third_person(world, player) -> void:
 			_check(int(model.seated_hilt.visible) + int(model.emerging_blade.visible) + int(model.drawn_blade.visible) == 1, "拔刀時只有一把照影刀")
 			_check(model.emerging_blade.visible == (phase == 0.35), "局部出鞘的時間正確")
 		player.model.play(player.model.idle, 1.0, 0.0, 0.0, true)
+		# 刀光：揮砍時跟著手骨上的刀身畫出光帶，揮完後淡出
+		var tr = player.model.trail
+		_check(tr != null and tr.blades.size() == 2, "南宮有刀光拖尾，綁在拔出與出鞘中的刀身")
+		if tr:
+			# 實際按普攻：move_runner 依招式時間開關刀光
+			player.runner.interrupt()
+			player.runner.combo = 0
+			player.runner.press("attack")
+			var hit_t := float(Data.moves.nan_n1.hits[0].time_s)
+			var span := 0.0
+			var most := 0
+			var drawn_on_screen := false
+			for f in int(ceil(hit_t * 60.0)) + 2:
+				await get_tree().process_frame
+				var e: Array = tr.samples.filter(func(x): return x != null)
+				most = maxi(most, e.size())
+				if e.size() > 1:
+					span = maxf(span, (e[e.size() - 1][2] as Vector3).distance_to(e[0][2]))
+				drawn_on_screen = drawn_on_screen or tr.im.get_surface_count() == 1
+			_check(span > 0.2 and drawn_on_screen, "揮刀時刀光有畫出來（%d 個取樣，刀尖移動 %.2f 公尺）" % [most, span])
+			for f in 30:
+				await get_tree().process_frame
+			_check(tr.im.get_surface_count() == 0, "揮完後刀光淡出")
+			player.model.play(player.model.idle, 1.0, 0.0, 0.0, true)
 
 	_check(player.cam.get_parent() == player.pivot and player.cam.position.z > 2.0, "第三人稱鏡頭在角色後方")
 	_check(Game.weapons[1] == null and Game.current_weapon().id == String(Data.characters[Game.char_id].weapon_id), "角色使用固定兵器，沒有副武器")

@@ -36,3 +36,10 @@ armor_outline_color_b,#ff7f0d,霸體外框變到最橙時的顏色
 armor_outline_cycle_s,1.4,霸體外框紅→橙→紅一輪的秒數（整圈同時變色）
 invincible_blink_s,0.36,無敵閃爍的週期（秒）
 invincible_blink_alpha,0.78,無敵閃爍亮部的不透明度
+blade_trail_life_s,0.18,刀光拖尾留在畫面上的秒數（越長尾巴越長）
+blade_trail_lead_s,0.12,第一下判定前多早開始畫刀光（招式時間，秒）
+blade_trail_tail_s,0.08,最後一下判定後再畫多久（招式時間，秒）
+blade_trail_alpha,0.85,刀光最亮處的強度
+blade_trail_root,0.25,光帶從刀身哪裡開始（0＝刀根、1＝刀尖）
+blade_trail_steps,4,兩幀取樣之間用曲線補幾段（越多越圓滑）
+blade_trail_glow,1.6,刀光亮度倍率（大於 1 會更亮、更接近白色）
