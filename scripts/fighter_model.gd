@@ -12,6 +12,7 @@ var head_rest_inverse := Basis.IDENTITY
 const UAL1 := preload("res://assets/models/character/UAL1.glb")
 const NANGONG := preload("res://assets/models/character/Nangong.glb")
 const UAL2 := preload("res://assets/models/character/UAL2.glb")
+const NANGONG_MOCAP := "res://assets/models/character/NangongMocap.glb"
 const WEAPONS := {"W001": preload("res://assets/models/weapons/Tachi.glb"),
 	"W007": preload("res://assets/models/weapons/W007.glb"), "W301": preload("res://assets/models/weapons/W301.glb")}
 const LOOPS := ["Sword_Idle"]
@@ -40,6 +41,7 @@ var seated_hilt: MeshInstance3D
 var drawn_blade: MeshInstance3D
 var emerging_blade: MeshInstance3D
 var scabbard: MeshInstance3D
+var trail                      # 刀光拖尾（blade_trail.gd），目前只有南宮
 
 
 func setup(char_id: String, weapon_id: String) -> void:
@@ -57,6 +59,9 @@ func setup(char_id: String, weapon_id: String) -> void:
 	var sources := [UAL2]
 	if is_nangong:
 		sources.append(UAL1)
+		# 動作擷取（MoCapAnything V2）轉到南宮骨架的招式，名稱以 NGM_ 開頭；見 tools/mocap/README.md
+		if ResourceLoader.exists(NANGONG_MOCAP):
+			sources.append(load(NANGONG_MOCAP))
 	for scene in sources:
 		var extra: Node = scene.instantiate()
 		var source: AnimationPlayer = extra.find_children("*", "AnimationPlayer", true, false)[0]
@@ -85,6 +90,7 @@ func setup(char_id: String, weapon_id: String) -> void:
 		drawn_blade = body.find_child("DrawnBlade", true, false)
 		emerging_blade = body.find_child("EmergingBlade", true, false)
 		scabbard = body.find_child("FlatSaya", true, false)
+		_align_blade(drawn_blade)
 		weapon = drawn_blade
 	else:
 		var mesh: MeshInstance3D = body_meshes[0]
@@ -128,6 +134,92 @@ func setup(char_id: String, weapon_id: String) -> void:
 	play(idle)
 	if seated_hilt:
 		_update_sword_visibility()
+	if is_nangong:
+		trail = preload("res://scripts/blade_trail.gd").new()
+		add_child(trail)
+		trail.setup([drawn_blade, emerging_blade], skeleton, "hand_r")
+
+
+## 南宮模型裡拔出的刀，刀弧凸面（刃）朝向手腕內側，看起來拿反了。以刀柄端到刀尖的連線為軸轉動刀身，
+## 讓凸面朝「手腕→指根」的方向（正常握刀時刃朝前）；刀柄與刀尖位置不變，握點和刀光拖尾都不受影響。
+static func _align_blade(mi: MeshInstance3D) -> void:
+	var skel := mi.get_parent() as Skeleton3D
+	if skel == null or skel.find_bone("middle_01_r") < 0:
+		return
+	var src: ArrayMesh = mi.mesh
+	var box := src.get_aabb()
+	var axis := 0
+	for i in 3:
+		if box.size[i] > box.size[axis]:
+			axis = i
+	var arrays := src.surface_get_arrays(0)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var to_mesh := mi.global_transform.affine_inverse() * skel.global_transform
+	var hand := to_mesh * skel.get_bone_global_rest(skel.find_bone("hand_r")).origin
+	var knuckle := to_mesh * skel.get_bone_global_rest(skel.find_bone("middle_01_r")).origin
+	var lo := box.position[axis]
+	var hi := box.end[axis]
+	var band := (hi - lo) * 0.02
+	var a := Vector3.ZERO
+	var b := Vector3.ZERO
+	var na := 0
+	var nb := 0
+	for v in verts:
+		if v[axis] < lo + band:
+			a += v
+			na += 1
+		elif v[axis] > hi - band:
+			b += v
+			nb += 1
+	a /= maxi(na, 1)
+	b /= maxi(nb, 1)
+	var root := a if a.distance_to(hand) < b.distance_to(hand) else b
+	var dir := ((b if root == a else a) - root).normalized()
+	var length := (hi - lo)
+	# 刀身中段（避開刀鐔）平均偏離刀柄→刀尖連線的方向＝凸面
+	var bulge := Vector3.ZERO
+	for v in verts:
+		var along := (v - root).dot(dir)
+		if along > length * 0.3 and along < length * 0.7:
+			bulge += (v - root) - dir * along
+	var want := (knuckle - hand) - dir * (knuckle - hand).dot(dir)
+	if bulge.length() < 1e-5 or want.length() < 1e-5:
+		return
+	var angle := bulge.normalized().signed_angle_to(want.normalized(), dir)
+	var turn := Basis(dir, angle)
+	for i in verts.size():
+		verts[i] = root + turn * (verts[i] - root)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	if arrays[Mesh.ARRAY_NORMAL] is PackedVector3Array:
+		var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+		for i in normals.size():
+			normals[i] = turn * normals[i]
+		arrays[Mesh.ARRAY_NORMAL] = normals
+	if arrays[Mesh.ARRAY_TANGENT] is PackedFloat32Array:
+		var tangents: PackedFloat32Array = arrays[Mesh.ARRAY_TANGENT]
+		for i in range(0, tangents.size(), 4):
+			var t := turn * Vector3(tangents[i], tangents[i + 1], tangents[i + 2])
+			tangents[i] = t.x
+			tangents[i + 1] = t.y
+			tangents[i + 2] = t.z
+		arrays[Mesh.ARRAY_TANGENT] = tangents
+	var aligned := ArrayMesh.new()
+	aligned.add_surface_from_arrays(src.surface_get_primitive_type(0), arrays, [], {},
+		src.surface_get_format(0) & ~Mesh.ARRAY_FORMAT_BLEND_SHAPE_MASK)
+	aligned.surface_set_material(0, src.surface_get_material(0))
+	mi.mesh = aligned
+	print_verbose("南宮刀身轉了 %.0f 度" % rad_to_deg(angle))
+
+
+## 揮刀時的刀光；delay、length 是真實秒數。沒有刀光的角色不做事。
+func swing_trail(delay: float, length: float, tint: Color) -> void:
+	if trail:
+		trail.swing(delay, length, tint)
+
+
+func stop_trail() -> void:
+	if trail:
+		trail.stop()
 
 
 func _update_face_light() -> void:
